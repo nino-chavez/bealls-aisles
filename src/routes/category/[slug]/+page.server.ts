@@ -38,9 +38,9 @@ export const load: PageServerLoad = async ({ params, url, cookies, request }) =>
 
 	// Store current session state in cookies
 	const visitCount = inferenceContext.visitCount;
-	cookies.set('prism_persona', inference.primary, { path: '/', maxAge: 60 * 60 * 24 * 30 });
-	cookies.set('prism_last_category', slug, { path: '/', maxAge: 60 * 60 * 24 * 30 });
-	cookies.set('prism_visits', String(visitCount), { path: '/', maxAge: 60 * 60 * 24 * 30 });
+	cookies.set('aisles_persona', inference.primary, { path: '/', maxAge: 60 * 60 * 24 * 30 });
+	cookies.set('aisles_last_category', slug, { path: '/', maxAge: 60 * 60 * 24 * 30 });
+	cookies.set('aisles_visits', String(visitCount), { path: '/', maxAge: 60 * 60 * 24 * 30 });
 
 	return {
 		category: {

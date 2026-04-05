@@ -1,5 +1,5 @@
 /**
- * Signal and inference types for Prism's persona detection system.
+ * Signal and inference types for Aisles' persona detection system.
  *
  * Phase 2 replaces the one-shot regex → persona string with a continuous
  * signal stream → probability vector pipeline. These types define the

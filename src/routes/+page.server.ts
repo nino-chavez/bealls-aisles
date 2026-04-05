@@ -9,8 +9,8 @@ export const load: PageServerLoad = async ({ cookies }) => {
 	]);
 
 	// Check for returning visitor persona
-	const storedPersona = cookies.get('prism_persona') || null;
-	const storedCategory = cookies.get('prism_last_category') || null;
+	const storedPersona = cookies.get('aisles_persona') || null;
+	const storedCategory = cookies.get('aisles_last_category') || null;
 
 	// Transform products
 	const products = allProducts.map(transformProduct);

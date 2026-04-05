@@ -45,7 +45,7 @@
 		</div>
 
 		<div class="mt-12 border-t border-surface-border pt-8 text-xs text-surface-muted-fg">
-			<p>Haven is a demo storefront powered by Prism &middot; BigCommerce &middot; Signal X Studio</p>
+			<p>Haven is a demo storefront powered by Aisles &middot; BigCommerce &middot; Signal X Studio</p>
 		</div>
 	</div>
 </footer>

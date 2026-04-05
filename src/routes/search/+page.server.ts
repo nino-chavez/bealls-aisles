@@ -38,7 +38,7 @@ export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	const inference = infer(inferenceContext);
 
 	// Update stored persona
-	cookies.set('prism_persona', inference.primary, { path: '/', maxAge: 60 * 60 * 24 * 30 });
+	cookies.set('aisles_persona', inference.primary, { path: '/', maxAge: 60 * 60 * 24 * 30 });
 
 	return {
 		query,

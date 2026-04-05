@@ -27,12 +27,12 @@ export function createStoreFromRequest(ctx: RequestContext): SignalStore {
 	const store = new SignalStore(crypto.randomUUID());
 
 	// Cross-session state from cookies
-	const storedPersonaRaw = ctx.cookies.get('prism_persona') || null;
+	const storedPersonaRaw = ctx.cookies.get('aisles_persona') || null;
 	const storedPersona = (storedPersonaRaw && PERSONAS.includes(storedPersonaRaw as Persona))
 		? storedPersonaRaw as Persona
 		: null;
-	const storedCategory = ctx.cookies.get('prism_last_category') || null;
-	const visitCount = parseInt(ctx.cookies.get('prism_visits') || '0') + 1;
+	const storedCategory = ctx.cookies.get('aisles_last_category') || null;
+	const visitCount = parseInt(ctx.cookies.get('aisles_visits') || '0') + 1;
 
 	store.setCrossSessionContext({
 		storedPersona,
