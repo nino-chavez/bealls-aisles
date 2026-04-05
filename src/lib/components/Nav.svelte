@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { getEmitter } from '$lib/signals/emitter';
 
 	let { cartCount = 0, onCartClick }: { cartCount?: number; onCartClick?: () => void } = $props();
 
@@ -9,6 +10,9 @@
 	function handleSearch(e: Event) {
 		e.preventDefault();
 		if (searchQuery.trim()) {
+			getEmitter()?.emit('nav.search', {
+				query: searchQuery.trim(),
+			});
 			goto(`/search?q=${encodeURIComponent(searchQuery.trim())}&dev=true`);
 			searchOpen = false;
 			searchQuery = '';

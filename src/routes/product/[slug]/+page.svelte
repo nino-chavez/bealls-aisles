@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PageData } from './$types';
+	import { getEmitter } from '$lib/signals/emitter';
 
 	let { data }: { data: PageData } = $props();
 	const { product, relatedProducts, persona } = data;
@@ -22,6 +23,14 @@
 
 			const result = await res.json();
 			cartMessage = `Added to cart (${result.itemCount} items)`;
+
+			getEmitter()?.emit('commerce.add_to_cart', {
+				productId: product.id,
+				entityId: product.entityId,
+				price: product.salePrice || product.price,
+				name: product.name,
+				category: product.category,
+			});
 
 			// Notify layout to refresh cart count
 			window.dispatchEvent(new CustomEvent('cart-updated', { detail: { itemCount: result.itemCount } }));

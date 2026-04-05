@@ -6,7 +6,7 @@ import type { Product } from '$lib/types';
  * It returns a Layout schema that the renderer interprets.
  */
 
-const PERSONA_DEFINITIONS = {
+const PERSONA_DEFINITIONS: Record<string, string> = {
 	gatherer: `GATHERER persona — an exploratory, inspiration-driven shopper.
 They browse at a leisurely pace, relying on visual cues and editorial storytelling.
 They want to discover, be inspired, and imagine how pieces fit their space.
@@ -32,25 +32,53 @@ Layout principles:
 - No editorial copy — no hero product, no lifestyle stories
 - Sort products by price (low to high) by default
 - Copy should be minimal and functional`,
+
+	researcher: `RESEARCHER persona — a methodical, evidence-driven shopper.
+They compare options systematically, reading specs, reviews, and expert opinions.
+They want data to make an informed decision, not inspiration or speed.
+
+Layout principles:
+- Lead with a category header showing count, sort by rating, and filter controls
+- Use a 2-3 column grid with square images
+- Show full specs inline on every card (material, dimensions, weight, features)
+- Show product descriptions — detail matters
+- No quick-add buttons — they're not ready to buy yet, they're evaluating
+- No editorial fluff — factual, structured, comparison-friendly
+- Order products by relevance to query, then by rating/review count
+- Copy should be informative and precise`,
+
+	gifter: `GIFTER persona — shopping for someone else, often with a budget and occasion.
+They need guidance on what makes a good gift, price tiers, and giftability.
+They want curation and confidence that the recipient will love it.
+
+Layout principles:
+- Lead with an editorial header framing the gift context (occasion, recipient type)
+- Feature one hero product as the "top pick" with a clear value proposition
+- Use a 2-3 column grid with landscape images (gifts should look appealing)
+- Show product descriptions focused on why it makes a great gift
+- Show quick-add buttons — gifters decide faster once convinced
+- Group or call out price tiers ("Under $100", "Splurge-worthy")
+- Copy should be warm, reassuring, and focused on the recipient's experience
+- Order products by giftability score (universal appeal, presentation, value)`,
 };
 
 const COMPONENT_GUIDE = `You have exactly 4 components to work with:
 
 1. "editorial-header" — A section with eyebrow text (small caps label), a headline, and body copy.
-   Use for: Gatherer layouts to set the editorial tone. Not for Hunter.
+   Use for: Gatherer layouts to set the editorial tone. Gifter layouts to frame the occasion. Not for Hunter or Researcher.
 
 2. "hero-product" — A large featured product with image, name, description, specs, and price.
-   Use for: Gatherer layouts to highlight one standout product. Not for Hunter.
+   Use for: Gatherer and Gifter layouts to highlight one standout product. Not for Hunter or Researcher.
 
 3. "product-grid" — A grid of product cards. Configurable:
    - columns: 2 (editorial), 3 (moderate), 4 (dense)
    - imageRatio: "landscape" (4:3, editorial) or "square" (compact)
-   - showDescription: true for editorial, false for dense
+   - showDescription: true for editorial/research, false for dense
    - showSpecs: true to show material/dimensions line
-   - showQuickAdd: true for Hunter, false for Gatherer
+   - showQuickAdd: true for Hunter and Gifter, false for Gatherer and Researcher
 
 4. "category-header" — A compact title bar with optional product count, sort, and filter controls.
-   Use for: Hunter layouts as the leading section. Can also be used for Gatherer as a subtle header.
+   Use for: Hunter and Researcher layouts as the leading section. Can be used for any persona as a subtle header.
 
 RULES:
 - Every product must appear in at least one section
@@ -65,8 +93,7 @@ export function buildLayoutPrompt(
 	categoryName: string,
 	products: Product[]
 ): string {
-	const personaDef = PERSONA_DEFINITIONS[persona as keyof typeof PERSONA_DEFINITIONS]
-		|| PERSONA_DEFINITIONS.gatherer;
+	const personaDef = PERSONA_DEFINITIONS[persona] || PERSONA_DEFINITIONS.gatherer;
 
 	const productSummaries = products.map((p) => {
 		const specs = Object.entries(p.specs)

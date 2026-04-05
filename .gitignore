@@ -7,3 +7,5 @@ build
 !.env.example
 dist
 *.local
+.playwright-mcp/
+validation/

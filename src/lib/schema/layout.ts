@@ -61,7 +61,7 @@ export const SectionSchema = z.discriminatedUnion('component', [
 export type Section = z.infer<typeof SectionSchema>;
 
 export const LayoutSchema = z.object({
-	persona: z.enum(['gatherer', 'hunter']).describe('The detected shopper persona driving this layout'),
+	persona: z.enum(['gatherer', 'hunter', 'researcher', 'gifter']).describe('The detected shopper persona driving this layout'),
 	reasoning: z.string().describe('Brief explanation of why this layout was chosen — shown in dev mode'),
 	sections: z.array(SectionSchema).min(1).max(8).describe('Ordered list of UI sections to render'),
 	productOrder: z.array(z.string()).describe('Product IDs in recommended display order'),

@@ -1,6 +1,8 @@
 import type { PageServerLoad } from './$types';
 import { getCategories, getProductsByCategory, customFieldsToRecord, type BCProduct } from '$lib/server/bigcommerce';
 import { error } from '@sveltejs/kit';
+import { infer } from '$lib/signals/inference';
+import { createStoreFromRequest } from '$lib/signals/request';
 
 /** Map BC category slugs to our category config */
 const CATEGORY_MAP: Record<string, { bcName: string; displayName: string }> = {
@@ -8,7 +10,7 @@ const CATEGORY_MAP: Record<string, { bcName: string; displayName: string }> = {
 	'office': { bcName: 'Haven Office', displayName: 'Office' },
 };
 
-export const load: PageServerLoad = async ({ params, url, cookies }) => {
+export const load: PageServerLoad = async ({ params, url, cookies, request }) => {
 	const slug = params.slug;
 	const devMode = url.searchParams.get('dev') === 'true';
 
@@ -29,52 +31,14 @@ export const load: PageServerLoad = async ({ params, url, cookies }) => {
 	const { products: bcProducts } = await getProductsByCategory(bcCategory.entityId);
 	const products = bcProducts.map((p) => transformProduct(p));
 
-	// ─── Cross-Session Persona Detection ────────────────────────────
-	const storedPersona = cookies.get('prism_persona') || null;
-	const storedCategory = cookies.get('prism_last_category') || null;
-	const visitCount = parseInt(cookies.get('prism_visits') || '0') + 1;
-
-	const intentParam = url.searchParams.get('intent');
-	const searchQuery = url.searchParams.get('q') || '';
-
-	let persona = 'gatherer';
-	let confidence = 0.6;
-	let personaSource = 'default';
-	let personaShift = false;
-
-	if (intentParam) {
-		// Explicit override — highest priority
-		persona = intentParam;
-		confidence = 0.9;
-		personaSource = 'url-param';
-	} else if (searchQuery) {
-		// Search query signals — check for conflict with stored persona
-		const queryPersona = detectPersonaFromQuery(searchQuery);
-
-		if (queryPersona) {
-			persona = queryPersona.persona;
-			confidence = queryPersona.confidence;
-			personaSource = 'search-query';
-
-			// Detect persona SHIFT — current signals conflict with stored model
-			if (storedPersona && storedPersona !== persona) {
-				personaShift = true;
-			}
-		}
-	} else if (storedPersona && storedCategory === slug) {
-		// Returning visitor, same category — continuity (Act 2)
-		persona = storedPersona;
-		confidence = 0.85;
-		personaSource = 'returning-visitor';
-	} else if (storedPersona && storedCategory !== slug) {
-		// Returning visitor, different category — soft continuity, lower confidence
-		persona = storedPersona;
-		confidence = 0.5;
-		personaSource = 'returning-visitor-new-category';
-	}
+	// ─── Signal Store: emit request-time signals, then infer ───────
+	const store = createStoreFromRequest({ url, request, cookies, category: slug });
+	const inferenceContext = store.toInferenceContext();
+	const inference = infer(inferenceContext);
 
 	// Store current session state in cookies
-	cookies.set('prism_persona', persona, { path: '/', maxAge: 60 * 60 * 24 * 30 });
+	const visitCount = inferenceContext.visitCount;
+	cookies.set('prism_persona', inference.primary, { path: '/', maxAge: 60 * 60 * 24 * 30 });
 	cookies.set('prism_last_category', slug, { path: '/', maxAge: 60 * 60 * 24 * 30 });
 	cookies.set('prism_visits', String(visitCount), { path: '/', maxAge: 60 * 60 * 24 * 30 });
 
@@ -85,40 +49,21 @@ export const load: PageServerLoad = async ({ params, url, cookies }) => {
 			description: '',
 		},
 		products,
-		persona,
-		confidence,
+		inference,
+		persona: inference.primary,
+		confidence: inference.confidence,
 		devMode,
-		// Cross-session context for dev mode
 		sessionContext: {
-			personaSource,
-			personaShift,
-			storedPersona,
-			storedCategory,
+			personaSource: inference.dominantSource,
+			personaShift: inference.shift.detected,
+			storedPersona: inferenceContext.storedPersona,
+			storedCategory: inferenceContext.storedCategory,
 			visitCount,
-			searchQuery: searchQuery || null,
+			searchQuery: inferenceContext.searchQuery,
+			signalCount: store.eventCount,
 		},
 	};
 };
-
-/** Detect persona from search query keywords */
-function detectPersonaFromQuery(query: string): { persona: string; confidence: number } | null {
-	const q = query.toLowerCase();
-
-	if (/cheap|budget|deal|dorm|under \$|affordable|sale|discount/i.test(q)) {
-		return { persona: 'hunter', confidence: 0.8 };
-	}
-	if (/review|compare|spec|vs|rating|best|versus/i.test(q)) {
-		return { persona: 'researcher', confidence: 0.75 };
-	}
-	if (/gift|birthday|anniversary|present|for him|for her/i.test(q)) {
-		return { persona: 'gifter', confidence: 0.8 };
-	}
-	if (/browse|explore|inspiration|ideas|modern|style/i.test(q)) {
-		return { persona: 'gatherer', confidence: 0.7 };
-	}
-
-	return null;
-}
 
 /** Transform a BC product into the shape our layout components expect */
 function transformProduct(p: BCProduct) {

@@ -1,8 +1,10 @@
 import type { PageServerLoad } from './$types';
 import { getProducts, customFieldsToRecord, type BCProduct } from '$lib/server/bigcommerce';
 import { redirect } from '@sveltejs/kit';
+import { infer } from '$lib/signals/inference';
+import { createStoreFromRequest } from '$lib/signals/request';
 
-export const load: PageServerLoad = async ({ url, cookies }) => {
+export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	const query = url.searchParams.get('q') || '';
 	const devMode = url.searchParams.get('dev') === 'true';
 
@@ -22,41 +24,31 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 		})
 		.map(transformProduct);
 
-	// Detect persona from query
-	const storedPersona = cookies.get('prism_persona') || null;
-	let persona = 'gatherer';
-	let confidence = 0.6;
-	let personaShift = false;
+	// Infer category from results/query for store context
+	const categorySlug = inferCategory(matched, q);
 
-	if (/cheap|budget|deal|dorm|under \$|affordable|compact|student/i.test(q)) {
-		persona = 'hunter';
-		confidence = 0.8;
-	} else if (/review|compare|spec|vs|best/i.test(q)) {
-		persona = 'researcher';
-		confidence = 0.75;
-	} else if (/gift|birthday|anniversary/i.test(q)) {
-		persona = 'gifter';
-		confidence = 0.8;
-	}
-
-	if (storedPersona && storedPersona !== persona && confidence > 0.7) {
-		personaShift = true;
-	}
+	// Signal store → inference
+	const store = createStoreFromRequest({
+		url,
+		request,
+		cookies,
+		category: categorySlug || 'search',
+	});
+	const inferenceContext = store.toInferenceContext();
+	const inference = infer(inferenceContext);
 
 	// Update stored persona
-	cookies.set('prism_persona', persona, { path: '/', maxAge: 60 * 60 * 24 * 30 });
-
-	// Determine which category to route to based on results
-	const categorySlug = inferCategory(matched, q);
+	cookies.set('prism_persona', inference.primary, { path: '/', maxAge: 60 * 60 * 24 * 30 });
 
 	return {
 		query,
 		results: matched,
 		resultCount: matched.length,
-		persona,
-		confidence,
-		personaShift,
-		storedPersona,
+		inference,
+		persona: inference.primary,
+		confidence: inference.confidence,
+		personaShift: inference.shift.detected,
+		storedPersona: inferenceContext.storedPersona,
 		suggestedCategory: categorySlug,
 		devMode,
 	};
@@ -66,7 +58,6 @@ function inferCategory(products: Array<{ category: string }>, query: string): st
 	if (/desk|chair|office|dorm|storage|bookshelf|monitor/i.test(query)) return 'office';
 	if (/sofa|couch|sectional|table|lamp|rug|living/i.test(query)) return 'living-room';
 
-	// Check product categories
 	const categories = products.map((p) => p.category);
 	if (categories.filter((c) => c.includes('Office')).length > categories.length / 2) return 'office';
 	if (categories.filter((c) => c.includes('Living')).length > categories.length / 2) return 'living-room';

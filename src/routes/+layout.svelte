@@ -1,13 +1,36 @@
 <script lang="ts">
 	import '../app.css';
+	import { afterNavigate } from '$app/navigation';
 	import Nav from '$lib/components/Nav.svelte';
 	import Footer from '$lib/components/Footer.svelte';
 	import CartDrawer from '$lib/components/CartDrawer.svelte';
+	import { initEmitter, destroyEmitter, getEmitter } from '$lib/signals/emitter';
 
 	let { children } = $props();
 	let cartCount = $state(0);
 	let cartOpen = $state(false);
 
+	// ─── Signal Emitter (client-side singleton) ────────────────────
+	$effect(() => {
+		initEmitter();
+		return () => destroyEmitter();
+	});
+
+	afterNavigate(({ to, from }) => {
+		const emitter = getEmitter();
+		if (!emitter || !to?.url) return;
+
+		const category = to.url.pathname.match(/^\/category\/([^/]+)/)?.[1] || null;
+		if (category) {
+			emitter.emit('nav.category_view', {
+				category,
+				fromCategory: from?.url.pathname.match(/^\/category\/([^/]+)/)?.[1] || null,
+				fromPage: from?.url.pathname || null,
+			});
+		}
+	});
+
+	// ─── Cart ──────────────────────────────────────────────────────
 	$effect(() => {
 		fetch('/api/cart')
 			.then((res) => res.json())
@@ -31,7 +54,6 @@
 
 	function closeCart() {
 		cartOpen = false;
-		// Refresh cart count
 		fetch('/api/cart')
 			.then((res) => res.json())
 			.then((data) => { cartCount = data.itemCount || 0; })
