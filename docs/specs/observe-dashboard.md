@@ -210,3 +210,27 @@ The intended demo flow:
 7. The layout changes on the left — the right shows why: which signals triggered it, what the new probabilities are, which model generated it, how long it took
 
 "The shopper just sees a store that gets them. Here's what's actually happening."
+
+### Decision: Polling over SSE (2026-04-06)
+
+**Choice:** The observe dashboard uses 2-second polling against REST endpoints, not Server-Sent Events (SSE) or WebSockets.
+
+**Context:** Production log viewers (Vercel, Railway, Datadog, Grafana Loki) use SSE for real-time streaming — the server holds an open connection and pushes new entries as they arrive. This eliminates wasted requests during idle periods and removes the poll-interval latency gap. They also use virtual scrolling (only visible rows rendered in the DOM) to handle thousands of log lines without performance degradation.
+
+**Why polling is sufficient here:**
+
+- This is a demo tool, not a production observability platform. Sessions are short, event counts are low (tens, not thousands), and the audience is watching a live walkthrough — they won't perceive 2-second latency.
+- Polling against Redis + Postgres is simple to implement and debug. SSE would require a pub/sub layer (Redis Pub/Sub or a message broker) to push events from the signal ingestion path to the dashboard connection.
+- The existing data sources (Redis session store, Postgres generation_logs) are pull-oriented. SSE would need an event bus sitting between signal ingestion and the dashboard, adding infrastructure complexity for no demo benefit.
+
+**What would warrant revisiting:**
+
+- If the dashboard becomes a persistent monitoring tool (not just demo)
+- If event volume grows enough that polling creates noticeable load
+- If the 2-second latency gap becomes visible during the demo narrative
+
+**Upgrade path if needed:**
+
+1. Add SSE endpoint that tails Redis Pub/Sub (signal ingestion publishes to a channel, SSE endpoint subscribes and streams to the client)
+2. Replace the event list with a virtual scroller (e.g., tanstack-virtual) for large sessions
+3. Add tail-pinning behavior: auto-scroll to newest, pause when user scrolls up, "Jump to latest" pill to re-pin
