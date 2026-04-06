@@ -1,19 +1,19 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { getSessionStore, hasSession } from '$lib/signals/session';
+import { infer } from '$lib/signals/inference';
+import type { SignalEventType, SignalSource } from '$lib/signals/types';
+
+const SESSION_COOKIE = 'aisles_session';
 
 /**
  * POST /api/signals
  *
- * Receives batched client-side signal events. For Phase 2, this
- * endpoint validates and acknowledges. The server-side store is
- * per-request (not persistent), so these events are logged but
- * don't feed back into the current page's inference yet.
- *
- * Phase 3 (Upstash Redis): events are appended to the session's
- * persistent store, inference re-runs, and the response includes
- * an updated PersonaInference for the client to act on.
+ * Receives batched client-side signal events, appends them to the
+ * session's store, re-runs inference, and returns the updated
+ * PersonaInference so the client can react to persona shifts.
  */
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, cookies }) => {
 	try {
 		const { events } = await request.json();
 
@@ -28,13 +28,29 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 		}
 
-		// Phase 2: acknowledge receipt. Log for observability.
-		// Phase 3: append to Redis session store, re-run inference, return updated vector.
+		// Get session — if no session cookie exists, acknowledge but can't infer
+		const sessionId = cookies.get(SESSION_COOKIE);
+		if (!sessionId || !hasSession(sessionId)) {
+			return json({ received: events.length, inference: null });
+		}
+
+		// Append events to the session store
+		const store = getSessionStore(sessionId);
+		for (const event of events) {
+			store.emit(
+				event.type as SignalEventType,
+				event.source as SignalSource,
+				event.data || {},
+				event.context,
+			);
+		}
+
+		// Re-run inference with accumulated signals
+		const inference = infer(store.toInferenceContext());
 
 		return json({
 			received: events.length,
-			// Placeholder — Phase 3 will return updated inference here
-			inference: null,
+			inference,
 		});
 	} catch {
 		return json({ error: 'Invalid request body' }, { status: 400 });

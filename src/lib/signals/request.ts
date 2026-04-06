@@ -1,30 +1,44 @@
 /**
  * Server-side request signal extraction.
  *
- * Reads the same data that +page.server.ts previously extracted manually
- * (referrer, UTM, device, search query, intent param, cookies) and emits
- * it as structured SignalEvent objects into a SignalStore.
+ * Reads request-time signals (referrer, UTM, device, search query,
+ * intent param, cookies) and emits them into a SignalStore.
+ *
+ * Uses the session manager to reuse stores across requests within
+ * the same session, so client-side signals accumulate.
  */
 
 import type { Persona } from './types';
 import { PERSONAS } from './types';
-import { SignalStore } from './store';
+import { getSessionStore } from './session';
+
+const SESSION_COOKIE = 'aisles_session';
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 interface RequestContext {
 	url: URL;
 	request: Request;
 	cookies: {
 		get: (name: string) => string | undefined;
+		set: (name: string, value: string, opts: { path: string; maxAge?: number }) => void;
 	};
 	category: string;
 }
 
 /**
- * Create a SignalStore and populate it with request-time signals.
- * Returns the store ready for inference.
+ * Get or create a session store and populate it with request-time signals.
+ * Returns the store (which may already contain client-side signals from
+ * earlier in the session) and the visit count for cookie updates.
  */
-export function createStoreFromRequest(ctx: RequestContext): SignalStore {
-	const store = new SignalStore(crypto.randomUUID());
+export function createStoreFromRequest(ctx: RequestContext): { store: ReturnType<typeof getSessionStore>; visitCount: number } {
+	// Get or create session
+	let sessionId = ctx.cookies.get(SESSION_COOKIE) || null;
+	if (!sessionId) {
+		sessionId = crypto.randomUUID();
+		ctx.cookies.set(SESSION_COOKIE, sessionId, { path: '/', maxAge: COOKIE_MAX_AGE });
+	}
+
+	const store = getSessionStore(sessionId);
 
 	// Cross-session state from cookies
 	const storedPersonaRaw = ctx.cookies.get('aisles_persona') || null;
@@ -81,7 +95,7 @@ export function createStoreFromRequest(ctx: RequestContext): SignalStore {
 		}, eventContext);
 	}
 
-	return store;
+	return { store, visitCount };
 }
 
 function detectDeviceType(userAgent: string): 'mobile' | 'tablet' | 'desktop' {

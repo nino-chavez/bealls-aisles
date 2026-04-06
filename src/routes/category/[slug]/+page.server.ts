@@ -32,12 +32,9 @@ export const load: PageServerLoad = async ({ params, url, cookies, request }) =>
 	const products = bcProducts.map((p) => transformProduct(p));
 
 	// ─── Signal Store: emit request-time signals, then infer ───────
-	const store = createStoreFromRequest({ url, request, cookies, category: slug });
+	const { store, visitCount } = createStoreFromRequest({ url, request, cookies, category: slug });
 	const inferenceContext = store.toInferenceContext();
 	const inference = infer(inferenceContext);
-
-	// Store current session state in cookies
-	const visitCount = inferenceContext.visitCount;
 	cookies.set('aisles_persona', inference.primary, { path: '/', maxAge: 60 * 60 * 24 * 30 });
 	cookies.set('aisles_last_category', slug, { path: '/', maxAge: 60 * 60 * 24 * 30 });
 	cookies.set('aisles_visits', String(visitCount), { path: '/', maxAge: 60 * 60 * 24 * 30 });

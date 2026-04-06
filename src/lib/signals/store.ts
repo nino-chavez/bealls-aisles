@@ -91,6 +91,7 @@ export class SignalStore {
 
 		for (const event of this.events) {
 			switch (event.type) {
+				// Request-time signals (server-side)
 				case 'request.pageview':
 					referrer = (event.data.referrer as string) || null;
 					utmSource = (event.data.utm_source as string) || null;
@@ -105,11 +106,20 @@ export class SignalStore {
 					searchQuery = (event.data.query as string) || null;
 					break;
 				case 'request.returning':
-					// Cross-session data is already set via setCrossSessionContext
+					break;
+
+				// Client-side signals — override context when they arrive
+				case 'nav.search':
+					searchQuery = (event.data.query as string) || null;
+					break;
+				case 'nav.category_view':
+					if (event.data.category) {
+						this.currentCategory = event.data.category as string;
+					}
 					break;
 			}
 
-			// Time context from any event
+			// Time context from the most recent event
 			if (event.timestamp) {
 				const d = new Date(event.timestamp);
 				hourOfDay = d.getHours();
