@@ -63,6 +63,14 @@ export class SignalStore {
 		return event;
 	}
 
+	/** Restore a previously-persisted event without generating new ID/timestamp. */
+	restore(event: SignalEvent) {
+		this.events.push(event);
+		if (event.sequence >= this.sequence) {
+			this.sequence = event.sequence + 1;
+		}
+	}
+
 	/** Get all events in order. */
 	getEvents(): readonly SignalEvent[] {
 		return this.events;

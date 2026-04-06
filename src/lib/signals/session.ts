@@ -10,7 +10,7 @@
  */
 
 import { SignalStore } from './store';
-import type { SignalEvent, SignalEventType, SignalSource } from './types';
+import type { SignalEvent } from './types';
 import { env } from '$env/dynamic/private';
 
 const SESSION_TTL_S = 30 * 60; // 30 minutes
@@ -208,14 +208,9 @@ function restoreFromSnapshot(snapshot: SessionSnapshot): SignalStore {
 		currentCategory: snapshot.crossSession.currentCategory,
 	});
 
-	// Replay events into the store
+	// Restore events with original IDs and timestamps
 	for (const event of snapshot.events) {
-		store.emit(
-			event.type as SignalEventType,
-			event.source as SignalSource,
-			event.data,
-			event.context,
-		);
+		store.restore(event);
 	}
 
 	return store;
