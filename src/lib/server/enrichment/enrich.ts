@@ -23,8 +23,9 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY required');
 
 const STORE_HASH = process.env.BIGCOMMERCE_STORE_HASH;
-const STOREFRONT_TOKEN = process.env.BIGCOMMERCE_STOREFRONT_TOKEN;
-if (!STORE_HASH || !STOREFRONT_TOKEN) throw new Error('BigCommerce credentials required');
+// Use channel-specific token if available, fall back to default
+const STOREFRONT_TOKEN = process.env.STOREFRONT_TOKEN || process.env.BIGCOMMERCE_STOREFRONT_TOKEN;
+if (!STORE_HASH || !STOREFRONT_TOKEN) throw new Error('BigCommerce credentials required (set STOREFRONT_TOKEN or BIGCOMMERCE_STOREFRONT_TOKEN)');
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 if (!OPENROUTER_API_KEY) throw new Error('OPENROUTER_API_KEY required');
@@ -94,7 +95,11 @@ const EnrichmentSchema = z.object({
 
 // ─── BigCommerce GraphQL ───────────────────────────────────────────
 
-const BC_GRAPHQL_URL = `https://store-${STORE_HASH}.mybigcommerce.com/graphql`;
+const CHANNEL_ID = process.env.BIGCOMMERCE_CHANNEL_ID || '1';
+const BC_HOST = CHANNEL_ID === '1'
+	? `store-${STORE_HASH}.mybigcommerce.com`
+	: `store-${STORE_HASH}-${CHANNEL_ID}.mybigcommerce.com`;
+const BC_GRAPHQL_URL = `https://${BC_HOST}/graphql`;
 
 const PRODUCT_QUERY = `
   query Products($first: Int!) {
