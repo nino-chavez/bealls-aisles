@@ -51,16 +51,40 @@ export const POST: RequestHandler = async ({ request }) => {
 		const { products, categoryName } = result;
 		const prompt = buildLayoutPrompt(persona, categoryName, products);
 
-		const { output: layout, usage } = await generateText({
-			model: gateway('anthropic/claude-sonnet-4.6'),
-			output: Output.object({ schema: LayoutSchema }),
-			prompt,
-			providerOptions: {
-				gateway: {
-					tags: ['feature:layout', `persona:${persona}`, `category:${categorySlug}`],
+		// Try Haiku first (2-4s), fall back to Sonnet (8-15s) on validation failure
+		let layout;
+		let usage;
+		let model = 'anthropic/claude-haiku-4.5';
+
+		try {
+			const haiku = await generateText({
+				model: gateway('anthropic/claude-haiku-4.5'),
+				output: Output.object({ schema: LayoutSchema }),
+				prompt,
+				providerOptions: {
+					gateway: {
+						tags: ['feature:layout', `persona:${persona}`, `category:${categorySlug}`, 'model:haiku'],
+					},
 				},
-			},
-		});
+			});
+			layout = haiku.output;
+			usage = haiku.usage;
+		} catch {
+			// Haiku failed (validation error, etc.) — fall back to Sonnet
+			model = 'anthropic/claude-sonnet-4.6';
+			const sonnet = await generateText({
+				model: gateway('anthropic/claude-sonnet-4.6'),
+				output: Output.object({ schema: LayoutSchema }),
+				prompt,
+				providerOptions: {
+					gateway: {
+						tags: ['feature:layout', `persona:${persona}`, `category:${categorySlug}`, 'model:sonnet-fallback'],
+					},
+				},
+			});
+			layout = sonnet.output;
+			usage = sonnet.usage;
+		}
 
 		if (layout) {
 			cacheLayout(persona, categorySlug, layout).catch(() => {});

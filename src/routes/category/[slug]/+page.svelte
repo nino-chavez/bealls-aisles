@@ -4,7 +4,6 @@
 	import type { PersonaInference } from '$lib/signals/types';
 	import { PERSONAS } from '$lib/signals/types';
 	import LayoutRenderer from '$lib/components/layouts/LayoutRenderer.svelte';
-	import LayoutSkeleton from '$lib/components/layouts/LayoutSkeleton.svelte';
 	import GathererLayout from '$lib/components/layouts/GathererLayout.svelte';
 	import HunterLayout from '$lib/components/layouts/HunterLayout.svelte';
 	import ResearcherLayout from '$lib/components/layouts/ResearcherLayout.svelte';
@@ -16,7 +15,7 @@
 	let aiLayout = $state<Layout | null>(null);
 	let aiMeta = $state<{ generationTimeMs: number; persona: string; cacheHit?: boolean } | null>(null);
 	let aiError = $state<string | null>(null);
-	let isLoading = $state(true);
+	let isUpgrading = $state(true);
 	let overridePersona = $state<string | null>(null);
 	let currentPersona = $derived(overridePersona ?? data.persona);
 
@@ -40,13 +39,13 @@
 	});
 
 	async function fetchLayout(persona: string) {
-		isLoading = true;
+		isUpgrading = true;
 		aiError = null;
-		aiLayout = null;
+		// Don't null out aiLayout — keep showing previous layout or static fallback
 
 		try {
 			const controller = new AbortController();
-			const timeout = setTimeout(() => controller.abort(), 15000);
+			const timeout = setTimeout(() => controller.abort(), 30000);
 
 			const res = await fetch('/api/layout', {
 				method: 'POST',
@@ -70,9 +69,9 @@
 			aiMeta = result.meta;
 		} catch (err) {
 			aiError = err instanceof Error ? err.message : 'Unknown error';
-			console.error('AI layout failed, falling back:', aiError);
+			console.error('AI layout generation failed, using static layout:', aiError);
 		} finally {
-			isLoading = false;
+			isUpgrading = false;
 		}
 	}
 
@@ -187,10 +186,8 @@
 		</div>
 	{/if}
 
-	<!-- Content area -->
-	{#if isLoading}
-		<LayoutSkeleton />
-	{:else if aiLayout}
+	<!-- Content area: show static fallback instantly, upgrade to AI layout when ready -->
+	{#if aiLayout}
 		<LayoutRenderer layout={aiLayout} products={data.products} />
 	{:else if currentPersona === 'gatherer'}
 		<GathererLayout category={data.category} products={data.products} />
@@ -203,10 +200,19 @@
 	{:else}
 		<GathererLayout category={data.category} products={data.products} />
 	{/if}
+
+	<!-- A/B: ?upgrade=visible shows the personalizing indicator.
+	     Default (silent): no indicator, the layout just improves. -->
+	{#if isUpgrading && new URLSearchParams(window.location.search).get('upgrade') === 'visible'}
+		<div class="fixed bottom-20 left-6 z-30 flex items-center gap-2 rounded-full bg-surface-card px-4 py-2 text-xs text-surface-muted-fg shadow-md border border-surface-border">
+			<span class="inline-block h-1.5 w-1.5 rounded-full bg-accent animate-pulse"></span>
+			Personalizing your experience
+		</div>
+	{/if}
 </div>
 
 <!-- Refinement chat — floats over the page -->
-{#if !isLoading}
+{#if !isUpgrading}
 	<RefinementChat
 		persona={currentPersona}
 		categorySlug={data.category.slug}

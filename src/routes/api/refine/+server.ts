@@ -63,16 +63,36 @@ AVAILABLE COMPONENTS: editorial-header, hero-product, product-grid, category-hea
 
 Generate a refined layout.`;
 
-		const { output: layout, usage } = await generateText({
-			model: gateway('anthropic/claude-sonnet-4.6'),
-			output: Output.object({ schema: LayoutSchema }),
-			prompt,
-			providerOptions: {
-				gateway: {
-					tags: ['feature:refine', `persona:${persona}`, `category:${categorySlug}`],
+		// Try Haiku first, fall back to Sonnet
+		let layout;
+		let usage;
+		try {
+			const haiku = await generateText({
+				model: gateway('anthropic/claude-haiku-4.5'),
+				output: Output.object({ schema: LayoutSchema }),
+				prompt,
+				providerOptions: {
+					gateway: {
+						tags: ['feature:refine', `persona:${persona}`, `category:${categorySlug}`, 'model:haiku'],
+					},
 				},
-			},
-		});
+			});
+			layout = haiku.output;
+			usage = haiku.usage;
+		} catch {
+			const sonnet = await generateText({
+				model: gateway('anthropic/claude-sonnet-4.6'),
+				output: Output.object({ schema: LayoutSchema }),
+				prompt,
+				providerOptions: {
+					gateway: {
+						tags: ['feature:refine', `persona:${persona}`, `category:${categorySlug}`, 'model:sonnet-fallback'],
+					},
+				},
+			});
+			layout = sonnet.output;
+			usage = sonnet.usage;
+		}
 
 		const elapsed = Date.now() - startTime;
 		const newConstraint = message.trim();
