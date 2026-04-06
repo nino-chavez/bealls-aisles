@@ -1,0 +1,95 @@
+/**
+ * Layout cache backed by Upstash Redis.
+ *
+ * Caches generated layouts by persona + category slug.
+ * First visitor generates (8-13s), subsequent visitors get sub-100ms.
+ *
+ * Falls back gracefully — cache miss just means a fresh generation.
+ */
+
+import { env } from '$env/dynamic/private';
+import type { Layout } from '$lib/schema/layout';
+
+const LAYOUT_TTL_S = 60 * 60; // 1 hour
+
+let redis: import('@upstash/redis').Redis | null = null;
+let initialized = false;
+
+async function getRedis(): Promise<import('@upstash/redis').Redis | null> {
+	if (initialized) return redis;
+	initialized = true;
+
+	const url = env.KV_REST_API_URL;
+	const token = env.KV_REST_API_TOKEN;
+	if (!url || !token) return null;
+
+	try {
+		const { Redis } = await import('@upstash/redis');
+		redis = new Redis({ url, token });
+		return redis;
+	} catch {
+		return null;
+	}
+}
+
+function layoutKey(persona: string, categorySlug: string): string {
+	return `aisles:layout:${persona}:${categorySlug}`;
+}
+
+/**
+ * Get a cached layout for a persona + category combination.
+ * Returns null on cache miss or any error.
+ */
+export async function getCachedLayout(persona: string, categorySlug: string): Promise<Layout | null> {
+	const r = await getRedis();
+	if (!r) return null;
+
+	try {
+		return await r.get<Layout>(layoutKey(persona, categorySlug));
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Store a generated layout in the cache.
+ */
+export async function cacheLayout(persona: string, categorySlug: string, layout: Layout): Promise<void> {
+	const r = await getRedis();
+	if (!r) return;
+
+	try {
+		await r.set(layoutKey(persona, categorySlug), layout, { ex: LAYOUT_TTL_S });
+	} catch {
+		// Cache write failure is non-fatal
+	}
+}
+
+/**
+ * Invalidate cached layouts. Called after enrichment runs or manual flush.
+ * If no args, invalidates all layout caches.
+ */
+export async function invalidateLayoutCache(persona?: string, categorySlug?: string): Promise<number> {
+	const r = await getRedis();
+	if (!r) return 0;
+
+	try {
+		if (persona && categorySlug) {
+			return await r.del(layoutKey(persona, categorySlug));
+		}
+
+		// Scan and delete all layout keys
+		const keys: string[] = [];
+		let cursor = 0;
+		do {
+			const [newCursor, found] = await r.scan(cursor, { match: 'aisles:layout:*', count: 100 });
+			cursor = Number(newCursor);
+			keys.push(...found);
+		} while (cursor !== 0);
+
+		if (keys.length === 0) return 0;
+		return await r.del(...keys);
+	} catch {
+		return 0;
+	}
+}

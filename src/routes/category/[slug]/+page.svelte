@@ -14,7 +14,7 @@
 	let { data }: { data: PageData } = $props();
 
 	let aiLayout = $state<Layout | null>(null);
-	let aiMeta = $state<{ generationTimeMs: number; persona: string } | null>(null);
+	let aiMeta = $state<{ generationTimeMs: number; persona: string; cacheHit?: boolean } | null>(null);
 	let aiError = $state<string | null>(null);
 	let isLoading = $state(true);
 	let overridePersona = $state<string | null>(null);
@@ -104,6 +104,9 @@
 						{/if}
 						{#if aiMeta}
 							&middot; Layout in {aiMeta.generationTimeMs}ms
+							{#if aiMeta.cacheHit}
+								&middot; <span class="font-medium text-accent">CACHE HIT</span>
+							{/if}
 						{/if}
 						{#if aiError}
 							&middot; <span class="text-error">Fallback: {aiError}</span>
