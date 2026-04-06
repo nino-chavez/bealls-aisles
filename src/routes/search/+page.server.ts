@@ -3,6 +3,7 @@ import { getProducts, customFieldsToRecord, type BCProduct } from '$lib/server/b
 import { redirect } from '@sveltejs/kit';
 import { infer } from '$lib/signals/inference';
 import { createStoreFromRequest } from '$lib/signals/request';
+import { searchProducts } from '$lib/server/search';
 
 export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	const query = url.searchParams.get('q') || '';
@@ -12,20 +13,44 @@ export const load: PageServerLoad = async ({ url, cookies, request }) => {
 		throw redirect(302, '/');
 	}
 
-	// Fetch all products and filter by search query (basic text search for now)
+	// Fetch all products (needed for both search paths)
 	const allProducts = await getProducts(50);
-	const q = query.toLowerCase();
+	const productMap = new Map(allProducts.map((p) => [p.entityId, p]));
 
-	const matched = allProducts
-		.filter((p) => {
-			const searchable = `${p.name} ${p.description} ${p.sku}`.toLowerCase();
-			const fields = p.customFields.edges.map((e) => e.node.value).join(' ').toLowerCase();
-			return searchable.includes(q) || fields.includes(q);
-		})
-		.map(transformProduct);
+	// Try enrichment-powered search first, fall back to text match
+	const enrichedResults = await searchProducts(query, 20);
+	let matched;
+	let searchMethod: 'enriched' | 'text';
+
+	if (enrichedResults.length > 0) {
+		// Enrichment search succeeded — map results back to full product data
+		searchMethod = 'enriched';
+		matched = enrichedResults
+			.map((r) => {
+				const bcProduct = productMap.get(r.bcEntityId);
+				if (!bcProduct) return null;
+				return {
+					...transformProduct(bcProduct),
+					relevanceScore: r.relevanceScore,
+					semanticTags: r.semanticTags,
+				};
+			})
+			.filter((p): p is NonNullable<typeof p> => p !== null);
+	} else {
+		// Fallback: basic text search
+		searchMethod = 'text';
+		const q = query.toLowerCase();
+		matched = allProducts
+			.filter((p) => {
+				const searchable = `${p.name} ${p.description} ${p.sku}`.toLowerCase();
+				const fields = p.customFields.edges.map((e) => e.node.value).join(' ').toLowerCase();
+				return searchable.includes(q) || fields.includes(q);
+			})
+			.map((p) => ({ ...transformProduct(p), relevanceScore: null, semanticTags: [] as string[] }));
+	}
 
 	// Infer category from results/query for store context
-	const categorySlug = inferCategory(matched, q);
+	const categorySlug = inferCategory(matched, query.toLowerCase());
 
 	// Signal store → inference
 	const { store } = await createStoreFromRequest({
@@ -37,13 +62,13 @@ export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	const inferenceContext = store.toInferenceContext();
 	const inference = infer(inferenceContext);
 
-	// Update stored persona
 	cookies.set('aisles_persona', inference.primary, { path: '/', maxAge: 60 * 60 * 24 * 30 });
 
 	return {
 		query,
 		results: matched,
 		resultCount: matched.length,
+		searchMethod,
 		inference,
 		persona: inference.primary,
 		confidence: inference.confidence,

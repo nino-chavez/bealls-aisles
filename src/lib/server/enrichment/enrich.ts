@@ -10,7 +10,8 @@
 import 'dotenv/config';
 import { neon } from '@neondatabase/serverless';
 import { createAnthropic } from '@ai-sdk/anthropic';
-import { generateText, Output } from 'ai';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+import { generateText, Output, embedMany } from 'ai';
 import { z } from 'zod';
 
 // ─── Config ────────────────────────────────────────────────────────
@@ -25,8 +26,12 @@ const STORE_HASH = process.env.BIGCOMMERCE_STORE_HASH;
 const STOREFRONT_TOKEN = process.env.BIGCOMMERCE_STOREFRONT_TOKEN;
 if (!STORE_HASH || !STOREFRONT_TOKEN) throw new Error('BigCommerce credentials required');
 
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+if (!OPENROUTER_API_KEY) throw new Error('OPENROUTER_API_KEY required');
+
 const sql = neon(DATABASE_URL);
 const anthropic = createAnthropic({ apiKey: ANTHROPIC_API_KEY });
+const openrouter = createOpenRouter({ apiKey: OPENROUTER_API_KEY });
 
 // ─── Schema ────────────────────────────────────────────────────────
 
@@ -216,7 +221,44 @@ async function main() {
 		}
 	}
 
-	console.log(`\nDone: ${enriched} enriched, ${failed} failed out of ${products.length} total`);
+	console.log(`\nEnrichment: ${enriched} enriched, ${failed} failed out of ${products.length} total`);
+
+	// ─── Generate embeddings ───────────────────────────────────────
+	console.log('\nGenerating embeddings...');
+
+	// Build embedding text per product: name + description + semantic tags
+	const embeddingTexts = products.map((p) => {
+		const desc = p.description.replace(/<[^>]*>/g, '').trim();
+		const tags = p.customFields.edges.map((e) => e.node.value).join(', ');
+		return `${p.name}. ${desc} ${tags}`.slice(0, 8000); // text-embedding-3-small max ~8k tokens
+	});
+
+	try {
+		const { embeddings } = await embedMany({
+			model: openrouter.textEmbeddingModel('openai/text-embedding-3-small'),
+			values: embeddingTexts,
+		});
+
+		let embeddingCount = 0;
+		for (let i = 0; i < products.length; i++) {
+			const vec = embeddings[i];
+			if (!vec) continue;
+
+			const vecStr = `[${vec.join(',')}]`;
+			await sql`
+				UPDATE enriched_products
+				SET embedding = ${vecStr}::vector
+				WHERE bc_entity_id = ${products[i].entityId}
+			`;
+			embeddingCount++;
+		}
+
+		console.log(`Embeddings: ${embeddingCount} generated (${embeddings[0]?.length || 0} dimensions)`);
+	} catch (err) {
+		console.error('Embedding generation failed:', err instanceof Error ? err.message : err);
+	}
+
+	console.log('\nDone.');
 }
 
 main().catch(console.error);
