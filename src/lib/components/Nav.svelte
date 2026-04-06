@@ -99,6 +99,10 @@
 <script lang="ts" module>
 	const navItems = [
 		{ label: 'Living Room', href: '/category/living-room' },
+		{ label: 'Bedroom', href: '/category/bedroom' },
+		{ label: 'Dining', href: '/category/dining' },
 		{ label: 'Office', href: '/category/office' },
+		{ label: 'Outdoor', href: '/category/outdoor' },
+		{ label: 'Kids', href: '/category/kids' },
 	];
 </script>

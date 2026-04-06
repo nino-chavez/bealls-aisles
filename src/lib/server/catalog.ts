@@ -14,6 +14,10 @@ import type { Product } from '$lib/types';
 export const CATEGORY_MAP: Record<string, { bcName: string; displayName: string }> = {
 	'living-room': { bcName: 'Haven Living Room', displayName: 'Living Room' },
 	'office': { bcName: 'Haven Office', displayName: 'Office' },
+	'bedroom': { bcName: 'Bedroom', displayName: 'Bedroom' },
+	'dining': { bcName: 'Dining', displayName: 'Dining' },
+	'outdoor': { bcName: 'Outdoor', displayName: 'Outdoor' },
+	'kids': { bcName: 'Kids', displayName: 'Kids' },
 };
 
 export interface EnrichedProduct extends Product {
