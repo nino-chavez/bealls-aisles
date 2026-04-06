@@ -59,7 +59,9 @@
 				const productsInLayout = data.layout.productOrder?.length || '?';
 				chatHistory = [...chatHistory, {
 					role: 'assistant',
-					text: `${data.layout.reasoning} (${productsInLayout} products, ${data.meta.generationTimeMs}ms)`,
+					text: productsInLayout === 0
+						? `I couldn't find products matching that. Try a different filter.`
+						: `Done — showing ${productsInLayout} ${productsInLayout === 1 ? 'piece' : 'pieces'} that match.`,
 				}];
 			}
 		} catch (err) {
