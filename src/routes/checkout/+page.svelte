@@ -46,7 +46,7 @@
 
 			// For embedded checkout, we need the checkout URL
 			// BC embedded checkout uses a redirect URL approach
-			const checkoutUrl = `https://store-cdfqf9k6zf.mybigcommerce.com/checkout`;
+			const checkoutUrl = `https://store-${import.meta.env.VITE_BC_STORE_HASH || 'cdfqf9k6zf'}.mybigcommerce.com/checkout`;
 
 			// Create an iframe-based checkout
 			const iframe = document.createElement('iframe');
@@ -63,7 +63,7 @@
 			console.error('Checkout SDK error:', err);
 			// Fallback: redirect to BC hosted checkout
 			if (browser) {
-				window.location.href = `https://store-cdfqf9k6zf.mybigcommerce.com/checkout?cartId=${cartEntityId}`;
+				window.location.href = `https://store-${import.meta.env.VITE_BC_STORE_HASH || 'cdfqf9k6zf'}.mybigcommerce.com/checkout?cartId=${cartEntityId}`;
 			}
 		}
 	}

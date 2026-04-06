@@ -98,11 +98,14 @@ interface PromptProduct {
 	personaFit?: { gatherer: number; hunter: number; researcher: number; gifter: number } | null;
 }
 
+import { getBrand } from '$lib/brand/config';
+
 export function buildLayoutPrompt(
 	persona: string,
 	categoryName: string,
 	products: PromptProduct[]
 ): string {
+	const brand = getBrand();
 	const personaDef = PERSONA_DEFINITIONS[persona] || PERSONA_DEFINITIONS.gatherer;
 
 	const productSummaries = products.map((p) => {
@@ -119,7 +122,9 @@ export function buildLayoutPrompt(
 		return `- ID: "${p.id}" | ${p.name} | ${price} | ${specs}${fit}`;
 	}).join('\n');
 
-	return `You are a merchandising AI for a furniture store called Haven. Your job is to arrange a category page layout that serves the shopper's intent.
+	return `You are a merchandising AI for ${brand.prompt.storeDescription} called ${brand.prompt.storeName}. Your job is to arrange a category page layout that serves the shopper's intent.
+
+VOICE: ${brand.prompt.voiceGuidance}
 
 PERSONA:
 ${personaDef}

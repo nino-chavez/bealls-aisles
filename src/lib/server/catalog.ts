@@ -8,17 +8,11 @@
 
 import { getCategories, getProductsByCategory, customFieldsToRecord, type BCProduct } from './bigcommerce';
 import { getEnrichmentByEntityIds } from './enrichment/query';
+import { getBrand } from '$lib/brand/config';
 import type { Product } from '$lib/types';
 
-/** Map URL slugs to BigCommerce category names */
-export const CATEGORY_MAP: Record<string, { bcName: string; displayName: string }> = {
-	'living-room': { bcName: 'Haven Living Room', displayName: 'Living Room' },
-	'office': { bcName: 'Haven Office', displayName: 'Office' },
-	'bedroom': { bcName: 'Bedroom', displayName: 'Bedroom' },
-	'dining': { bcName: 'Dining', displayName: 'Dining' },
-	'outdoor': { bcName: 'Outdoor', displayName: 'Outdoor' },
-	'kids': { bcName: 'Kids', displayName: 'Kids' },
-};
+/** Category map — driven by the active brand config */
+export const CATEGORY_MAP: Record<string, { bcName: string; displayName: string }> = getBrand().categories;
 
 export interface EnrichedProduct extends Product {
 	personaFit: { gatherer: number; hunter: number; researcher: number; gifter: number } | null;

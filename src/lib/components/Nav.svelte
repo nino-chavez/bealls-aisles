@@ -2,7 +2,15 @@
 	import { goto } from '$app/navigation';
 	import { getEmitter } from '$lib/signals/emitter';
 
-	let { cartCount = 0, onCartClick }: { cartCount?: number; onCartClick?: () => void } = $props();
+	import { getBrand } from '$lib/brand/config';
+
+	let { cartCount = 0, onCartClick, brandName = 'Haven' }: { cartCount?: number; onCartClick?: () => void; brandName?: string } = $props();
+
+	const brand = getBrand();
+	const navItems = Object.entries(brand.categories).map(([slug, config]) => ({
+		label: config.displayName,
+		href: `/category/${slug}`,
+	}));
 
 	let searchOpen = $state(false);
 	let searchQuery = $state('');
@@ -24,7 +32,7 @@
 	<div class="mx-auto flex h-14 max-w-7xl items-center justify-between px-6 lg:h-16">
 		<!-- Logo -->
 		<a href="/" class="font-display text-2xl text-surface-fg transition-opacity hover:opacity-80">
-			Haven
+			{brandName}
 		</a>
 
 		<!-- Category Nav -->
@@ -96,13 +104,3 @@
 	</div>
 </header>
 
-<script lang="ts" module>
-	const navItems = [
-		{ label: 'Living Room', href: '/category/living-room' },
-		{ label: 'Bedroom', href: '/category/bedroom' },
-		{ label: 'Dining', href: '/category/dining' },
-		{ label: 'Office', href: '/category/office' },
-		{ label: 'Outdoor', href: '/category/outdoor' },
-		{ label: 'Kids', href: '/category/kids' },
-	];
-</script>

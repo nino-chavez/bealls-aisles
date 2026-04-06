@@ -6,8 +6,12 @@
 	import Footer from '$lib/components/Footer.svelte';
 	import CartDrawer from '$lib/components/CartDrawer.svelte';
 	import { initEmitter, destroyEmitter, getEmitter } from '$lib/signals/emitter';
+	import type { LayoutData } from './$types';
 
-	let { children } = $props();
+	let { children, data }: { children: any; data: LayoutData } = $props();
+	let brandName = $derived(data.brand?.name ?? 'Haven');
+	let brandTagline = $derived(data.brand?.tagline ?? '');
+	let brandFooterNote = $derived(data.brand?.footerNote ?? '');
 	let cartCount = $state(0);
 	let cartOpen = $state(false);
 
@@ -69,11 +73,11 @@
 	{@render children()}
 {:else}
 	<div class="flex min-h-screen flex-col">
-		<Nav {cartCount} onCartClick={openCart} />
+		<Nav {cartCount} onCartClick={openCart} {brandName} />
 		<main class="flex-1">
 			{@render children()}
 		</main>
-		<Footer />
+		<Footer {brandName} footerNote={brandFooterNote} tagline={brandTagline} />
 	</div>
 
 	<CartDrawer open={cartOpen} onclose={closeCart} />

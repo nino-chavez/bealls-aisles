@@ -1,12 +1,10 @@
 import type { PageServerLoad } from './$types';
-import { getProducts, getCategories, customFieldsToRecord, type BCProduct } from '$lib/server/bigcommerce';
+import { getProducts, customFieldsToRecord, type BCProduct } from '$lib/server/bigcommerce';
+import { getBrand } from '$lib/brand/config';
 
 export const load: PageServerLoad = async ({ cookies }) => {
-	// Fetch featured products and categories from BC
-	const [allProducts, categories] = await Promise.all([
-		getProducts(30),
-		getCategories(),
-	]);
+	// Fetch featured products from BC
+	const allProducts = await getProducts(30);
 
 	// Check for returning visitor persona
 	const storedPersona = cookies.get('aisles_persona') || null;
@@ -19,14 +17,13 @@ export const load: PageServerLoad = async ({ cookies }) => {
 	const sorted = [...products].sort((a, b) => b.price - a.price);
 	const featured = [sorted[0], sorted[Math.floor(sorted.length / 3)], sorted[Math.floor(sorted.length * 2 / 3)], sorted[sorted.length - 1]];
 
-	// Map categories for display
-	const categoryList = categories
-		.filter((c) => c.name.startsWith('Haven'))
-		.map((c) => ({
-			name: c.name.replace('Haven ', ''),
-			path: c.path,
-			slug: c.path.replace(/^\/|\/$/g, '').replace('haven-', ''),
-		}));
+	// Map categories for display — driven by brand config
+	const brand = getBrand();
+	const categoryList = Object.entries(brand.categories).map(([slug, config]) => ({
+		name: config.displayName,
+		path: `/${slug}/`,
+		slug,
+	}));
 
 	return {
 		featured,

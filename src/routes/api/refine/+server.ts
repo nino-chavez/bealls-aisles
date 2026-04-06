@@ -4,6 +4,7 @@ import { generateText, Output, gateway } from 'ai';
 import { LayoutSchema } from '$lib/schema/layout';
 import { loadCategoryProducts } from '$lib/server/catalog';
 import { logGeneration } from '$lib/server/generation-log';
+import { getBrand } from '$lib/brand/config';
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	const startTime = Date.now();
@@ -34,7 +35,8 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 			return `- ID: "${p.id}" | ${p.name} | ${price} | ${specs}${fit}`;
 		}).join('\n');
 
-		const prompt = `You are a merchandising AI for Haven, a furniture store. A shopper is refining their browse experience through conversation.
+		const brand = getBrand();
+		const prompt = `You are a merchandising AI for ${brand.prompt.storeName}, ${brand.prompt.storeDescription}. A shopper is refining their browse experience through conversation.
 
 CURRENT PERSONA: ${persona}
 CATEGORY: ${categoryName}
