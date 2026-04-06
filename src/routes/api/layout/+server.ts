@@ -1,14 +1,11 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { generateText, Output } from 'ai';
-import { createAnthropic } from '@ai-sdk/anthropic';
-import { ANTHROPIC_API_KEY } from '$env/static/private';
+import { generateText, Output, gateway } from 'ai';
 import { LayoutSchema } from '$lib/schema/layout';
 import { buildLayoutPrompt } from '$lib/server/layout-prompt';
 import { loadCategoryProducts } from '$lib/server/catalog';
 import { getCachedLayout, cacheLayout } from '$lib/server/cache';
-
-const anthropic = createAnthropic({ apiKey: ANTHROPIC_API_KEY });
+import { logGeneration } from '$lib/server/generation-log';
 
 export const POST: RequestHandler = async ({ request }) => {
 	const startTime = Date.now();
@@ -24,6 +21,15 @@ export const POST: RequestHandler = async ({ request }) => {
 		const cached = await getCachedLayout(persona, categorySlug);
 		if (cached) {
 			const elapsed = Date.now() - startTime;
+
+			logGeneration({
+				type: 'layout',
+				persona,
+				categorySlug,
+				cacheHit: true,
+				generationTimeMs: elapsed,
+			}).catch(() => {});
+
 			return json({
 				layout: cached,
 				meta: {
@@ -36,7 +42,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			});
 		}
 
-		// ─── Cache miss — generate ─────────────────────────────────
+		// ─── Cache miss — generate via AI Gateway ──────────────────
 		const result = await loadCategoryProducts(categorySlug, persona);
 		if (!result) {
 			return json({ error: `Category "${categorySlug}" not found` }, { status: 404 });
@@ -45,18 +51,33 @@ export const POST: RequestHandler = async ({ request }) => {
 		const { products, categoryName } = result;
 		const prompt = buildLayoutPrompt(persona, categoryName, products);
 
-		const { output: layout } = await generateText({
-			model: anthropic('claude-sonnet-4-20250514'),
+		const { output: layout, usage } = await generateText({
+			model: gateway('anthropic/claude-sonnet-4.6'),
 			output: Output.object({ schema: LayoutSchema }),
 			prompt,
+			providerOptions: {
+				gateway: {
+					tags: ['feature:layout', `persona:${persona}`, `category:${categorySlug}`],
+				},
+			},
 		});
 
-		// Store in cache (non-blocking — don't slow down the response)
 		if (layout) {
 			cacheLayout(persona, categorySlug, layout).catch(() => {});
 		}
 
 		const elapsed = Date.now() - startTime;
+
+		logGeneration({
+			type: 'layout',
+			persona,
+			categorySlug,
+			cacheHit: false,
+			generationTimeMs: elapsed,
+			productCount: products.length,
+			inputTokens: usage?.inputTokens,
+			outputTokens: usage?.outputTokens,
+		}).catch(() => {});
 
 		return json({
 			layout,

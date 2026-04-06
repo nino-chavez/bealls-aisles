@@ -1,12 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { generateText, Output } from 'ai';
-import { createAnthropic } from '@ai-sdk/anthropic';
-import { ANTHROPIC_API_KEY } from '$env/static/private';
+import { generateText, Output, gateway } from 'ai';
 import { LayoutSchema } from '$lib/schema/layout';
 import { loadCategoryProducts } from '$lib/server/catalog';
-
-const anthropic = createAnthropic({ apiKey: ANTHROPIC_API_KEY });
+import { logGeneration } from '$lib/server/generation-log';
 
 export const POST: RequestHandler = async ({ request }) => {
 	const startTime = Date.now();
@@ -66,14 +63,30 @@ AVAILABLE COMPONENTS: editorial-header, hero-product, product-grid, category-hea
 
 Generate a refined layout.`;
 
-		const { output: layout } = await generateText({
-			model: anthropic('claude-sonnet-4-20250514'),
+		const { output: layout, usage } = await generateText({
+			model: gateway('anthropic/claude-sonnet-4.6'),
 			output: Output.object({ schema: LayoutSchema }),
 			prompt,
+			providerOptions: {
+				gateway: {
+					tags: ['feature:refine', `persona:${persona}`, `category:${categorySlug}`],
+				},
+			},
 		});
 
 		const elapsed = Date.now() - startTime;
 		const newConstraint = message.trim();
+
+		logGeneration({
+			type: 'refine',
+			persona,
+			categorySlug,
+			cacheHit: false,
+			generationTimeMs: elapsed,
+			productCount: products.length,
+			inputTokens: usage?.inputTokens,
+			outputTokens: usage?.outputTokens,
+		}).catch(() => {});
 
 		return json({
 			layout,
