@@ -203,10 +203,10 @@
 
 	<!-- A/B: ?upgrade=visible shows the personalizing indicator.
 	     Default (silent): no indicator, the layout just improves. -->
-	{#if isUpgrading && new URLSearchParams(window.location.search).get('upgrade') === 'visible'}
+	{#if isUpgrading && data.devMode}
 		<div class="fixed bottom-20 left-6 z-30 flex items-center gap-2 rounded-full bg-surface-card px-4 py-2 text-xs text-surface-muted-fg shadow-md border border-surface-border">
 			<span class="inline-block h-1.5 w-1.5 rounded-full bg-accent animate-pulse"></span>
-			Personalizing your experience
+			Generating AI layout...
 		</div>
 	{/if}
 </div>
