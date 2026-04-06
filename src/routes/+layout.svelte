@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { afterNavigate } from '$app/navigation';
+	import { page } from '$app/stores';
 	import Nav from '$lib/components/Nav.svelte';
 	import Footer from '$lib/components/Footer.svelte';
 	import CartDrawer from '$lib/components/CartDrawer.svelte';
@@ -9,6 +10,9 @@
 	let { children } = $props();
 	let cartCount = $state(0);
 	let cartOpen = $state(false);
+
+	// Observe dashboard uses its own chrome-less shell
+	let isObserve = $derived($page.url.pathname.startsWith('/observe'));
 
 	// ─── Signal Emitter (client-side singleton) ────────────────────
 	$effect(() => {
@@ -61,12 +65,16 @@
 	}
 </script>
 
-<div class="flex min-h-screen flex-col">
-	<Nav {cartCount} onCartClick={openCart} />
-	<main class="flex-1">
-		{@render children()}
-	</main>
-	<Footer />
-</div>
+{#if isObserve}
+	{@render children()}
+{:else}
+	<div class="flex min-h-screen flex-col">
+		<Nav {cartCount} onCartClick={openCart} />
+		<main class="flex-1">
+			{@render children()}
+		</main>
+		<Footer />
+	</div>
 
-<CartDrawer open={cartOpen} onclose={closeCart} />
+	<CartDrawer open={cartOpen} onclose={closeCart} />
+{/if}

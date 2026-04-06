@@ -163,6 +163,36 @@ export function sessionCount(): number {
 	return sessions.size;
 }
 
+/** List all active session IDs from Redis (scanning aisles:session:* keys). */
+export async function listSessionIds(): Promise<string[]> {
+	const ids: string[] = [];
+
+	const r = await getRedis();
+	if (r) {
+		try {
+			let cursor = 0;
+			do {
+				const result = await r.scan(cursor, { match: 'aisles:session:*', count: 100 });
+				cursor = typeof result[0] === 'string' ? parseInt(result[0]) : result[0];
+				const keys = result[1] as string[];
+
+				for (const key of keys) {
+					ids.push(key.replace('aisles:session:', ''));
+				}
+			} while (cursor !== 0);
+		} catch {
+			// Redis scan failed — fall through to hot cache
+		}
+	}
+
+	// Merge in hot cache IDs not already found
+	for (const id of sessions.keys()) {
+		if (!ids.includes(id)) ids.push(id);
+	}
+
+	return ids;
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────
 
 function restoreFromSnapshot(snapshot: SessionSnapshot): SignalStore {
