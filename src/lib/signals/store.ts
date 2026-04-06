@@ -73,6 +73,16 @@ export class SignalStore {
 		return this.events.length;
 	}
 
+	/** Get cross-session context (for Redis persistence). */
+	getCrossSessionContext() {
+		return {
+			storedPersona: this.storedPersona as string | null,
+			storedCategory: this.storedCategory,
+			visitCount: this.visitCount,
+			currentCategory: this.currentCategory,
+		};
+	}
+
 	/**
 	 * Build an InferenceContext from accumulated events + cross-session state.
 	 * This is the bridge between the signal store and the inference engine.

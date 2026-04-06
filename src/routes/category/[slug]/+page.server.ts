@@ -32,7 +32,7 @@ export const load: PageServerLoad = async ({ params, url, cookies, request }) =>
 	const products = bcProducts.map((p) => transformProduct(p));
 
 	// ─── Signal Store: emit request-time signals, then infer ───────
-	const { store, visitCount } = createStoreFromRequest({ url, request, cookies, category: slug });
+	const { store, visitCount } = await createStoreFromRequest({ url, request, cookies, category: slug });
 	const inferenceContext = store.toInferenceContext();
 	const inference = infer(inferenceContext);
 	cookies.set('aisles_persona', inference.primary, { path: '/', maxAge: 60 * 60 * 24 * 30 });

@@ -28,7 +28,7 @@ export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	const categorySlug = inferCategory(matched, q);
 
 	// Signal store → inference
-	const { store } = createStoreFromRequest({
+	const { store } = await createStoreFromRequest({
 		url,
 		request,
 		cookies,

@@ -10,7 +10,7 @@
 
 import type { Persona } from './types';
 import { PERSONAS } from './types';
-import { getSessionStore } from './session';
+import { getSessionStore, persistSession } from './session';
 
 const SESSION_COOKIE = 'aisles_session';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
@@ -30,7 +30,7 @@ interface RequestContext {
  * Returns the store (which may already contain client-side signals from
  * earlier in the session) and the visit count for cookie updates.
  */
-export function createStoreFromRequest(ctx: RequestContext): { store: ReturnType<typeof getSessionStore>; visitCount: number } {
+export async function createStoreFromRequest(ctx: RequestContext): Promise<{ store: Awaited<ReturnType<typeof getSessionStore>>; visitCount: number }> {
 	// Get or create session
 	let sessionId = ctx.cookies.get(SESSION_COOKIE) || null;
 	if (!sessionId) {
@@ -38,7 +38,7 @@ export function createStoreFromRequest(ctx: RequestContext): { store: ReturnType
 		ctx.cookies.set(SESSION_COOKIE, sessionId, { path: '/', maxAge: COOKIE_MAX_AGE });
 	}
 
-	const store = getSessionStore(sessionId);
+	const store = await getSessionStore(sessionId);
 
 	// Cross-session state from cookies
 	const storedPersonaRaw = ctx.cookies.get('aisles_persona') || null;
@@ -94,6 +94,9 @@ export function createStoreFromRequest(ctx: RequestContext): { store: ReturnType
 			visitCount,
 		}, eventContext);
 	}
+
+	// Persist to Redis after emitting request signals
+	await persistSession(store);
 
 	return { store, visitCount };
 }

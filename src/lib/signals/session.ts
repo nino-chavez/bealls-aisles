@@ -1,26 +1,30 @@
 /**
  * Server-side session manager for signal stores.
  *
- * In-memory Map<sessionId, SignalStore> with TTL cleanup.
- * Works in dev (single process) and on Vercel Fluid Compute
- * (instance reuse across requests). Does not survive cold starts.
+ * Hybrid approach: in-memory Map as hot cache + Upstash Redis for
+ * durability. The hot cache avoids a Redis roundtrip on every request
+ * within the same function instance. Redis ensures sessions survive
+ * cold starts and work across multiple function instances.
  *
- * Phase 3: replace with Upstash Redis for durable sessions.
+ * Falls back to in-memory only if Redis is not configured (dev without env vars).
  */
 
 import { SignalStore } from './store';
+import type { SignalEvent, SignalEventType, SignalSource } from './types';
+import { env } from '$env/dynamic/private';
 
-const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
-const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // Clean every 5 minutes
+const SESSION_TTL_S = 30 * 60; // 30 minutes
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 
 interface SessionEntry {
 	store: SignalStore;
 	lastAccessed: number;
 }
 
+// ─── Hot cache (in-memory) ─────────────────────────────────────────
+
 const sessions = new Map<string, SessionEntry>();
 
-// Periodic cleanup of expired sessions
 let cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
 function ensureCleanup() {
@@ -28,11 +32,10 @@ function ensureCleanup() {
 	cleanupTimer = setInterval(() => {
 		const now = Date.now();
 		for (const [id, entry] of sessions) {
-			if (now - entry.lastAccessed > SESSION_TTL_MS) {
+			if (now - entry.lastAccessed > SESSION_TTL_S * 1000) {
 				sessions.delete(id);
 			}
 		}
-		// Stop the timer if no sessions remain
 		if (sessions.size === 0 && cleanupTimer) {
 			clearInterval(cleanupTimer);
 			cleanupTimer = null;
@@ -40,29 +43,147 @@ function ensureCleanup() {
 	}, CLEANUP_INTERVAL_MS);
 }
 
+// ─── Redis (durable) ───────────────────────────────────────────────
+
+let redis: import('@upstash/redis').Redis | null = null;
+let redisInitialized = false;
+
+async function getRedis(): Promise<import('@upstash/redis').Redis | null> {
+	if (redisInitialized) return redis;
+	redisInitialized = true;
+
+	try {
+		const url = env.KV_REST_API_URL;
+		const token = env.KV_REST_API_TOKEN;
+
+		if (!url || !token) {
+			console.warn('[session] No Redis credentials found, using in-memory only');
+			return null;
+		}
+
+		const { Redis } = await import('@upstash/redis');
+		redis = new Redis({ url, token });
+		return redis;
+	} catch (err) {
+		console.warn('[session] Failed to initialize Redis:', err);
+		return null;
+	}
+}
+
+function sessionKey(sessionId: string): string {
+	return `aisles:session:${sessionId}`;
+}
+
+/** Serializable snapshot of a SignalStore for Redis persistence. */
+interface SessionSnapshot {
+	sessionId: string;
+	events: SignalEvent[];
+	crossSession: {
+		storedPersona: string | null;
+		storedCategory: string | null;
+		visitCount: number;
+		currentCategory: string;
+	};
+}
+
+// ─── Public API ────────────────────────────────────────────────────
+
 /**
  * Get an existing session store or create a new one.
- * Touches the session's lastAccessed timestamp.
+ * Checks in-memory cache first, then Redis, then creates fresh.
  */
-export function getSessionStore(sessionId: string): SignalStore {
-	const existing = sessions.get(sessionId);
-	if (existing) {
-		existing.lastAccessed = Date.now();
-		return existing.store;
+export async function getSessionStore(sessionId: string): Promise<SignalStore> {
+	// Hot cache hit
+	const cached = sessions.get(sessionId);
+	if (cached) {
+		cached.lastAccessed = Date.now();
+		return cached.store;
 	}
 
+	// Try Redis
+	const r = await getRedis();
+	if (r) {
+		try {
+			const snapshot = await r.get<SessionSnapshot>(sessionKey(sessionId));
+			if (snapshot) {
+				const store = restoreFromSnapshot(snapshot);
+				sessions.set(sessionId, { store, lastAccessed: Date.now() });
+				ensureCleanup();
+				return store;
+			}
+		} catch {
+			// Redis read failed — fall through to create fresh
+		}
+	}
+
+	// Create fresh
 	const store = new SignalStore(sessionId);
 	sessions.set(sessionId, { store, lastAccessed: Date.now() });
 	ensureCleanup();
 	return store;
 }
 
-/** Check if a session exists without creating one. */
-export function hasSession(sessionId: string): boolean {
-	return sessions.has(sessionId);
+/**
+ * Persist the session store to Redis.
+ * Called after events are appended or inference runs.
+ */
+export async function persistSession(store: SignalStore): Promise<void> {
+	const r = await getRedis();
+	if (!r) return;
+
+	const snapshot: SessionSnapshot = {
+		sessionId: store.sessionId,
+		events: [...store.getEvents()],
+		crossSession: store.getCrossSessionContext(),
+	};
+
+	try {
+		await r.set(sessionKey(store.sessionId), snapshot, { ex: SESSION_TTL_S });
+	} catch {
+		// Redis write failed — session still lives in memory
+	}
 }
 
-/** Number of active sessions (for observability). */
+/** Check if a session exists in cache or Redis. */
+export async function hasSession(sessionId: string): Promise<boolean> {
+	if (sessions.has(sessionId)) return true;
+
+	const r = await getRedis();
+	if (!r) return false;
+
+	try {
+		return await r.exists(sessionKey(sessionId)) > 0;
+	} catch {
+		return false;
+	}
+}
+
+/** Number of active sessions in the hot cache (for observability). */
 export function sessionCount(): number {
 	return sessions.size;
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────
+
+function restoreFromSnapshot(snapshot: SessionSnapshot): SignalStore {
+	const store = new SignalStore(snapshot.sessionId);
+
+	store.setCrossSessionContext({
+		storedPersona: snapshot.crossSession.storedPersona as any,
+		storedCategory: snapshot.crossSession.storedCategory,
+		visitCount: snapshot.crossSession.visitCount,
+		currentCategory: snapshot.crossSession.currentCategory,
+	});
+
+	// Replay events into the store
+	for (const event of snapshot.events) {
+		store.emit(
+			event.type as SignalEventType,
+			event.source as SignalSource,
+			event.data,
+			event.context,
+		);
+	}
+
+	return store;
 }

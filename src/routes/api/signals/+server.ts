@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getSessionStore, hasSession } from '$lib/signals/session';
+import { getSessionStore, hasSession, persistSession } from '$lib/signals/session';
 import { infer } from '$lib/signals/inference';
 import type { SignalEventType, SignalSource } from '$lib/signals/types';
 
@@ -30,12 +30,12 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 		// Get session — if no session cookie exists, acknowledge but can't infer
 		const sessionId = cookies.get(SESSION_COOKIE);
-		if (!sessionId || !hasSession(sessionId)) {
+		if (!sessionId || !(await hasSession(sessionId))) {
 			return json({ received: events.length, inference: null });
 		}
 
 		// Append events to the session store
-		const store = getSessionStore(sessionId);
+		const store = await getSessionStore(sessionId);
 		for (const event of events) {
 			store.emit(
 				event.type as SignalEventType,
@@ -47,6 +47,9 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 		// Re-run inference with accumulated signals
 		const inference = infer(store.toInferenceContext());
+
+		// Persist to Redis
+		await persistSession(store);
 
 		return json({
 			received: events.length,
