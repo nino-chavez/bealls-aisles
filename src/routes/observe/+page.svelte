@@ -16,6 +16,16 @@
 		createdAt: string;
 	}
 
+	interface EnrichedProductRow {
+		id: string;
+		entityId: number;
+		name: string;
+		price: number;
+		salePrice?: number;
+		personaFit: { gatherer: number; hunter: number; researcher: number; gifter: number } | null;
+		semanticTags: string[];
+	}
+
 	interface SessionData {
 		sessionId: string;
 		events: SignalEvent[];
@@ -39,6 +49,9 @@
 	let logs = $state<GenerationLog[]>([]);
 	let watchLatest = $state(true);
 	let enrichmentOpen = $state(false);
+	let enrichmentProducts = $state<EnrichedProductRow[]>([]);
+	let enrichmentCategory = $state<string | null>(null);
+	let enrichmentLoading = $state(false);
 	let previousEventCount = $state(0);
 	let shiftFlash = $state(false);
 	let authorized = $state(false);
@@ -130,6 +143,27 @@
 		doFetch();
 		const interval = setInterval(doFetch, POLL_INTERVAL);
 		return () => clearInterval(interval);
+	});
+
+	// ─── Enrichment fetch (on-demand when panel is opened) ───────
+	$effect(() => {
+		if (!enrichmentOpen || !sessionData?.crossSession?.currentCategory) return;
+		const category = sessionData.crossSession.currentCategory;
+		const persona = sessionData.inference?.primary || 'gatherer';
+
+		if (category === enrichmentCategory) return;
+		enrichmentProducts = [];
+
+		enrichmentLoading = true;
+		enrichmentCategory = category;
+
+		fetch(`/api/observe/enrichment?category=${category}&persona=${persona}&key=${OBSERVE_KEY}`)
+			.then((r) => r.json())
+			.then((data) => {
+				enrichmentProducts = data.products || [];
+			})
+			.catch(() => { enrichmentProducts = []; })
+			.finally(() => { enrichmentLoading = false; });
 	});
 
 	// ─── Derived ──────────────────────────────────────────────────
@@ -464,14 +498,69 @@
 						</button>
 
 						{#if enrichmentOpen}
-							<div class="mt-3">
-								<p class="font-mono text-[10px] text-neutral-600">
-									Product enrichment data is available via the enriched_products table.
-									Browse a category on the storefront to see persona-fit scores here.
-								</p>
-								<!-- Enrichment data would be loaded per-category in a full implementation.
-								     For the demo, the inference panel and layout decisions show the
-								     persona-product relationship clearly. -->
+							<div class="mt-3 max-h-64 overflow-y-auto">
+								{#if enrichmentLoading}
+									<p class="py-4 text-center font-mono text-[10px] text-neutral-600">Loading enrichment data...</p>
+								{:else if enrichmentProducts.length === 0}
+									<p class="py-4 text-center font-mono text-[10px] text-neutral-600">
+										{sessionData?.crossSession?.currentCategory
+											? `No enrichment data for "${sessionData.crossSession.currentCategory}".`
+											: 'Browse a category to see enrichment data.'}
+									</p>
+								{:else}
+									{@const currentPersona = sessionData?.inference?.primary || 'gatherer'}
+									<table class="w-full font-mono text-[10px]">
+										<thead>
+											<tr class="border-b border-neutral-800 text-left text-neutral-600">
+												<th class="pb-1.5 pr-2">Product</th>
+												<th class="pb-1.5 px-2 text-right">
+													<span class={PERSONA_TEXT_COLORS[currentPersona]}>fit</span>
+												</th>
+												<th class="pb-1.5 px-2 text-right">g</th>
+												<th class="pb-1.5 px-2 text-right">h</th>
+												<th class="pb-1.5 px-2 text-right">r</th>
+												<th class="pb-1.5 px-2 text-right">gi</th>
+												<th class="pb-1.5 pl-2">Tags</th>
+											</tr>
+										</thead>
+										<tbody>
+											{#each enrichmentProducts as product, i}
+												{@const fit = product.personaFit}
+												{@const primaryFit = fit?.[currentPersona as keyof typeof fit] ?? 0.5}
+												<tr class="border-b border-neutral-900 {i < 3 ? 'bg-neutral-900/50' : ''}">
+													<td class="py-1 pr-2 text-neutral-300 truncate max-w-[140px]" title={product.name}>
+														{#if i < 3}<span class="text-amber-500 mr-1">*</span>{/if}{product.name}
+													</td>
+													<td class="py-1 px-2 text-right tabular-nums {PERSONA_TEXT_COLORS[currentPersona]}">
+														{(primaryFit * 100).toFixed(0)}
+													</td>
+													<td class="py-1 px-2 text-right tabular-nums text-neutral-600">
+														{fit ? (fit.gatherer * 100).toFixed(0) : '-'}
+													</td>
+													<td class="py-1 px-2 text-right tabular-nums text-neutral-600">
+														{fit ? (fit.hunter * 100).toFixed(0) : '-'}
+													</td>
+													<td class="py-1 px-2 text-right tabular-nums text-neutral-600">
+														{fit ? (fit.researcher * 100).toFixed(0) : '-'}
+													</td>
+													<td class="py-1 px-2 text-right tabular-nums text-neutral-600">
+														{fit ? (fit.gifter * 100).toFixed(0) : '-'}
+													</td>
+													<td class="py-1 pl-2">
+														<div class="flex flex-wrap gap-1">
+															{#each product.semanticTags.slice(0, 3) as tag}
+																<span class="rounded bg-neutral-800 px-1 py-0.5 text-neutral-500">{tag}</span>
+															{/each}
+														</div>
+													</td>
+												</tr>
+											{/each}
+										</tbody>
+									</table>
+									<div class="mt-2 text-[10px] text-neutral-700">
+										<span class="text-amber-500">*</span> = hero/featured candidates &middot; sorted by {currentPersona} fit &middot; {enrichmentProducts.length} products
+									</div>
+								{/if}
 							</div>
 						{/if}
 					</div>
