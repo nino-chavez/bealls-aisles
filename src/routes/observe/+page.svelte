@@ -179,7 +179,7 @@
 			: new Set<string>()
 	);
 
-	let latestLog = $derived(logs.length > 0 ? logs[0] : null);
+	let latestLog = $derived(logs.find((l) => !l.cacheHit) ?? logs[0] ?? null);
 
 	let cumulativeStats = $derived.by(() => {
 		if (logs.length === 0) return { count: 0, cacheHitRate: 0, avgMs: 0, totalTokens: 0, totalCost: 0, sonnetFallbacks: 0 };
