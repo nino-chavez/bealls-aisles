@@ -5,9 +5,24 @@
  * Server-side only — never import this from client components.
  */
 
-import { BIGCOMMERCE_STORE_HASH, BIGCOMMERCE_STOREFRONT_TOKEN } from '$env/static/private';
+import { env } from '$env/dynamic/private';
+import { getBrand } from '$lib/brand/config';
 
-const GRAPHQL_URL = `https://store-${BIGCOMMERCE_STORE_HASH}.mybigcommerce.com/graphql`;
+function getGraphQLConfig() {
+	const brand = getBrand();
+	// Brand-specific storefront tokens: VOLT_STOREFRONT_TOKEN, EMBER_STOREFRONT_TOKEN, etc.
+	const tokenKey = `${brand.id.toUpperCase()}_STOREFRONT_TOKEN`;
+	const storeHash = env.BIGCOMMERCE_STORE_HASH;
+	const storefrontToken = env[tokenKey] || env.BIGCOMMERCE_STOREFRONT_TOKEN;
+
+	if (!storeHash) throw new Error('BIGCOMMERCE_STORE_HASH not configured');
+	if (!storefrontToken) throw new Error(`Storefront token not configured (tried ${tokenKey} and BIGCOMMERCE_STOREFRONT_TOKEN)`);
+
+	return {
+		url: `https://store-${storeHash}.mybigcommerce.com/graphql`,
+		token: storefrontToken,
+	};
+}
 
 interface GraphQLResponse<T> {
 	data: T;
@@ -15,11 +30,12 @@ interface GraphQLResponse<T> {
 }
 
 async function query<T>(gql: string, variables?: Record<string, unknown>): Promise<T> {
-	const res = await fetch(GRAPHQL_URL, {
+	const { url, token } = getGraphQLConfig();
+	const res = await fetch(url, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
-			Authorization: `Bearer ${BIGCOMMERCE_STOREFRONT_TOKEN}`,
+			Authorization: `Bearer ${token}`,
 		},
 		body: JSON.stringify({ query: gql, variables }),
 	});

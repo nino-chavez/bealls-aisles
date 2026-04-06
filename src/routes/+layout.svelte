@@ -12,6 +12,11 @@
 	let brandName = $derived(data.brand?.name ?? 'Haven');
 	let brandTagline = $derived(data.brand?.tagline ?? '');
 	let brandFooterNote = $derived(data.brand?.footerNote ?? '');
+	let themeStyle = $derived.by(() => {
+		const t = data.brand?.theme;
+		if (!t) return '';
+		return `--color-primary:${t.primary};--color-secondary:${t.secondary};--color-accent:${t.accent};--color-surface-bg:${t.surfaceBg};--color-surface-fg:${t.surfaceFg};--color-surface-card:${t.surfaceCard};--color-surface-card-fg:${t.surfaceCardFg};--color-surface-muted:${t.surfaceMuted};--color-surface-muted-fg:${t.surfaceMutedFg};--color-surface-border:${t.surfaceBorder};--font-display:${t.fontDisplay};--font-body:${t.fontBody};--font-mono:${t.fontMono}`;
+	});
 	let cartCount = $state(0);
 	let cartOpen = $state(false);
 
@@ -69,16 +74,26 @@
 	}
 </script>
 
-{#if isObserve}
-	{@render children()}
-{:else}
-	<div class="flex min-h-screen flex-col">
-		<Nav {cartCount} onCartClick={openCart} {brandName} />
-		<main class="flex-1">
-			{@render children()}
-		</main>
-		<Footer {brandName} footerNote={brandFooterNote} tagline={brandTagline} />
-	</div>
+<svelte:head>
+	{#if data.brand?.googleFontsUrl}
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+		<link href={data.brand.googleFontsUrl} rel="stylesheet" />
+	{/if}
+</svelte:head>
 
-	<CartDrawer open={cartOpen} onclose={closeCart} />
-{/if}
+<div style={themeStyle}>
+	{#if isObserve}
+		{@render children()}
+	{:else}
+		<div class="flex min-h-screen flex-col">
+			<Nav {cartCount} onCartClick={openCart} {brandName} />
+			<main class="flex-1">
+				{@render children()}
+			</main>
+			<Footer {brandName} footerNote={brandFooterNote} tagline={brandTagline} />
+		</div>
+
+		<CartDrawer open={cartOpen} onclose={closeCart} />
+	{/if}
+</div>

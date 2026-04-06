@@ -134,7 +134,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.category.name} — Haven</title>
+	<title>{data.category.name} — {data.persona} view</title>
 </svelte:head>
 
 <div class="mx-auto max-w-7xl px-6 py-8">

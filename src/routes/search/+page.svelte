@@ -7,7 +7,7 @@
 </script>
 
 <svelte:head>
-	<title>Search: {data.query} — Haven</title>
+	<title>Search: {data.query}</title>
 </svelte:head>
 
 <div class="mx-auto max-w-7xl px-6 py-8">

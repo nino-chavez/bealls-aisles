@@ -5,8 +5,8 @@
 </script>
 
 <svelte:head>
-	<title>Haven — Furniture for how you actually live</title>
-	<meta name="description" content="Design-forward furniture at fair prices. Sofas, tables, beds, and storage — built to last, delivered to your door." />
+	<title>{data.brandName} — {data.brandTagline}</title>
+	<meta name="description" content="{data.brandTagline}. Powered by Aisles." />
 </svelte:head>
 
 <!-- Returning visitor banner -->
@@ -23,21 +23,13 @@
 	<div class="mx-auto max-w-7xl px-6 py-20 sm:py-28 lg:py-36">
 		<div class="max-w-xl">
 			<h1 class="text-4xl leading-tight sm:text-5xl lg:text-6xl">
-				Furniture for how you actually live
+				{data.brandTagline}
 			</h1>
 			<p class="mt-6 text-lg leading-relaxed text-surface-muted-fg">
-				Pieces that hold up to real life. Pet-friendly fabrics, washable covers,
-				frames that don't creak at year five. Design you can see; quality you can feel.
+				Browse {data.brandDomain} — personalized to how you shop.
 			</p>
 			<div class="mt-10 flex flex-wrap gap-3">
-				{#each [
-					{ label: 'Living Room', href: '/category/living-room', primary: true },
-					{ label: 'Bedroom', href: '/category/bedroom', primary: false },
-					{ label: 'Dining', href: '/category/dining', primary: false },
-					{ label: 'Office', href: '/category/office', primary: false },
-					{ label: 'Outdoor', href: '/category/outdoor', primary: false },
-					{ label: 'Kids', href: '/category/kids', primary: false },
-				] as cta}
+				{#each data.categories.map((c, i) => ({ label: c.name, href: `/category/${c.slug}`, primary: i === 0 })) as cta}
 					<a
 						href={cta.href}
 						class="inline-flex items-center rounded-sm px-5 py-2.5 text-sm font-medium transition-colors
@@ -90,7 +82,7 @@
 <!-- Category grid -->
 <section class="border-t border-surface-border">
 	<div class="mx-auto max-w-7xl px-6 py-16 lg:py-20">
-		<h2 class="text-3xl">Shop by Room</h2>
+		<h2 class="text-3xl">Shop by Category</h2>
 		<div class="mt-10 grid gap-px overflow-hidden rounded-sm border border-surface-border bg-surface-border sm:grid-cols-2">
 			{#each data.categories as cat}
 				<a
@@ -111,17 +103,18 @@
 	<div class="mx-auto max-w-7xl px-6 py-16 lg:py-20">
 		<div class="grid items-center gap-12 lg:grid-cols-2">
 			<div>
-				<h2 class="text-3xl">The kind of sofa people rearrange the room around</h2>
+				<h2 class="text-3xl">{data.brandTagline}</h2>
 				<p class="mt-4 text-surface-muted-fg leading-relaxed">
-					Top-grain leather that softens with use. Kiln-dried hardwood frames
-					with double-doweled joints. Built to look better in year three than year one.
+					Browse {data.brandDomain} — curated and personalized by AI to match how you shop.
 				</p>
-				<a
-					href="/category/living-room"
-					class="mt-6 inline-block text-sm font-medium text-primary hover:text-secondary"
-				>
-					Explore the collection &rarr;
-				</a>
+				{#if data.categories[0]}
+					<a
+						href="/category/{data.categories[0].slug}"
+						class="mt-6 inline-block text-sm font-medium text-primary hover:text-secondary"
+					>
+						Start browsing &rarr;
+					</a>
+				{/if}
 			</div>
 			<!-- Featured product image -->
 			{#if data.featured[0]?.image}

@@ -30,6 +30,9 @@ export const load: PageServerLoad = async ({ cookies }) => {
 		categories: categoryList,
 		storedPersona,
 		storedCategory,
+		brandName: brand.name,
+		brandTagline: brand.tagline,
+		brandDomain: brand.domain,
 	};
 };
 

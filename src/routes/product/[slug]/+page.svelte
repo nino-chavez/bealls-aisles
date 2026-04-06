@@ -47,7 +47,7 @@
 </script>
 
 <svelte:head>
-	<title>{product.name} — Haven</title>
+	<title>{product.name} </title>
 	<meta name="description" content={product.descriptionPlain.slice(0, 160)} />
 </svelte:head>
 
@@ -57,7 +57,7 @@
 		<a href="/" class="hover:text-surface-fg">Home</a>
 		<span class="mx-2">/</span>
 		{#if product.categoryPath}
-			<a href="/category/{product.categoryPath.replace(/^\/|\/$/g, '').replace('haven-', '')}" class="hover:text-surface-fg">{product.category.replace('Haven ', '')}</a>
+			<a href="/category/{product.categoryPath.replace(/^\/|\/$/g, '').replace(/^(haven|volt|ember)-/i, '')}" class="hover:text-surface-fg">{product.category.replace(/^(Haven|Volt|Ember)\s+/i, '')}</a>
 			<span class="mx-2">/</span>
 		{/if}
 		<span class="text-surface-fg">{product.name}</span>
