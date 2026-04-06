@@ -5,8 +5,9 @@ import { LayoutSchema } from '$lib/schema/layout';
 import { loadCategoryProducts } from '$lib/server/catalog';
 import { logGeneration } from '$lib/server/generation-log';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, cookies }) => {
 	const startTime = Date.now();
+	const sessionId = cookies.get('aisles_session') || undefined;
 
 	try {
 		const { message, currentLayout, persona, categorySlug, constraints } = await request.json();
@@ -109,6 +110,7 @@ Generate a refined layout.`;
 			inputTokens: usage?.inputTokens,
 			outputTokens: usage?.outputTokens,
 			model,
+			sessionId,
 		}).catch(() => {});
 
 		return json({

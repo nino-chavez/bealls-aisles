@@ -121,7 +121,7 @@
 			try {
 				const [sessionRes, logsRes] = await Promise.all([
 					fetch(`/api/observe/session?id=${selectedSessionId}&key=${OBSERVE_KEY}`),
-					fetch(`/api/observe/logs?limit=20&key=${OBSERVE_KEY}`),
+					fetch(`/api/observe/logs?limit=50&session=${selectedSessionId}&key=${OBSERVE_KEY}`),
 				]);
 				const newSession = await sessionRes.json();
 				const newLogs = await logsRes.json();
@@ -477,10 +477,10 @@
 								<span class="text-neutral-500">{new Date(latestLog.createdAt).toLocaleTimeString()}</span>
 							</div>
 
-							<!-- Cumulative stats -->
+							<!-- Session cost stats -->
 							{@const stats = cumulativeStats}
 							<div class="mt-3 border-t border-neutral-800 pt-3">
-								<h3 class="mb-1 font-mono text-[10px] tracking-widest text-neutral-600 uppercase">Cumulative ({stats.count} generations)</h3>
+								<h3 class="mb-1 font-mono text-[10px] tracking-widest text-neutral-600 uppercase">Session Cost ({stats.count} generations)</h3>
 								<div class="grid grid-cols-3 gap-x-4 gap-y-2 font-mono text-xs">
 									<div>
 										<div class="text-neutral-600">cache hit</div>

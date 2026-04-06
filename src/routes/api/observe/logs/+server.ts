@@ -14,18 +14,30 @@ export const GET: RequestHandler = async ({ url }) => {
 	}
 
 	const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100);
+	const sessionId = url.searchParams.get('session') || null;
 
 	try {
 		const sql = getDb();
-		const rows = await sql`
-			SELECT
-				type, persona, category_slug, cache_hit,
-				generation_ms, product_count, input_tokens, output_tokens,
-				eval_score, prompt_version, model, estimated_cost, created_at
-			FROM generation_logs
-			ORDER BY created_at DESC
-			LIMIT ${limit}
-		`;
+		const rows = sessionId
+			? await sql`
+				SELECT
+					type, persona, category_slug, cache_hit,
+					generation_ms, product_count, input_tokens, output_tokens,
+					eval_score, prompt_version, model, estimated_cost, session_id, created_at
+				FROM generation_logs
+				WHERE session_id = ${sessionId}
+				ORDER BY created_at DESC
+				LIMIT ${limit}
+			`
+			: await sql`
+				SELECT
+					type, persona, category_slug, cache_hit,
+					generation_ms, product_count, input_tokens, output_tokens,
+					eval_score, prompt_version, model, estimated_cost, session_id, created_at
+				FROM generation_logs
+				ORDER BY created_at DESC
+				LIMIT ${limit}
+			`;
 
 		const logs = rows.map((row) => ({
 			type: row.type,
@@ -40,6 +52,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			promptVersion: row.prompt_version,
 			model: row.model,
 			estimatedCost: row.estimated_cost,
+			sessionId: row.session_id,
 			createdAt: row.created_at,
 		}));
 

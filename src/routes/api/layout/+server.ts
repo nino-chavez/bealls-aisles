@@ -7,8 +7,10 @@ import { loadCategoryProducts } from '$lib/server/catalog';
 import { getCachedLayout, cacheLayout } from '$lib/server/cache';
 import { logGeneration } from '$lib/server/generation-log';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, cookies }) => {
 	const startTime = Date.now();
+
+	const sessionId = cookies.get('aisles_session') || undefined;
 
 	try {
 		const { persona, categorySlug } = await request.json();
@@ -28,6 +30,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				categorySlug,
 				cacheHit: true,
 				generationTimeMs: elapsed,
+				sessionId,
 			}).catch(() => {});
 
 			return json({
@@ -102,6 +105,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			inputTokens: usage?.inputTokens,
 			outputTokens: usage?.outputTokens,
 			model,
+			sessionId,
 		}).catch(() => {});
 
 		return json({

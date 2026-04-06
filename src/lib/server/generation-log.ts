@@ -37,6 +37,7 @@ async function ensureTable() {
 	// Add columns if they don't exist (idempotent migration for existing tables)
 	await sql`ALTER TABLE generation_logs ADD COLUMN IF NOT EXISTS model TEXT`.catch(() => {});
 	await sql`ALTER TABLE generation_logs ADD COLUMN IF NOT EXISTS estimated_cost REAL`.catch(() => {});
+	await sql`ALTER TABLE generation_logs ADD COLUMN IF NOT EXISTS session_id TEXT`.catch(() => {});
 	tableCreated = true;
 }
 
@@ -64,6 +65,7 @@ export interface GenerationLogEntry {
 	outputTokens?: number;
 	evalScore?: number;
 	model?: string;
+	sessionId?: string;
 }
 
 export async function logGeneration(entry: GenerationLogEntry): Promise<void> {
@@ -75,13 +77,13 @@ export async function logGeneration(entry: GenerationLogEntry): Promise<void> {
 			INSERT INTO generation_logs (
 				type, persona, category_slug, cache_hit, generation_ms,
 				product_count, input_tokens, output_tokens, eval_score,
-				model, estimated_cost
+				model, estimated_cost, session_id
 			) VALUES (
 				${entry.type}, ${entry.persona}, ${entry.categorySlug},
 				${entry.cacheHit}, ${entry.generationTimeMs},
 				${entry.productCount ?? null}, ${entry.inputTokens ?? null},
 				${entry.outputTokens ?? null}, ${entry.evalScore ?? null},
-				${entry.model ?? null}, ${cost}
+				${entry.model ?? null}, ${cost}, ${entry.sessionId ?? null}
 			)
 		`;
 	} catch (err) {
