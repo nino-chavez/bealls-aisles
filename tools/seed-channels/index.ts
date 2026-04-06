@@ -43,7 +43,9 @@ async function api<T = any>(method: string, path: string, body?: unknown): Promi
 		throw new Error(`${method} ${path} → ${res.status}: ${text}`);
 	}
 
-	const json = await res.json();
+	const text = await res.text();
+	if (!text) return {} as T;
+	const json = JSON.parse(text);
 	return json.data ?? json;
 }
 
@@ -85,39 +87,32 @@ interface CategoryDef {
 	children?: CategoryDef[];
 }
 
-async function createCategoryTree(channelId: number, treeName: string, categories: CategoryDef[]): Promise<Map<string, number>> {
-	console.log(`Creating category tree: ${treeName}...`);
+async function createCategories(categories: CategoryDef[]): Promise<Map<string, number>> {
+	console.log(`Creating categories...`);
 
-	// Create tree
-	const trees = await api('POST', '/v3/catalog/trees', [
-		{ name: treeName, channels: [channelId] },
-	]);
-	const treeId = trees[0]?.id;
-	if (!treeId) throw new Error('Failed to create category tree');
-	console.log(`  Tree created: ID ${treeId}`);
-
-	// Create categories under tree
 	const categoryMap = new Map<string, number>();
 
 	for (const cat of categories) {
 		try {
-			const result = await api('POST', '/v3/catalog/trees/categories', [
-				{
-					tree_id: treeId,
-					parent_id: 0,
-					name: cat.name,
-					is_visible: true,
-				},
-			]);
-			const catId = result[0]?.data?.id ?? result[0]?.id;
-			if (catId) {
-				categoryMap.set(cat.name, catId);
-				console.log(`  Category: ${cat.name} → ID ${catId}`);
+			// Check if category already exists
+			const existing = await api('GET', `/v3/catalog/categories?name=${encodeURIComponent(cat.name)}`);
+			if (Array.isArray(existing) && existing.length > 0) {
+				categoryMap.set(cat.name, existing[0].id);
+				console.log(`  Category exists: ${cat.name} → ID ${existing[0].id}`);
+				continue;
 			}
+
+			const result = await api('POST', '/v3/catalog/categories', {
+				name: cat.name,
+				parent_id: 0,
+				is_visible: true,
+			});
+			categoryMap.set(cat.name, result.id);
+			console.log(`  Category created: ${cat.name} → ID ${result.id}`);
 		} catch (err) {
 			console.warn(`  Failed to create category ${cat.name}:`, (err as Error).message);
 		}
-		await sleep(200);
+		await sleep(300);
 	}
 
 	return categoryMap;
@@ -223,12 +218,11 @@ async function seedBrand(
 	console.log(`${'='.repeat(60)}\n`);
 
 	const channelId = await createChannel(brandName);
-	const categoryMap = await createCategoryTree(channelId, `${brandName} Categories`, categories);
+	const categoryMap = await createCategories(categories);
 	const productIds = await createProducts(channelId, products, categoryMap);
 
 	const token = await createStorefrontToken(channelId, [
 		'http://localhost:5180',
-		'http://localhost:5173',
 		`https://${brandName.toLowerCase()}-signal-x-studio-labs.vercel.app`,
 	]);
 
