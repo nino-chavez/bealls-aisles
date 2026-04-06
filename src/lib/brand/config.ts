@@ -116,7 +116,7 @@ const BRANDS: Record<string, BrandConfig> = {
 		footerNote: 'Volt is a demo storefront powered by Aisles',
 
 		bc: {
-			channelId: 2,
+			channelId: 1846321,
 			categoryPrefix: 'Volt',
 		},
 
@@ -168,7 +168,7 @@ const BRANDS: Record<string, BrandConfig> = {
 		footerNote: 'Ember is a demo storefront powered by Aisles',
 
 		bc: {
-			channelId: 3,
+			channelId: 1846324,
 			categoryPrefix: 'Ember',
 		},
 
