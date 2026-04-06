@@ -50,6 +50,7 @@
 			price: p.price,
 			salePrice: p.salePrice,
 			specs: p.specs,
+			personaFit: p.personaFit,
 		}));
 
 		try {

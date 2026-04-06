@@ -1,4 +1,3 @@
-import type { Product } from '$lib/types';
 
 /**
  * Build the system prompt for layout generation.
@@ -81,6 +80,8 @@ const COMPONENT_GUIDE = `You have exactly 4 components to work with:
    Use for: Hunter and Researcher layouts as the leading section. Can be used for any persona as a subtle header.
 
 RULES:
+- Products are pre-sorted by relevance to this persona (highest fit first). Respect this order unless the layout demands otherwise.
+- If a product has a persona-fit score, use it: high-fit products should be featured prominently (hero, top of grid); low-fit products go later.
 - Every product must appear in at least one section
 - Every product must be purchasable (price always visible)
 - Use the product IDs exactly as provided — do not invent IDs
@@ -88,10 +89,19 @@ RULES:
 - Maximum 8 sections total
 - The "reasoning" field should explain your layout choices in 1-2 sentences`;
 
+interface PromptProduct {
+	id: string;
+	name: string;
+	price: number;
+	salePrice?: number;
+	specs: Record<string, string>;
+	personaFit?: { gatherer: number; hunter: number; researcher: number; gifter: number } | null;
+}
+
 export function buildLayoutPrompt(
 	persona: string,
 	categoryName: string,
-	products: Product[]
+	products: PromptProduct[]
 ): string {
 	const personaDef = PERSONA_DEFINITIONS[persona] || PERSONA_DEFINITIONS.gatherer;
 
@@ -103,7 +113,10 @@ export function buildLayoutPrompt(
 		const price = p.salePrice
 			? `$${p.salePrice} (sale from $${p.price})`
 			: `$${p.price}`;
-		return `- ID: "${p.id}" | ${p.name} | ${price} | ${specs}`;
+		const fit = p.personaFit
+			? ` | ${persona}-fit: ${(p.personaFit[persona as keyof typeof p.personaFit] * 100).toFixed(0)}%`
+			: '';
+		return `- ID: "${p.id}" | ${p.name} | ${price} | ${specs}${fit}`;
 	}).join('\n');
 
 	return `You are a merchandising AI for a furniture store called Haven. Your job is to arrange a category page layout that serves the shopper's intent.

@@ -3,6 +3,7 @@ import { getCategories, getProductsByCategory, customFieldsToRecord, type BCProd
 import { error } from '@sveltejs/kit';
 import { infer } from '$lib/signals/inference';
 import { createStoreFromRequest } from '$lib/signals/request';
+import { getEnrichmentByEntityIds } from '$lib/server/enrichment/query';
 
 /** Map BC category slugs to our category config */
 const CATEGORY_MAP: Record<string, { bcName: string; displayName: string }> = {
@@ -27,17 +28,38 @@ export const load: PageServerLoad = async ({ params, url, cookies, request }) =>
 		throw error(404, `BigCommerce category "${catConfig.bcName}" not found`);
 	}
 
-	// Fetch products
+	// Fetch products + enrichment in parallel
 	const { products: bcProducts } = await getProductsByCategory(bcCategory.entityId);
 	const products = bcProducts.map((p) => transformProduct(p));
 
 	// ─── Signal Store: emit request-time signals, then infer ───────
-	const { store, visitCount } = await createStoreFromRequest({ url, request, cookies, category: slug });
+	const [{ store, visitCount }, enrichmentMap] = await Promise.all([
+		createStoreFromRequest({ url, request, cookies, category: slug }),
+		getEnrichmentByEntityIds(products.map((p) => p.entityId)),
+	]);
 	const inferenceContext = store.toInferenceContext();
 	const inference = infer(inferenceContext);
+
+	// Sort products by persona-fit score for the inferred persona
+	const persona = inference.primary;
+	products.sort((a, b) => {
+		const fitA = enrichmentMap.get(a.entityId)?.personaFit[persona] ?? 0.5;
+		const fitB = enrichmentMap.get(b.entityId)?.personaFit[persona] ?? 0.5;
+		return fitB - fitA; // Higher fit first
+	});
 	cookies.set('aisles_persona', inference.primary, { path: '/', maxAge: 60 * 60 * 24 * 30 });
 	cookies.set('aisles_last_category', slug, { path: '/', maxAge: 60 * 60 * 24 * 30 });
 	cookies.set('aisles_visits', String(visitCount), { path: '/', maxAge: 60 * 60 * 24 * 30 });
+
+	// Attach enrichment to products for the client
+	const enrichedProducts = products.map((p) => {
+		const enrichment = enrichmentMap.get(p.entityId);
+		return {
+			...p,
+			personaFit: enrichment?.personaFit ?? null,
+			semanticTags: enrichment?.semanticTags ?? [],
+		};
+	});
 
 	return {
 		category: {
@@ -45,7 +67,7 @@ export const load: PageServerLoad = async ({ params, url, cookies, request }) =>
 			name: catConfig.displayName,
 			description: '',
 		},
-		products,
+		products: enrichedProducts,
 		inference,
 		persona: inference.primary,
 		confidence: inference.confidence,
