@@ -101,6 +101,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			productCount: products.length,
 			inputTokens: usage?.inputTokens,
 			outputTokens: usage?.outputTokens,
+			model,
 		}).catch(() => {});
 
 		return json({

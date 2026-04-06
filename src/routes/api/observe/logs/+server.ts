@@ -21,7 +21,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			SELECT
 				type, persona, category_slug, cache_hit,
 				generation_ms, product_count, input_tokens, output_tokens,
-				eval_score, prompt_version, created_at
+				eval_score, prompt_version, model, estimated_cost, created_at
 			FROM generation_logs
 			ORDER BY created_at DESC
 			LIMIT ${limit}
@@ -38,6 +38,8 @@ export const GET: RequestHandler = async ({ url }) => {
 			outputTokens: row.output_tokens,
 			evalScore: row.eval_score,
 			promptVersion: row.prompt_version,
+			model: row.model,
+			estimatedCost: row.estimated_cost,
 			createdAt: row.created_at,
 		}));
 

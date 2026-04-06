@@ -13,6 +13,8 @@
 		outputTokens: number | null;
 		evalScore: number | null;
 		promptVersion: string;
+		model: string | null;
+		estimatedCost: number | null;
 		createdAt: string;
 	}
 
@@ -180,7 +182,7 @@
 	let latestLog = $derived(logs.length > 0 ? logs[0] : null);
 
 	let cumulativeStats = $derived.by(() => {
-		if (logs.length === 0) return { count: 0, cacheHitRate: 0, avgMs: 0, totalTokens: 0 };
+		if (logs.length === 0) return { count: 0, cacheHitRate: 0, avgMs: 0, totalTokens: 0, totalCost: 0, sonnetFallbacks: 0 };
 		const count = logs.length;
 		const cacheHits = logs.filter((l) => l.cacheHit).length;
 		const totalMs = logs.reduce((sum, l) => sum + l.generationMs, 0);
@@ -188,11 +190,15 @@
 			(sum, l) => sum + (l.inputTokens ?? 0) + (l.outputTokens ?? 0),
 			0
 		);
+		const totalCost = logs.reduce((sum, l) => sum + (l.estimatedCost ?? 0), 0);
+		const sonnetFallbacks = logs.filter((l) => l.model?.includes('sonnet')).length;
 		return {
 			count,
 			cacheHitRate: Math.round((cacheHits / count) * 100),
 			avgMs: Math.round(totalMs / count),
 			totalTokens,
+			totalCost,
+			sonnetFallbacks,
 		};
 	});
 
@@ -449,6 +455,10 @@
 								<span class={PERSONA_TEXT_COLORS[latestLog.persona] ?? 'text-neutral-300'}>{latestLog.persona}</span>
 								<span class="text-neutral-600">category</span>
 								<span class="text-neutral-300">{latestLog.categorySlug}</span>
+								<span class="text-neutral-600">model</span>
+								<span class="tabular-nums {latestLog.model?.includes('sonnet') ? 'text-amber-400' : 'text-emerald-400'}">
+									{latestLog.model ? latestLog.model.split('/').pop() : '?'}
+								</span>
 								<span class="text-neutral-600">cache</span>
 								<span class={latestLog.cacheHit ? 'text-emerald-400' : 'text-amber-400'}>
 									{latestLog.cacheHit ? 'HIT' : 'MISS'}
@@ -459,6 +469,10 @@
 								<span class="tabular-nums text-neutral-300">
 									{latestLog.inputTokens ?? '?'} in / {latestLog.outputTokens ?? '?'} out
 								</span>
+								<span class="text-neutral-600">cost</span>
+								<span class="tabular-nums text-neutral-300">
+									{latestLog.estimatedCost != null ? `$${latestLog.estimatedCost.toFixed(4)}` : '—'}
+								</span>
 								<span class="text-neutral-600">time</span>
 								<span class="text-neutral-500">{new Date(latestLog.createdAt).toLocaleTimeString()}</span>
 							</div>
@@ -467,7 +481,7 @@
 							{@const stats = cumulativeStats}
 							<div class="mt-3 border-t border-neutral-800 pt-3">
 								<h3 class="mb-1 font-mono text-[10px] tracking-widest text-neutral-600 uppercase">Cumulative ({stats.count} generations)</h3>
-								<div class="grid grid-cols-3 gap-2 font-mono text-xs">
+								<div class="grid grid-cols-3 gap-x-4 gap-y-2 font-mono text-xs">
 									<div>
 										<div class="text-neutral-600">cache hit</div>
 										<div class="tabular-nums text-neutral-300">{stats.cacheHitRate}%</div>
@@ -479,6 +493,14 @@
 									<div>
 										<div class="text-neutral-600">total tokens</div>
 										<div class="tabular-nums text-neutral-300">{stats.totalTokens.toLocaleString()}</div>
+									</div>
+									<div>
+										<div class="text-neutral-600">total cost</div>
+										<div class="tabular-nums text-neutral-300">${stats.totalCost.toFixed(4)}</div>
+									</div>
+									<div>
+										<div class="text-neutral-600">sonnet fallbacks</div>
+										<div class="tabular-nums {stats.sonnetFallbacks > 0 ? 'text-amber-400' : 'text-neutral-300'}">{stats.sonnetFallbacks}</div>
 									</div>
 								</div>
 							</div>

@@ -66,6 +66,7 @@ Generate a refined layout.`;
 		// Try Haiku first, fall back to Sonnet
 		let layout;
 		let usage;
+		let model = 'anthropic/claude-haiku-4.5';
 		try {
 			const haiku = await generateText({
 				model: gateway('anthropic/claude-haiku-4.5'),
@@ -80,6 +81,7 @@ Generate a refined layout.`;
 			layout = haiku.output;
 			usage = haiku.usage;
 		} catch {
+			model = 'anthropic/claude-sonnet-4.6';
 			const sonnet = await generateText({
 				model: gateway('anthropic/claude-sonnet-4.6'),
 				output: Output.object({ schema: LayoutSchema }),
@@ -106,6 +108,7 @@ Generate a refined layout.`;
 			productCount: products.length,
 			inputTokens: usage?.inputTokens,
 			outputTokens: usage?.outputTokens,
+			model,
 		}).catch(() => {});
 
 		return json({
