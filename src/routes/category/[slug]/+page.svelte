@@ -44,15 +44,6 @@
 		aiError = null;
 		aiLayout = null;
 
-		const productSummaries = data.products.map((p) => ({
-			id: p.id,
-			name: p.name,
-			price: p.price,
-			salePrice: p.salePrice,
-			specs: p.specs,
-			personaFit: p.personaFit,
-		}));
-
 		try {
 			const controller = new AbortController();
 			const timeout = setTimeout(() => controller.abort(), 15000);
@@ -62,8 +53,7 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					persona,
-					categoryName: data.category.name,
-					products: productSummaries,
+					categorySlug: data.category.slug,
 				}),
 				signal: controller.signal,
 			});
@@ -216,8 +206,7 @@
 {#if !isLoading}
 	<RefinementChat
 		persona={currentPersona}
-		categoryName={data.category.name}
-		products={data.products}
+		categorySlug={data.category.slug}
 		currentLayout={aiLayout}
 		onLayoutUpdate={(newLayout) => { aiLayout = newLayout; }}
 	/>

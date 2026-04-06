@@ -1,17 +1,14 @@
 <script lang="ts">
 	import type { Layout } from '$lib/schema/layout';
-	import type { Product } from '$lib/types';
 
 	let {
 		persona,
-		categoryName,
-		products,
+		categorySlug,
 		currentLayout,
 		onLayoutUpdate,
 	}: {
 		persona: string;
-		categoryName: string;
-		products: Product[];
+		categorySlug: string;
 		currentLayout: Layout | null;
 		onLayoutUpdate: (layout: Layout) => void;
 	} = $props();
@@ -39,14 +36,6 @@
 		isLoading = true;
 
 		try {
-			const productSummaries = products.map((p) => ({
-				id: p.id,
-				name: p.name,
-				price: p.price,
-				salePrice: p.salePrice,
-				specs: p.specs,
-			}));
-
 			const res = await fetch('/api/refine', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -54,8 +43,7 @@
 					message: userMessage,
 					currentLayout,
 					persona,
-					categoryName,
-					products: productSummaries,
+					categorySlug,
 					constraints,
 				}),
 			});
