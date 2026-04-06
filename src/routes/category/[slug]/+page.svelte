@@ -20,8 +20,20 @@
 	let currentPersona = $derived(overridePersona ?? data.persona);
 
 	// Fetch AI-generated layout on mount / persona change
+	// Track category to reset layout on navigation
+	let lastCategory = $state(data.category.slug);
+
 	$effect(() => {
 		const persona = currentPersona;
+		const slug = data.category.slug;
+
+		// Clear stale layout when category changes
+		if (slug !== lastCategory) {
+			aiLayout = null;
+			aiMeta = null;
+			lastCategory = slug;
+		}
+
 		fetchLayout(persona);
 	});
 
@@ -189,6 +201,22 @@
 	<!-- Content area: show static fallback instantly, upgrade to AI layout when ready -->
 	{#if aiLayout}
 		<LayoutRenderer layout={aiLayout} products={data.products} />
+	{:else if isUpgrading}
+		<!-- Skeleton: editorial header + product grid placeholder -->
+		<div class="animate-pulse">
+			<div class="mb-2 h-4 w-32 rounded bg-surface-muted"></div>
+			<div class="mb-3 h-10 w-3/4 rounded bg-surface-muted"></div>
+			<div class="mb-8 h-16 w-2/3 rounded bg-surface-muted"></div>
+			<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+				{#each Array(6) as _}
+					<div>
+						<div class="aspect-[4/3] rounded bg-surface-muted"></div>
+						<div class="mt-3 h-4 w-3/4 rounded bg-surface-muted"></div>
+						<div class="mt-2 h-4 w-1/3 rounded bg-surface-muted"></div>
+					</div>
+				{/each}
+			</div>
+		</div>
 	{:else if currentPersona === 'gatherer'}
 		<GathererLayout category={data.category} products={data.products} />
 	{:else if currentPersona === 'hunter'}
@@ -201,12 +229,11 @@
 		<GathererLayout category={data.category} products={data.products} />
 	{/if}
 
-	<!-- A/B: ?upgrade=visible shows the personalizing indicator.
-	     Default (silent): no indicator, the layout just improves. -->
-	{#if isUpgrading && data.devMode}
+	<!-- Personalizing indicator — subtle pill at bottom-left -->
+	{#if isUpgrading}
 		<div class="fixed bottom-20 left-6 z-30 flex items-center gap-2 rounded-full bg-surface-card px-4 py-2 text-xs text-surface-muted-fg shadow-md border border-surface-border">
 			<span class="inline-block h-1.5 w-1.5 rounded-full bg-accent animate-pulse"></span>
-			Generating AI layout...
+			Personalizing...
 		</div>
 	{/if}
 </div>
