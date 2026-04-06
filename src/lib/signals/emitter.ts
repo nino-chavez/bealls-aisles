@@ -71,11 +71,20 @@ export class SignalEmitter {
 		this.buffer = [];
 
 		try {
-			await fetch('/api/signals', {
+			const res = await fetch('/api/signals', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ events }),
 			});
+
+			if (res.ok) {
+				const data = await res.json();
+				if (data.inference) {
+					window.dispatchEvent(new CustomEvent('aisles-inference-update', {
+						detail: data.inference,
+					}));
+				}
+			}
 		} catch {
 			// Re-buffer on failure — prepend so order is preserved
 			this.buffer = [...events, ...this.buffer];

@@ -26,6 +26,19 @@
 		fetchLayout(persona);
 	});
 
+	// Listen for inference updates from the signal pipeline
+	$effect(() => {
+		const handleInferenceUpdate = (e: Event) => {
+			const inference = (e as CustomEvent).detail;
+			if (inference?.primary && inference.primary !== currentPersona) {
+				overridePersona = inference.primary;
+			}
+		};
+
+		window.addEventListener('aisles-inference-update', handleInferenceUpdate);
+		return () => window.removeEventListener('aisles-inference-update', handleInferenceUpdate);
+	});
+
 	async function fetchLayout(persona: string) {
 		isLoading = true;
 		aiError = null;
