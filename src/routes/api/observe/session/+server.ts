@@ -23,7 +23,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		return json({ error: 'Session not found' }, { status: 404 });
 	}
 
-	const store = await getSessionStore(sessionId);
+	const store = await getSessionStore(sessionId, { fresh: true });
 	const events = store.getEvents();
 	const inference = infer(store.toInferenceContext());
 	const crossSession = store.getCrossSessionContext();

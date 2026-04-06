@@ -91,13 +91,16 @@ interface SessionSnapshot {
 /**
  * Get an existing session store or create a new one.
  * Checks in-memory cache first, then Redis, then creates fresh.
+ * Pass fresh=true to bypass the hot cache and always read from Redis.
  */
-export async function getSessionStore(sessionId: string): Promise<SignalStore> {
-	// Hot cache hit
-	const cached = sessions.get(sessionId);
-	if (cached) {
-		cached.lastAccessed = Date.now();
-		return cached.store;
+export async function getSessionStore(sessionId: string, { fresh = false } = {}): Promise<SignalStore> {
+	// Hot cache hit (skip if caller needs fresh data)
+	if (!fresh) {
+		const cached = sessions.get(sessionId);
+		if (cached) {
+			cached.lastAccessed = Date.now();
+			return cached.store;
+		}
 	}
 
 	// Try Redis
