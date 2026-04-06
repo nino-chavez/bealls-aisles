@@ -26,7 +26,7 @@ export const voltProducts = [
 			{ name: 'Weight', value: '250g' },
 			{ name: 'Connectivity', value: 'Bluetooth 5.3, 3.5mm, USB-C' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800',
+		image_url: 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=800',
 	},
 	{
 		name: 'Studio Monitor M50',
@@ -42,7 +42,7 @@ export const voltProducts = [
 			{ name: 'Weight', value: '285g' },
 			{ name: 'Cable', value: 'Detachable, 1.2m straight + 3m coiled' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=800',
+		image_url: 'https://images.unsplash.com/photo-1558089687-f282ffcbc126?w=800',
 	},
 	{
 		name: 'Commuter Fold',
@@ -59,7 +59,7 @@ export const voltProducts = [
 			{ name: 'Folding', value: 'Yes, flat-fold design' },
 			{ name: 'Multipoint', value: '2 devices simultaneously' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1524678606370-a47ad25cb82a?w=800',
+		image_url: 'https://images.unsplash.com/photo-1484704849700-f032a568e944?w=800',
 	},
 	{
 		name: 'Aura Wireless Open-Ear',
@@ -75,7 +75,7 @@ export const voltProducts = [
 			{ name: 'Storage', value: '32GB built-in MP3' },
 			{ name: 'Weight', value: '29g' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1590658268037-6bf12f032f55?w=800',
+		image_url: 'https://images.unsplash.com/photo-1608156639585-b3a776571bff?w=800',
 	},
 	{
 		name: 'Kids Safe Headphones',
@@ -91,7 +91,7 @@ export const voltProducts = [
 			{ name: 'Mic', value: 'Built-in boom mic' },
 			{ name: 'Durability', value: 'Flexible headband, drop-tested' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1572536147248-ac59a8abfa4b?w=800',
+		image_url: 'https://images.unsplash.com/photo-1613040809024-b4ef7ba99bc3?w=800',
 	},
 
 	// ─── Earbuds ──────────────────────────────────────────────────
@@ -125,7 +125,7 @@ export const voltProducts = [
 			{ name: 'Controls', value: 'Physical buttons' },
 			{ name: 'Driver', value: '12mm dynamic' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=800',
+		image_url: 'https://images.unsplash.com/photo-1593642702749-b7d2a804fbcf?w=800',
 	},
 	{
 		name: 'Micro Buds',
@@ -141,7 +141,7 @@ export const voltProducts = [
 			{ name: 'Bluetooth', value: '5.3 with multipoint' },
 			{ name: 'Charging', value: 'USB-C' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1631176093617-63490a3d785a?w=800',
+		image_url: 'https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=800',
 	},
 	{
 		name: 'Sleep Buds Ultra',
@@ -157,7 +157,7 @@ export const voltProducts = [
 			{ name: 'Sounds', value: '50+ masking soundscapes' },
 			{ name: 'Alarm', value: 'Personal alarm, no phone needed' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1585386959984-a4155224a1ad?w=800',
+		image_url: 'https://images.unsplash.com/photo-1631176093617-63490a3d785a?w=800',
 	},
 	{
 		name: 'Translate Buds',
@@ -207,7 +207,7 @@ export const voltProducts = [
 			{ name: 'DAC', value: 'Built-in 24-bit/96kHz' },
 			{ name: 'Weight', value: '1.4kg per speaker' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1545454675-3531b543be5d?w=800',
+		image_url: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=800',
 	},
 	{
 		name: 'Campfire Mini',
@@ -273,7 +273,7 @@ export const voltProducts = [
 			{ name: 'Monitoring', value: '3.5mm zero-latency' },
 			{ name: 'Controls', value: 'Gain, mute, headphone volume' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=800',
+		image_url: 'https://images.unsplash.com/photo-1598550476439-6847785fcea6?w=800',
 	},
 	{
 		name: 'Gaming Earbuds Low-Lag',
@@ -289,7 +289,7 @@ export const voltProducts = [
 			{ name: 'Dongle', value: 'USB-C included' },
 			{ name: 'Mic', value: 'Beamforming dual mic' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=800',
+		image_url: 'https://images.unsplash.com/photo-1590658165737-15a047b7c0a0?w=800',
 	},
 	{
 		name: 'Haptic Bass Controller',
@@ -305,6 +305,6 @@ export const voltProducts = [
 			{ name: 'Battery', value: '10 hours' },
 			{ name: 'Intensity', value: '10 levels, app-controlled' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=800',
+		image_url: 'https://images.unsplash.com/photo-1616588589676-62b3d4ff6e04?w=800',
 	},
 ];

@@ -26,7 +26,7 @@ export const emberProducts = [
 			{ name: 'Fuel', value: 'Firewood' },
 			{ name: 'Smokeless', value: 'Yes, secondary combustion' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1475483768296-6163e08872a1?w=800',
+		image_url: 'https://images.unsplash.com/photo-1597243777052-5c325d821f35?w=800',
 	},
 	{
 		name: 'Yukon XL Fire Pit',
@@ -42,7 +42,7 @@ export const emberProducts = [
 			{ name: 'Log Size', value: 'Up to 18 inches' },
 			{ name: 'Patina', value: 'Develops naturally over time' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1504457047772-27faf0c44320?w=800',
+		image_url: 'https://images.unsplash.com/photo-1567449790-26e5e4a53ebb?w=800',
 	},
 	{
 		name: 'Mesa Tabletop Fire',
@@ -58,7 +58,7 @@ export const emberProducts = [
 			{ name: 'Material', value: 'Stainless steel + tempered glass' },
 			{ name: 'Weight', value: '4 lbs' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1550029402-226115b7c579?w=800',
+		image_url: 'https://images.unsplash.com/photo-1602425121688-4e8c3b4a3b0f?w=800',
 	},
 	{
 		name: 'Ranger Portable Fire Pit',
@@ -74,7 +74,7 @@ export const emberProducts = [
 			{ name: 'Smokeless', value: 'Yes, secondary combustion' },
 			{ name: 'Material', value: '304 stainless steel' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1517824806704-9040b037703b?w=800',
+		image_url: 'https://images.unsplash.com/photo-1510672981848-a1c4f1cb5ccf?w=800',
 	},
 	{
 		name: 'Propane Fire Table',
@@ -108,7 +108,7 @@ export const emberProducts = [
 			{ name: 'Packed Size', value: '5" x 5" flat' },
 			{ name: 'Material', value: 'Titanium' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800',
+		image_url: 'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=800',
 	},
 	{
 		name: 'Basecamp Dual-Burner',
@@ -124,7 +124,7 @@ export const emberProducts = [
 			{ name: 'Weight', value: '12 lbs' },
 			{ name: 'Cooking Surface', value: '24" x 14"' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1510672981848-a1c4f1cb5ccf?w=800',
+		image_url: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800',
 	},
 	{
 		name: 'Rocket Stove',
@@ -140,7 +140,7 @@ export const emberProducts = [
 			{ name: 'Weight', value: '18 lbs' },
 			{ name: 'Use Case', value: 'Cooking, emergency prep' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1497906539264-eb74442e37a9?w=800',
+		image_url: 'https://images.unsplash.com/photo-1532978379173-523e16f371f2?w=800',
 	},
 
 	// ─── Grills ───────────────────────────────────────────────────
@@ -158,7 +158,7 @@ export const emberProducts = [
 			{ name: 'Pizza Size', value: 'Up to 12 inches' },
 			{ name: 'Portable', value: 'Yes, folding legs' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800',
+		image_url: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800',
 	},
 	{
 		name: 'Flatrock Griddle',
@@ -223,7 +223,7 @@ export const emberProducts = [
 			{ name: 'UV Protection', value: 'Yes' },
 			{ name: 'Closure', value: 'Elastic drawstring' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=800',
+		image_url: 'https://images.unsplash.com/photo-1600585152220-90363fe7e115?w=800',
 	},
 	{
 		name: 'Cast Iron Cook Top',
@@ -253,7 +253,7 @@ export const emberProducts = [
 			{ name: 'Material', value: 'Wood shavings + natural wax' },
 			{ name: 'Waterproof', value: 'Packaging is waterproof' },
 		],
-		image_url: 'https://images.unsplash.com/photo-1517686469429-8bdb88b9f907?w=800',
+		image_url: 'https://images.unsplash.com/photo-1487958449943-2429e8be8625?w=800',
 	},
 	{
 		name: 'Firewood Rack with Cover',
