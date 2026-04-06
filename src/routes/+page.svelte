@@ -29,19 +29,25 @@
 				Pieces that hold up to real life. Pet-friendly fabrics, washable covers,
 				frames that don't creak at year five. Design you can see; quality you can feel.
 			</p>
-			<div class="mt-10 flex flex-wrap gap-4">
-				<a
-					href="/category/living-room"
-					class="inline-flex items-center rounded-sm bg-surface-fg px-6 py-3 text-sm font-medium text-surface-bg transition-opacity hover:opacity-85"
-				>
-					Shop Living Room
-				</a>
-				<a
-					href="/category/office"
-					class="inline-flex items-center rounded-sm border border-surface-fg px-6 py-3 text-sm font-medium text-surface-fg transition-colors hover:bg-surface-fg hover:text-surface-bg"
-				>
-					Shop Office
-				</a>
+			<div class="mt-10 flex flex-wrap gap-3">
+				{#each [
+					{ label: 'Living Room', href: '/category/living-room', primary: true },
+					{ label: 'Bedroom', href: '/category/bedroom', primary: false },
+					{ label: 'Dining', href: '/category/dining', primary: false },
+					{ label: 'Office', href: '/category/office', primary: false },
+					{ label: 'Outdoor', href: '/category/outdoor', primary: false },
+					{ label: 'Kids', href: '/category/kids', primary: false },
+				] as cta}
+					<a
+						href={cta.href}
+						class="inline-flex items-center rounded-sm px-5 py-2.5 text-sm font-medium transition-colors
+							{cta.primary
+								? 'bg-surface-fg text-surface-bg hover:opacity-85'
+								: 'border border-surface-border text-surface-fg hover:bg-surface-fg hover:text-surface-bg'}"
+					>
+						{cta.label}
+					</a>
+				{/each}
 			</div>
 		</div>
 	</div>
