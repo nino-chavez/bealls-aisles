@@ -15,7 +15,9 @@ export const load: PageServerLoad = async ({ cookies }) => {
 
 	// Pick featured products (first 4 from different price ranges)
 	const sorted = [...products].sort((a, b) => b.price - a.price);
-	const featured = [sorted[0], sorted[Math.floor(sorted.length / 3)], sorted[Math.floor(sorted.length * 2 / 3)], sorted[sorted.length - 1]];
+	const featured = sorted.length >= 4
+		? [sorted[0], sorted[Math.floor(sorted.length / 3)], sorted[Math.floor(sorted.length * 2 / 3)], sorted[sorted.length - 1]]
+		: sorted.slice(0, 4);
 
 	// Map categories for display — driven by brand config
 	const brand = getBrand();

@@ -18,8 +18,14 @@ function getGraphQLConfig() {
 	if (!storeHash) throw new Error('BIGCOMMERCE_STORE_HASH not configured');
 	if (!storefrontToken) throw new Error(`Storefront token not configured (tried ${tokenKey} and BIGCOMMERCE_STOREFRONT_TOKEN)`);
 
+	// Non-default channels need channel ID in the URL hostname
+	const channelId = brand.bc.channelId;
+	const host = channelId === 1
+		? `store-${storeHash}.mybigcommerce.com`
+		: `store-${storeHash}-${channelId}.mybigcommerce.com`;
+
 	return {
-		url: `https://store-${storeHash}.mybigcommerce.com/graphql`,
+		url: `https://${host}/graphql`,
 		token: storefrontToken,
 	};
 }
