@@ -3,7 +3,9 @@
 	import { getEmitter } from '$lib/signals/emitter';
 
 	let { data }: { data: PageData } = $props();
-	const { product, relatedProducts, persona } = data;
+	let product = $derived(data.product);
+	let relatedProducts = $derived(data.relatedProducts);
+	let persona = $derived(data.persona);
 
 	let isAddingToCart = $state(false);
 	let cartMessage = $state('');
