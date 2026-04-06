@@ -33,6 +33,48 @@ const sql = neon(DATABASE_URL);
 const anthropic = createAnthropic({ apiKey: ANTHROPIC_API_KEY });
 const openrouter = createOpenRouter({ apiKey: OPENROUTER_API_KEY });
 
+const ENRICHMENT_MODEL_FULL = 'anthropic/claude-sonnet-4-20250514';
+
+// Per-1M token pricing (USD)
+const PRICING = { input: 3.00, output: 15.00 };
+
+interface EnrichmentStats {
+	totalInputTokens: number;
+	totalOutputTokens: number;
+	totalCost: number;
+	count: number;
+}
+
+const stats: EnrichmentStats = { totalInputTokens: 0, totalOutputTokens: 0, totalCost: 0, count: 0 };
+
+function estimateCost(inputTokens: number, outputTokens: number): number {
+	return (inputTokens / 1_000_000) * PRICING.input + (outputTokens / 1_000_000) * PRICING.output;
+}
+
+async function logEnrichmentGeneration(entityId: number, inputTokens: number, outputTokens: number, generationMs: number) {
+	const cost = estimateCost(inputTokens, outputTokens);
+	stats.totalInputTokens += inputTokens;
+	stats.totalOutputTokens += outputTokens;
+	stats.totalCost += cost;
+	stats.count++;
+
+	try {
+		await sql`
+			INSERT INTO generation_logs (
+				type, persona, category_slug, cache_hit, generation_ms,
+				input_tokens, output_tokens, model, estimated_cost
+			) VALUES (
+				'enrichment', 'n/a', ${String(entityId)},
+				false, ${generationMs},
+				${inputTokens}, ${outputTokens},
+				${ENRICHMENT_MODEL_FULL}, ${cost}
+			)
+		`;
+	} catch {
+		// Non-critical — pipeline continues
+	}
+}
+
 // ─── Schema ────────────────────────────────────────────────────────
 
 const EnrichmentSchema = z.object({
@@ -127,13 +169,25 @@ Score persona-fit based on:
 
 Generate semantic tags that capture how someone might search for this product by intent rather than keyword.`;
 
-	const { output } = await generateText({
+	const start = Date.now();
+	const { output, usage } = await generateText({
 		model: anthropic('claude-sonnet-4-20250514'),
 		output: Output.object({ schema: EnrichmentSchema }),
 		prompt,
 	});
 
 	if (!output) throw new Error('No enrichment output generated');
+
+	const elapsed = Date.now() - start;
+	if (usage) {
+		await logEnrichmentGeneration(
+			product.entityId,
+			usage.inputTokens ?? 0,
+			usage.outputTokens ?? 0,
+			elapsed,
+		);
+	}
+
 	return output;
 }
 
@@ -222,6 +276,7 @@ async function main() {
 	}
 
 	console.log(`\nEnrichment: ${enriched} enriched, ${failed} failed out of ${products.length} total`);
+	console.log(`Cost: $${stats.totalCost.toFixed(4)} (${stats.totalInputTokens.toLocaleString()} in / ${stats.totalOutputTokens.toLocaleString()} out tokens across ${stats.count} calls)`);
 
 	// ─── Generate embeddings ───────────────────────────────────────
 	console.log('\nGenerating embeddings...');

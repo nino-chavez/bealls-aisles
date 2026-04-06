@@ -53,13 +53,12 @@
 	async function fetchLayout(persona: string) {
 		isUpgrading = true;
 		aiError = null;
-		// Don't null out aiLayout — keep showing previous layout or static fallback
 
 		try {
 			const controller = new AbortController();
 			const timeout = setTimeout(() => controller.abort(), 30000);
 
-			const res = await fetch('/api/layout', {
+			const res = await fetch('/api/layout/stream', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
@@ -76,9 +75,50 @@
 				throw new Error(err.message || 'Layout generation failed');
 			}
 
-			const result = await res.json();
-			aiLayout = result.layout;
-			aiMeta = result.meta;
+			const contentType = res.headers.get('content-type') || '';
+
+			if (contentType.includes('application/json')) {
+				// Cache hit — complete JSON response
+				const result = await res.json();
+				aiLayout = result.layout;
+				aiMeta = result.meta;
+			} else {
+				// Cache miss — SSE stream of partial objects
+				const reader = res.body?.getReader();
+				if (!reader) throw new Error('No response body');
+
+				const decoder = new TextDecoder();
+				let buffer = '';
+
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) break;
+
+					buffer += decoder.decode(value, { stream: true });
+
+					// Parse SSE events from buffer
+					const lines = buffer.split('\n\n');
+					buffer = lines.pop() || ''; // Keep incomplete chunk
+
+					for (const chunk of lines) {
+						const line = chunk.trim();
+						if (!line.startsWith('data: ')) continue;
+
+						const payload = JSON.parse(line.slice(6));
+
+						if (payload.__done) {
+							// Final validated layout
+							aiLayout = payload.layout;
+							aiMeta = payload.meta;
+						} else if (payload.__error) {
+							throw new Error(payload.message);
+						} else if (payload.sections?.length) {
+							// Partial layout — render sections as they arrive
+							aiLayout = payload as Layout;
+						}
+					}
+				}
+			}
 		} catch (err) {
 			aiError = err instanceof Error ? err.message : 'Unknown error';
 			console.error('AI layout generation failed, using static layout:', aiError);
