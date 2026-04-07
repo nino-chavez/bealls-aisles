@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { generateText, Output, gateway } from 'ai';
-import { LayoutSchema } from '$lib/schema/layout';
+import { RefineResponseSchema } from '$lib/schema/refine';
 import { loadCategoryProducts } from '$lib/server/catalog';
 import { logGeneration } from '$lib/server/generation-log';
 import { getBrand } from '$lib/brand/config';
@@ -38,6 +38,8 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		const brand = getBrand();
 		const prompt = `You are a merchandising AI for ${brand.prompt.storeName}, ${brand.prompt.storeDescription}. A shopper is refining their browse experience through conversation.
 
+VOICE: ${brand.prompt.voiceGuidance}
+
 CURRENT PERSONA: ${persona}
 CATEGORY: ${categoryName}
 
@@ -51,29 +53,35 @@ PREVIOUS LAYOUT:
 ${currentLayout ? JSON.stringify(currentLayout.sections.map((s: any) => s.component), null, 2) : 'None'}
 
 INSTRUCTIONS:
-1. Interpret the shopper's message as a constraint on the current view
-2. Filter and reorder products based on ALL accumulated constraints + the new message
-3. Generate a new layout that reflects the refined intent
-4. In the "reasoning" field, explain what changed and why
-5. If the message implies a persona shift (e.g., from browsing to buying), adjust the layout style accordingly
-6. Respect persona-fit scores — high-fit products should remain prominent unless filtered out by constraints
+1. Extract a constraint from the shopper's message (e.g., "under $500", "wireless only", "for camping")
+2. Apply ALL accumulated constraints + the new one to filter and reorder products
+3. Generate a new layout reflecting the refined intent
+
+CONSTRAINT NEGOTIATION:
+- If the new constraint conflicts with existing ones (e.g., "leather" + "under $100" with no matches), set constraintConflict=true
+- When conflicting: relax the LEAST important constraint, explain in chatResponse what you did ("No leather options under $100 — showing faux leather alternatives instead")
+- When no products match at all: suggest removing a constraint or broadening the search
+- Never return an empty layout — always show the closest matches with an explanation
+
+RESPONSE STYLE:
+- chatResponse should be 1-2 sentences, natural, helpful
+- Good: "Narrowed to 4 compact options. The Ranger is the smallest at 15 inches."
+- Good: "No ANC headphones under $50 in this category — showing the closest options starting at $69."
+- Bad: "Done — showing 4 pieces that match." (too robotic)
+- Bad: "I've curated a selection of items matching your criteria." (too formal)
 
 AVAILABLE COMPONENTS: editorial-header, hero-product, product-grid, category-header
-- Use editorial-header for editorial intros
-- Use hero-product to highlight one standout
-- Use product-grid for the main product display (2/3/4 columns, square/landscape images, with/without quickAdd)
-- Use category-header for functional headers with count/sort
 
-Generate a refined layout.`;
+Generate a refined layout with a conversational response.`;
 
 		// Try Haiku first, fall back to Sonnet
-		let layout;
+		let output;
 		let usage;
 		let model = 'anthropic/claude-haiku-4.5';
 		try {
 			const haiku = await generateText({
 				model: gateway('anthropic/claude-haiku-4.5'),
-				output: Output.object({ schema: LayoutSchema }),
+				output: Output.object({ schema: RefineResponseSchema }),
 				prompt,
 				providerOptions: {
 					gateway: {
@@ -81,13 +89,13 @@ Generate a refined layout.`;
 					},
 				},
 			});
-			layout = haiku.output;
+			output = haiku.output;
 			usage = haiku.usage;
 		} catch {
 			model = 'anthropic/claude-sonnet-4.6';
 			const sonnet = await generateText({
 				model: gateway('anthropic/claude-sonnet-4.6'),
-				output: Output.object({ schema: LayoutSchema }),
+				output: Output.object({ schema: RefineResponseSchema }),
 				prompt,
 				providerOptions: {
 					gateway: {
@@ -95,12 +103,11 @@ Generate a refined layout.`;
 					},
 				},
 			});
-			layout = sonnet.output;
+			output = sonnet.output;
 			usage = sonnet.usage;
 		}
 
 		const elapsed = Date.now() - startTime;
-		const newConstraint = message.trim();
 
 		logGeneration({
 			type: 'refine',
@@ -116,8 +123,10 @@ Generate a refined layout.`;
 		}).catch(() => {});
 
 		return json({
-			layout,
-			newConstraint,
+			layout: output?.layout,
+			chatResponse: output?.chatResponse || 'Layout updated.',
+			newConstraint: output?.constraintApplied || message.trim(),
+			constraintConflict: output?.constraintConflict || false,
 			meta: {
 				generationTimeMs: elapsed,
 				persona,

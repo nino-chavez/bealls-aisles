@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Layout } from '$lib/schema/layout';
+	import { getBrand } from '$lib/brand/config';
 
 	let {
 		persona,
@@ -17,15 +18,17 @@
 	let message = $state('');
 	let isLoading = $state(false);
 	let constraints = $state<string[]>([]);
-	let chatHistory = $state<Array<{ role: 'user' | 'assistant'; text: string }>>([]);
+	let chatHistory = $state<Array<{ role: 'user' | 'assistant'; text: string; conflict?: boolean }>>([]);
 
-	const quickActions = [
-		'Under $500',
-		'Something in leather',
-		'More compact options',
-		'Show me everything on sale',
-		'Best for small spaces',
-	];
+	const brand = getBrand();
+
+	// Brand-aware quick actions
+	const quickActionsByDomain: Record<string, string[]> = {
+		'DTC home furniture': ['Under $500', 'Something in leather', 'More compact options', 'Show me everything on sale', 'Best for small spaces'],
+		'consumer audio & electronics': ['Under $100', 'Best battery life', 'With ANC', 'Wireless only', 'Good for gaming'],
+		'outdoor lifestyle & fire': ['Under $200', 'Portable options', 'Best for camping', 'Smokeless only', 'Good for gifting'],
+	};
+	const quickActions = quickActionsByDomain[brand.domain] || quickActionsByDomain['DTC home furniture'];
 
 	async function sendMessage(text: string) {
 		if (!text.trim() || isLoading) return;
@@ -56,15 +59,13 @@
 				constraints = [...constraints, data.newConstraint];
 				onLayoutUpdate(data.layout);
 
-				const productsInLayout = data.layout.productOrder?.length || '?';
 				chatHistory = [...chatHistory, {
 					role: 'assistant',
-					text: productsInLayout === 0
-						? `I couldn't find products matching that. Try a different filter.`
-						: `Done — showing ${productsInLayout} ${productsInLayout === 1 ? 'piece' : 'pieces'} that match.`,
+					text: data.chatResponse || `Updated — showing ${data.layout.productOrder?.length || '?'} products.`,
+					conflict: data.constraintConflict || false,
 				}];
 			}
-		} catch (err) {
+		} catch {
 			chatHistory = [...chatHistory, {
 				role: 'assistant',
 				text: 'Sorry, I couldn\'t process that. Try a different refinement.',
@@ -72,6 +73,12 @@
 		} finally {
 			isLoading = false;
 		}
+	}
+
+	function removeConstraint(index: number) {
+		constraints = constraints.filter((_, i) => i !== index);
+		// Re-send with remaining constraints to regenerate layout
+		sendMessage(`Remove the "${constraints[index]}" filter and show me the updated results`);
 	}
 
 	function handleSubmit(e: Event) {
@@ -111,11 +118,18 @@
 			</button>
 		</div>
 
-		<!-- Active constraints -->
+		<!-- Active constraints (clickable to remove) -->
 		{#if constraints.length > 0}
 			<div class="flex flex-wrap gap-1.5 border-b border-surface-border px-4 py-2">
-				{#each constraints as constraint}
-					<span class="rounded-sm bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{constraint}</span>
+				{#each constraints as constraint, i}
+					<button
+						onclick={() => removeConstraint(i)}
+						class="group flex items-center gap-1 rounded-sm bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+						title="Click to remove"
+					>
+						{constraint}
+						<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="opacity-0 group-hover:opacity-100 transition-opacity"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+					</button>
 				{/each}
 			</div>
 		{/if}
@@ -131,7 +145,9 @@
 					<div class="inline-block max-w-[85%] rounded-lg px-3 py-2 text-sm
 						{msg.role === 'user'
 							? 'bg-surface-fg text-surface-bg'
-							: 'bg-surface-muted text-surface-muted-fg'}">
+							: msg.conflict
+								? 'bg-warning/10 text-warning border border-warning/20'
+								: 'bg-surface-muted text-surface-muted-fg'}">
 						{msg.text}
 					</div>
 				</div>
@@ -165,7 +181,7 @@
 			<input
 				type="text"
 				bind:value={message}
-				placeholder="Something in leather, under $1,000..."
+				placeholder="Under $200, wireless, best for running..."
 				disabled={isLoading}
 				class="flex-1 bg-transparent text-sm placeholder:text-surface-muted-fg focus:outline-none disabled:opacity-50"
 			/>
