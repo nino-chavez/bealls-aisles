@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Product } from '$lib/types';
+	import { addPick, isPicked, removePick } from '$lib/stores/picks.svelte';
 
 	let {
 		columns = 2,
@@ -35,7 +36,7 @@
 			class="group {isCompact ? 'flex flex-col bg-surface-card' : ''}"
 		>
 			<!-- Image -->
-			<div class="overflow-hidden {isCompact ? '' : 'rounded-sm'} bg-surface-muted {imageRatio === 'square' ? 'aspect-square' : 'aspect-[4/3]'}">
+			<div class="relative overflow-hidden {isCompact ? '' : 'rounded-sm'} bg-surface-muted {imageRatio === 'square' ? 'aspect-square' : 'aspect-[4/3]'}">
 				{#if product.image}
 					<img
 						src={product.image}
@@ -47,6 +48,17 @@
 						loading="lazy"
 					/>
 				{/if}
+				<!-- Pick toggle -->
+				<button
+					onclick={(e) => { e.preventDefault(); e.stopPropagation(); isPicked(product.id) ? removePick(product.id) : addPick(product); }}
+					class="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full transition-all
+						{isPicked(product.id)
+							? 'bg-accent text-white shadow-md'
+							: 'bg-surface-card/80 text-surface-muted-fg opacity-0 group-hover:opacity-100 hover:bg-accent hover:text-white'}"
+					aria-label="{isPicked(product.id) ? 'Remove from' : 'Add to'} picks"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="{isPicked(product.id) ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+				</button>
 			</div>
 
 			<!-- Info -->

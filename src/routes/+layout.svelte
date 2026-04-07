@@ -5,6 +5,8 @@
 	import Nav from '$lib/components/Nav.svelte';
 	import Footer from '$lib/components/Footer.svelte';
 	import CartDrawer from '$lib/components/CartDrawer.svelte';
+	import PicksTray from '$lib/components/PicksTray.svelte';
+	import { pickCount } from '$lib/stores/picks.svelte';
 	import { initEmitter, destroyEmitter, getEmitter } from '$lib/signals/emitter';
 	import type { LayoutData } from './$types';
 
@@ -19,6 +21,18 @@
 	});
 	let cartCount = $state(0);
 	let cartOpen = $state(false);
+	let picksOpen = $state(false);
+	let picksCount = $state(0);
+
+	// Track picks count reactively
+	$effect(() => {
+		picksCount = pickCount();
+		const handlePicksUpdate = (e: Event) => {
+			picksCount = (e as CustomEvent).detail?.count ?? pickCount();
+		};
+		window.addEventListener('picks-updated', handlePicksUpdate);
+		return () => window.removeEventListener('picks-updated', handlePicksUpdate);
+	});
 
 	// Observe dashboard uses its own chrome-less shell
 	let isObserve = $derived($page.url.pathname.startsWith('/observe'));
@@ -87,7 +101,7 @@
 		{@render children()}
 	{:else}
 		<div class="flex min-h-screen flex-col">
-			<Nav {cartCount} onCartClick={openCart} {brandName} />
+			<Nav {cartCount} {picksCount} onCartClick={openCart} onPicksClick={() => picksOpen = true} {brandName} />
 			<main class="flex-1">
 				{@render children()}
 			</main>
@@ -95,5 +109,6 @@
 		</div>
 
 		<CartDrawer open={cartOpen} onclose={closeCart} />
+		<PicksTray open={picksOpen} onclose={() => picksOpen = false} />
 	{/if}
 </div>

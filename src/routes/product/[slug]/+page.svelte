@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { getEmitter } from '$lib/signals/emitter';
+	import { addPick, isPicked, removePick } from '$lib/stores/picks.svelte';
 
 	let { data }: { data: PageData } = $props();
 	let product = $derived(data.product);
@@ -111,19 +112,28 @@
 				</dl>
 			{/if}
 
-			<!-- Add to Cart — primary CTA, always present -->
-			<div class="mt-8">
+			<!-- CTAs -->
+			<div class="mt-8 flex flex-wrap gap-3">
 				<button
 					onclick={addToCart}
 					disabled={isAddingToCart}
-					class="w-full rounded-sm bg-surface-fg py-4 text-sm font-semibold text-surface-bg transition-opacity hover:opacity-85 disabled:opacity-50 sm:w-auto sm:px-12"
+					class="rounded-sm bg-surface-fg py-4 text-sm font-semibold text-surface-bg transition-opacity hover:opacity-85 disabled:opacity-50 px-12"
 				>
 					{isAddingToCart ? 'Adding...' : `Add to Cart — $${(product.salePrice || product.price).toLocaleString()}`}
 				</button>
-				{#if cartMessage}
-					<p class="mt-2 text-sm {cartMessage.includes('Failed') ? 'text-error' : 'text-success'}">{cartMessage}</p>
-				{/if}
+				<button
+					onclick={() => isPicked(product.id) ? removePick(product.id) : addPick(product)}
+					class="rounded-sm border py-4 px-6 text-sm font-medium transition-colors
+						{isPicked(product.id)
+							? 'border-accent bg-accent/10 text-accent'
+							: 'border-surface-border text-surface-muted-fg hover:border-accent hover:text-accent'}"
+				>
+					{isPicked(product.id) ? 'In Your Picks' : 'Add to Picks'}
+				</button>
 			</div>
+			{#if cartMessage}
+				<p class="mt-2 text-sm {cartMessage.includes('Failed') ? 'text-error' : 'text-success'}">{cartMessage}</p>
+			{/if}
 
 			<!-- Persona-conditional extras (30% adaptive zone) -->
 			{#if persona === 'gatherer'}
