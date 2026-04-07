@@ -5,6 +5,7 @@ import { RefineResponseSchema } from '$lib/schema/refine';
 import { loadCategoryProducts, CATEGORY_MAP } from '$lib/server/catalog';
 import { logGeneration } from '$lib/server/generation-log';
 import { getBrand } from '$lib/brand/config';
+import { getActiveRules, rulesToPromptContext } from '$lib/server/rules';
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	const startTime = Date.now();
@@ -53,8 +54,11 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		}).join('\n');
 
 		const brand = getBrand();
+		const rules = await getActiveRules(persona, categorySlug);
+		const rulesContext = rulesToPromptContext(rules);
 		const availableCategories = Object.values(brand.categories).map((c) => c.displayName).join(', ');
 		const prompt = `You are a merchandising AI for ${brand.prompt.storeName}, ${brand.prompt.storeDescription}. A shopper is refining their browse experience through conversation.
+${rulesContext}
 
 VOICE: ${brand.prompt.voiceGuidance}
 

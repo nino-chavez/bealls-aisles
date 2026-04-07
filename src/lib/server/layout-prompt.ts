@@ -105,6 +105,7 @@ export function buildLayoutPrompt(
 	categoryName: string,
 	products: PromptProduct[],
 	picksContext?: string,
+	rulesContext?: string,
 ): string {
 	const brand = getBrand();
 	const personaDef = PERSONA_DEFINITIONS[persona] || PERSONA_DEFINITIONS.gatherer;
@@ -147,7 +148,7 @@ CATEGORY: ${categoryName}
 
 AVAILABLE PRODUCTS (${filtered.length} items, top by ${persona} fit):
 ${productSummaries}
-${picksContext || ''}
+${picksContext || ''}${rulesContext || ''}
 ${COMPONENT_GUIDE}
 
 Generate a layout for this ${persona} shopper browsing the ${categoryName} category.`;

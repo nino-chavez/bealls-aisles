@@ -6,6 +6,7 @@ import { buildLayoutPrompt } from '$lib/server/layout-prompt';
 import { loadCategoryProducts } from '$lib/server/catalog';
 import { getCachedLayout, cacheLayout, hashPicks } from '$lib/server/cache';
 import { logGeneration } from '$lib/server/generation-log';
+import { getActiveRules, rulesToPromptContext } from '$lib/server/rules';
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	const startTime = Date.now();
@@ -53,7 +54,11 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		}
 
 		const { products, categoryName } = result;
-		const prompt = buildLayoutPrompt(persona, categoryName, products, picksContext);
+		// Fetch merchandising rules from the admin app's shared DB
+		const rules = await getActiveRules(persona, categorySlug);
+		const rulesContext = rulesToPromptContext(rules);
+
+		const prompt = buildLayoutPrompt(persona, categoryName, products, picksContext, rulesContext);
 
 		// Haiku primary, Sonnet fallback — handled by AI Gateway
 		const aiResult = await generateText({
