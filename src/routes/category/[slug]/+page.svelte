@@ -135,6 +135,7 @@
 
 <svelte:head>
 	<title>{data.category.name} — {data.persona} view</title>
+	<meta name="description" content="Browse {data.category.name} — personalized for {data.persona} shoppers. {data.products.length} products available." />
 </svelte:head>
 
 <div class="mx-auto max-w-7xl px-6 py-8">

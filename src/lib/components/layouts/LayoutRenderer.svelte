@@ -22,18 +22,18 @@
 </script>
 
 {#each layout.sections as section}
-	{#if section.component === 'editorial-header'}
+	{#if section.component === 'editorial-header' && section.props?.eyebrow}
 		<EditorialHeader
 			eyebrow={section.props.eyebrow}
 			headline={section.props.headline}
 			body={section.props.body}
 		/>
-	{:else if section.component === 'hero-product'}
+	{:else if section.component === 'hero-product' && section.props?.product?.productId}
 		{@const product = resolveProduct(section.props.product.productId)}
 		{#if product}
 			<HeroProduct {product} showSpecs={section.props.showSpecs} />
 		{/if}
-	{:else if section.component === 'product-grid'}
+	{:else if section.component === 'product-grid' && section.props?.products?.length}
 		{@const gridProducts = resolveProducts(section.props.products)}
 		<ProductGrid
 			columns={section.props.columns}
@@ -43,7 +43,7 @@
 			showSpecs={section.props.showSpecs}
 			showQuickAdd={section.props.showQuickAdd}
 		/>
-	{:else if section.component === 'category-header'}
+	{:else if section.component === 'category-header' && section.props?.title}
 		<CategoryHeader
 			title={section.props.title}
 			subtitle={section.props.subtitle}
