@@ -222,6 +222,8 @@ async function createTable() {
 			updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 		)
 	`;
+	// Idempotent migration for existing tables
+	await sql`ALTER TABLE enriched_products ADD COLUMN IF NOT EXISTS compatible_with TEXT[] DEFAULT '{}'`.catch(() => {});
 }
 
 async function upsertEnrichment(product: BCProductNode, enrichment: z.infer<typeof EnrichmentSchema>) {

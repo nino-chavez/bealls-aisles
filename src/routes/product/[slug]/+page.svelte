@@ -10,6 +10,26 @@
 
 	let isAddingToCart = $state(false);
 	let cartMessage = $state('');
+	let pairings = $state<Array<{ id: string; name: string; price: number; reason: string }>>([]);
+	let pairingsLoading = $state(false);
+
+	// Fetch AI-powered pairings on mount
+	$effect(() => {
+		const p = product;
+		if (!p) return;
+		pairingsLoading = true;
+		fetch('/api/suggest', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				picks: [{ id: p.id, name: p.name, price: p.price, category: p.category, specs: p.specs }],
+			}),
+		})
+			.then((r) => r.json())
+			.then((data) => { pairings = data.suggestions || []; })
+			.catch(() => {})
+			.finally(() => { pairingsLoading = false; });
+	});
 
 	async function addToCart() {
 		isAddingToCart = true;
@@ -135,21 +155,33 @@
 				<p class="mt-2 text-sm {cartMessage.includes('Failed') ? 'text-error' : 'text-success'}">{cartMessage}</p>
 			{/if}
 
-			<!-- Persona-conditional extras (30% adaptive zone) -->
-			{#if persona === 'gatherer'}
-				<!-- Gatherer: editorial cross-sell -->
+			<!-- AI-powered pairings -->
+			{#if pairingsLoading}
 				<div class="mt-8 border-t border-surface-border pt-8">
 					<h3 class="font-display text-lg">Pairs well with</h3>
-					<p class="mt-1 text-sm text-surface-muted-fg">Pieces that complement this one.</p>
+					<div class="mt-3 animate-pulse space-y-2">
+						<div class="h-10 rounded bg-surface-muted"></div>
+						<div class="h-10 rounded bg-surface-muted"></div>
+					</div>
 				</div>
-			{:else if persona === 'hunter'}
-				<!-- Hunter: practical info -->
+			{:else if pairings.length > 0}
 				<div class="mt-8 border-t border-surface-border pt-8">
-					<h4 class="text-sm font-semibold">Quick facts</h4>
-					<ul class="mt-2 space-y-1 text-sm text-surface-muted-fg">
-						<li>Free shipping on orders over $500</li>
-						<li>30-day returns — we arrange pickup</li>
-						<li>5-year warranty on materials and workmanship</li>
+					<h3 class="font-display text-lg">Pairs well with</h3>
+					<ul class="mt-3 space-y-2">
+						{#each pairings as pairing}
+							<li>
+								<a
+									href="/product/{pairing.id}"
+									class="flex items-center justify-between rounded-sm border border-surface-border px-4 py-3 transition-colors hover:bg-surface-muted"
+								>
+									<div>
+										<span class="text-sm font-medium">{pairing.name}</span>
+										<span class="ml-2 text-xs text-surface-muted-fg">{pairing.reason}</span>
+									</div>
+									<span class="text-sm font-medium">${pairing.price.toLocaleString()}</span>
+								</a>
+							</li>
+						{/each}
 					</ul>
 				</div>
 			{/if}
