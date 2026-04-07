@@ -18,6 +18,7 @@
 	let aiError = $state<string | null>(null);
 	let isUpgrading = $state(true);
 	let overridePersona = $state<string | null>(null);
+	let sessionCost = $state<{ totalCost: number; generations: number; tokens: number; cacheHitRate: number } | null>(null);
 	let currentPersona = $derived(overridePersona ?? data.persona);
 
 	// Fetch AI-generated layout on mount / persona change
@@ -129,6 +130,32 @@
 		}
 	}
 
+	// Fetch session cost data in dev mode
+	$effect(() => {
+		if (!data.devMode) return;
+
+		async function fetchCost() {
+			try {
+				const sessionId = document.cookie.match(/aisles_session=([^;]+)/)?.[1];
+				if (!sessionId) return;
+				const res = await fetch(`/api/observe/logs?session=${sessionId}&limit=50&key=aisles-observe`);
+				const { logs } = await res.json();
+				if (!logs?.length) return;
+				const totalCost = logs.reduce((s: number, l: any) => s + (l.estimatedCost ?? 0), 0);
+				const tokens = logs.reduce((s: number, l: any) => s + (l.inputTokens ?? 0) + (l.outputTokens ?? 0), 0);
+				const cacheHits = logs.filter((l: any) => l.cacheHit).length;
+				sessionCost = {
+					totalCost,
+					generations: logs.length,
+					tokens,
+					cacheHitRate: Math.round((cacheHits / logs.length) * 100),
+				};
+			} catch { /* non-critical */ }
+		}
+
+		fetchCost();
+	});
+
 	/** Format a probability as a percentage string */
 	function pct(n: number): string {
 		return `${Math.round(n * 100)}%`;
@@ -189,6 +216,16 @@
 						<span>urgency: {pct(inf.modifiers.urgency)}</span>
 						<span>familiarity: {pct(inf.modifiers.familiarityWithStore)}</span>
 					</div>
+
+					<!-- Session API Cost -->
+					{#if sessionCost}
+						<div class="mt-1.5 flex gap-3 text-xs">
+							<span class="text-surface-muted-fg">Session cost: <span class="font-mono font-medium text-surface-fg">${sessionCost.totalCost.toFixed(4)}</span></span>
+							<span class="text-surface-muted-fg">{sessionCost.generations} generations</span>
+							<span class="text-surface-muted-fg">{sessionCost.tokens.toLocaleString()} tokens</span>
+							<span class="text-surface-muted-fg">cache: {sessionCost.cacheHitRate}%</span>
+						</div>
+					{/if}
 
 					{#if data.sessionContext}
 						<p class="mt-1.5 text-xs text-surface-muted-fg">
