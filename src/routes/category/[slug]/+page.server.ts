@@ -4,9 +4,9 @@ import { infer } from '$lib/signals/inference';
 import { createStoreFromRequest } from '$lib/signals/request';
 import { loadCategoryProducts, CATEGORY_MAP } from '$lib/server/catalog';
 
-export const load: PageServerLoad = async ({ params, url, cookies, request }) => {
+export const load: PageServerLoad = async ({ params, url, cookies, request, parent }) => {
 	const slug = params.slug;
-	const devMode = url.searchParams.get('dev') === 'true';
+	const { devMode } = await parent();
 
 	if (!CATEGORY_MAP[slug]) {
 		throw error(404, `Category "${slug}" not found`);

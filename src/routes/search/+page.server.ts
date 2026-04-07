@@ -5,9 +5,9 @@ import { infer } from '$lib/signals/inference';
 import { createStoreFromRequest } from '$lib/signals/request';
 import { searchProducts } from '$lib/server/search';
 
-export const load: PageServerLoad = async ({ url, cookies, request }) => {
+export const load: PageServerLoad = async ({ url, cookies, request, parent }) => {
 	const query = url.searchParams.get('q') || '';
-	const devMode = url.searchParams.get('dev') === 'true';
+	const { devMode } = await parent();
 
 	if (!query.trim()) {
 		throw redirect(302, '/');

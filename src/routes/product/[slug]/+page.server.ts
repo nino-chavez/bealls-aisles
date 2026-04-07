@@ -2,9 +2,9 @@ import type { PageServerLoad } from './$types';
 import { getProductByPath, getProductsByCategory, customFieldsToRecord, type BCProduct } from '$lib/server/bigcommerce';
 import { error } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ params, url }) => {
+export const load: PageServerLoad = async ({ params, url, parent }) => {
 	const slug = params.slug;
-	const devMode = url.searchParams.get('dev') === 'true';
+	const { devMode } = await parent();
 	const persona = url.searchParams.get('intent') || 'gatherer';
 
 	// Fetch the product by its URL path
