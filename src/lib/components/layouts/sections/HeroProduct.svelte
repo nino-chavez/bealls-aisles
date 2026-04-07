@@ -11,8 +11,11 @@
 				<img
 					src={product.image}
 					alt={product.imageAlt}
+					width={800}
+					height={600}
+					decoding="async"
+					fetchpriority="high"
 					class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-					loading="eager"
 				/>
 			{/if}
 		</div>

@@ -40,6 +40,9 @@
 					<img
 						src={product.image}
 						alt={product.imageAlt}
+						width={columns >= 3 ? 400 : 600}
+						height={imageRatio === 'square' ? (columns >= 3 ? 400 : 600) : (columns >= 3 ? 300 : 450)}
+						decoding="async"
 						class="h-full w-full object-cover {isCompact ? 'transition-opacity group-hover:opacity-90' : 'transition-transform duration-500 group-hover:scale-[1.02]'}"
 						loading="lazy"
 					/>

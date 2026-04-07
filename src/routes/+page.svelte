@@ -57,6 +57,9 @@
 							<img
 								src={product.image}
 								alt={product.imageAlt}
+								width={400}
+								height={300}
+								decoding="async"
 								class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
 								loading="lazy"
 							/>

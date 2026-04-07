@@ -49,11 +49,10 @@ async function warmBrand(brandId: string) {
 		return;
 	}
 
-	// Warm gatherer + hunter for each category (most common first-visit combos)
-	const combos = [
-		...brand.categories.map((c) => ({ persona: 'gatherer', categorySlug: c })),
-		...brand.categories.map((c) => ({ persona: 'hunter', categorySlug: c })),
-	];
+	// Warm all 4 personas for each category
+	const combos = PERSONAS.flatMap((persona) =>
+		brand.categories.map((c) => ({ persona, categorySlug: c }))
+	);
 
 	console.log(`\n=== ${brandId.toUpperCase()} (${brand.url}) ===`);
 	console.log(`${combos.length} combinations\n`);
