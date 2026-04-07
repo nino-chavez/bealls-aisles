@@ -29,13 +29,12 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		const brand = getBrand();
 
-		// Load products from all categories to have a full catalog for suggestions
-		const allProducts: Array<{ id: string; name: string; price: number; category: string; specs: Record<string, string>; salePrice?: number }> = [];
+		// Load products from all categories
+		const allProducts: Array<{ id: string; name: string; price: number; category: string; specs: Record<string, string>; salePrice?: number; compatibleWith: string[] }> = [];
 		for (const [slug] of Object.entries(CATEGORY_MAP)) {
 			const result = await loadCategoryProducts(slug);
 			if (result) {
 				for (const p of result.products) {
-					// Don't suggest products already in picks
 					if (picks.some((pick: any) => pick.id === p.id)) continue;
 					allProducts.push({
 						id: p.id,
@@ -44,19 +43,39 @@ export const POST: RequestHandler = async ({ request }) => {
 						salePrice: p.salePrice,
 						category: result.categoryName,
 						specs: p.specs,
+						compatibleWith: (p as any).compatibleWith || [],
 					});
 				}
 			}
 		}
+
+		// Pre-filter: boost products with compatible_with matches against picks
+		const picksKeywords = picks.flatMap((p: any) => [
+			p.name?.toLowerCase(),
+			p.category?.toLowerCase(),
+			...Object.values(p.specs || {}).map((v: any) => String(v).toLowerCase()),
+		].filter(Boolean));
+
+		const scored = allProducts.map((p) => {
+			const compatMatches = p.compatibleWith.filter((kw) =>
+				picksKeywords.some((pk: string) => pk.includes(kw.toLowerCase()) || kw.toLowerCase().includes(pk))
+			).length;
+			return { ...p, compatScore: compatMatches };
+		});
+
+		// Sort by compatibility score, then take top 25 for the AI
+		scored.sort((a, b) => b.compatScore - a.compatScore);
+		const candidates = scored.slice(0, 25);
 
 		const picksSummary = picks.map((p: any) => {
 			const topSpecs = Object.entries(p.specs || {}).slice(0, 3).map(([k, v]) => `${k}: ${v}`).join(', ');
 			return `- ${p.name} | $${p.price} | ${p.category} | ${topSpecs}`;
 		}).join('\n');
 
-		const catalogSummary = allProducts.slice(0, 40).map((p) => {
+		const catalogSummary = candidates.map((p) => {
 			const topSpecs = Object.entries(p.specs).slice(0, 2).map(([k, v]) => `${k}: ${v}`).join(', ');
-			return `- ID:"${p.id}" | ${p.name} | $${p.salePrice || p.price} | ${p.category} | ${topSpecs}`;
+			const compat = p.compatScore > 0 ? ` | COMPATIBLE (${p.compatScore} matches)` : '';
+			return `- ID:"${p.id}" | ${p.name} | $${p.salePrice || p.price} | ${p.category} | ${topSpecs}${compat}`;
 		}).join('\n');
 
 		const prompt = `You are a merchandising AI for ${brand.prompt.storeName}, ${brand.prompt.storeDescription}.
@@ -93,7 +112,7 @@ IMPORTANT:
 
 		// Resolve suggestions to include name/price for the UI
 		const suggestions = (result.output?.suggestions || []).map((s) => {
-			const product = allProducts.find((p) => p.id === s.productId);
+			const product = candidates.find((p) => p.id === s.productId) || allProducts.find((p) => p.id === s.productId);
 			return {
 				id: s.productId,
 				name: product?.name || s.productId,

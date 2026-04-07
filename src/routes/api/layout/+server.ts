@@ -4,7 +4,7 @@ import { generateText, Output, gateway } from 'ai';
 import { LayoutSchema } from '$lib/schema/layout';
 import { buildLayoutPrompt } from '$lib/server/layout-prompt';
 import { loadCategoryProducts } from '$lib/server/catalog';
-import { getCachedLayout, cacheLayout } from '$lib/server/cache';
+import { getCachedLayout, cacheLayout, hashPicks } from '$lib/server/cache';
 import { logGeneration } from '$lib/server/generation-log';
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
@@ -20,7 +20,8 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		}
 
 		// ─── Cache check ───────────────────────────────────────────
-		const cached = await getCachedLayout(persona, categorySlug);
+		const ph = hashPicks(picksContext);
+		const cached = await getCachedLayout(persona, categorySlug, ph);
 		if (cached) {
 			const elapsed = Date.now() - startTime;
 
@@ -54,43 +55,24 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		const { products, categoryName } = result;
 		const prompt = buildLayoutPrompt(persona, categoryName, products, picksContext);
 
-		// Try Haiku first (2-4s), fall back to Sonnet (8-15s) on validation failure
-		let layout;
-		let usage;
-		let model = 'anthropic/claude-haiku-4.5';
-
-		try {
-			const haiku = await generateText({
-				model: gateway('anthropic/claude-haiku-4.5'),
-				output: Output.object({ schema: LayoutSchema }),
-				prompt,
-				providerOptions: {
-					gateway: {
-						tags: ['feature:layout', `persona:${persona}`, `category:${categorySlug}`, 'model:haiku'],
-					},
+		// Haiku primary, Sonnet fallback — handled by AI Gateway
+		const aiResult = await generateText({
+			model: gateway('anthropic/claude-haiku-4.5'),
+			output: Output.object({ schema: LayoutSchema }),
+			prompt,
+			providerOptions: {
+				gateway: {
+					models: ['anthropic/claude-sonnet-4.6'],
+					tags: ['feature:layout', `persona:${persona}`, `category:${categorySlug}`],
 				},
-			});
-			layout = haiku.output;
-			usage = haiku.usage;
-		} catch {
-			// Haiku failed (validation error, etc.) — fall back to Sonnet
-			model = 'anthropic/claude-sonnet-4.6';
-			const sonnet = await generateText({
-				model: gateway('anthropic/claude-sonnet-4.6'),
-				output: Output.object({ schema: LayoutSchema }),
-				prompt,
-				providerOptions: {
-					gateway: {
-						tags: ['feature:layout', `persona:${persona}`, `category:${categorySlug}`, 'model:sonnet-fallback'],
-					},
-				},
-			});
-			layout = sonnet.output;
-			usage = sonnet.usage;
-		}
+			},
+		});
+		const layout = aiResult.output;
+		const usage = aiResult.usage;
+		const model = 'anthropic/claude-haiku-4.5';
 
 		if (layout) {
-			cacheLayout(persona, categorySlug, layout).catch(() => {});
+			cacheLayout(persona, categorySlug, layout, ph).catch(() => {});
 		}
 
 		const elapsed = Date.now() - startTime;

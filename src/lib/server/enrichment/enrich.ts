@@ -91,6 +91,7 @@ const EnrichmentSchema = z.object({
 		gifter: z.number().min(0).max(1).describe('How well this appeals to someone shopping for others (universal appeal, giftable price point, presentation value)'),
 	}),
 	semanticTags: z.array(z.string()).describe('5-10 semantic tags for intent-based discovery (e.g., "compact", "dorm-friendly", "statement piece", "easy-care")'),
+	compatibleWith: z.array(z.string()).describe('3-8 keywords describing what this product pairs with physically or stylistically. For accessories: the product type/size it fits (e.g., "19-inch fire pit", "USB-C devices"). For furniture: matching materials/styles (e.g., "walnut furniture", "mid-century pieces"). For audio: compatible devices/use cases (e.g., "iPhone", "PS5", "running").'),
 });
 
 // ─── BigCommerce GraphQL ───────────────────────────────────────────
@@ -214,6 +215,7 @@ async function createTable() {
 			fit_researcher  REAL NOT NULL DEFAULT 0.5,
 			fit_gifter      REAL NOT NULL DEFAULT 0.5,
 			semantic_tags   TEXT[] DEFAULT '{}',
+			compatible_with TEXT[] DEFAULT '{}',
 			enriched_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 			enrichment_model TEXT NOT NULL,
 			created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -229,12 +231,12 @@ async function upsertEnrichment(product: BCProductNode, enrichment: z.infer<type
 			bc_entity_id, bc_product_path,
 			material, style, use_case, dimensions, price_tier,
 			fit_gatherer, fit_hunter, fit_researcher, fit_gifter,
-			semantic_tags, enriched_at, enrichment_model, updated_at
+			semantic_tags, compatible_with, enriched_at, enrichment_model, updated_at
 		) VALUES (
 			${product.entityId}, ${product.path},
 			${e.material}, ${e.style}, ${e.useCase}, ${e.dimensions}, ${e.priceTier},
 			${e.personaFit.gatherer}, ${e.personaFit.hunter}, ${e.personaFit.researcher}, ${e.personaFit.gifter},
-			${e.semanticTags}, NOW(), ${'claude-sonnet-4-20250514'}, NOW()
+			${e.semanticTags}, ${e.compatibleWith}, NOW(), ${'claude-sonnet-4-20250514'}, NOW()
 		)
 		ON CONFLICT (bc_entity_id) DO UPDATE SET
 			bc_product_path = EXCLUDED.bc_product_path,
@@ -248,6 +250,7 @@ async function upsertEnrichment(product: BCProductNode, enrichment: z.infer<type
 			fit_researcher = EXCLUDED.fit_researcher,
 			fit_gifter = EXCLUDED.fit_gifter,
 			semantic_tags = EXCLUDED.semantic_tags,
+			compatible_with = EXCLUDED.compatible_with,
 			enriched_at = NOW(),
 			enrichment_model = EXCLUDED.enrichment_model,
 			updated_at = NOW()

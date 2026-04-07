@@ -4,7 +4,7 @@ import { streamText, Output, gateway } from 'ai';
 import { LayoutSchema, type Layout } from '$lib/schema/layout';
 import { buildLayoutPrompt } from '$lib/server/layout-prompt';
 import { loadCategoryProducts } from '$lib/server/catalog';
-import { getCachedLayout, cacheLayout } from '$lib/server/cache';
+import { getCachedLayout, cacheLayout, hashPicks } from '$lib/server/cache';
 import { logGeneration } from '$lib/server/generation-log';
 
 /**
@@ -26,7 +26,8 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		}
 
 		// ─── Cache check — return instantly ────────────────────────
-		const cached = await getCachedLayout(persona, categorySlug);
+		const ph = hashPicks(picksContext);
+		const cached = await getCachedLayout(persona, categorySlug, ph);
 		if (cached) {
 			const elapsed = Date.now() - startTime;
 
@@ -54,24 +55,20 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		const { products, categoryName } = result;
 		const prompt = buildLayoutPrompt(persona, categoryName, products, picksContext);
 
-		let model = 'anthropic/claude-haiku-4.5';
+		const model = 'anthropic/claude-haiku-4.5';
 
-		const makeStream = (modelId: string, tags: string[]) =>
-			streamText({
-				model: gateway(modelId),
-				output: Output.object({ schema: LayoutSchema }),
-				prompt,
-				providerOptions: { gateway: { tags } },
-			});
-
-		let stream: ReturnType<typeof makeStream>;
-
-		try {
-			stream = makeStream(model, ['feature:layout', `persona:${persona}`, `category:${categorySlug}`, 'model:haiku']);
-		} catch {
-			model = 'anthropic/claude-sonnet-4.6';
-			stream = makeStream(model, ['feature:layout', `persona:${persona}`, `category:${categorySlug}`, 'model:sonnet-fallback']);
-		}
+		// Haiku primary, Sonnet fallback — handled by AI Gateway
+		const stream = streamText({
+			model: gateway('anthropic/claude-haiku-4.5'),
+			output: Output.object({ schema: LayoutSchema }),
+			prompt,
+			providerOptions: {
+				gateway: {
+					models: ['anthropic/claude-sonnet-4.6'],
+					tags: ['feature:layout', `persona:${persona}`, `category:${categorySlug}`],
+				},
+			},
+		});
 
 		const encoder = new TextEncoder();
 
@@ -90,7 +87,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 					const elapsed = Date.now() - startTime;
 
 					if (layout) {
-						cacheLayout(persona, categorySlug, layout).catch(() => {});
+						cacheLayout(persona, categorySlug, layout, ph).catch(() => {});
 					}
 
 					logGeneration({

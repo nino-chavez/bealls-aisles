@@ -32,20 +32,35 @@ async function getRedis(): Promise<import('@upstash/redis').Redis | null> {
 	}
 }
 
-function layoutKey(persona: string, categorySlug: string): string {
-	return `aisles:layout:${persona}:${categorySlug}`;
+function layoutKey(persona: string, categorySlug: string, picksHash?: string): string {
+	const base = `aisles:layout:${persona}:${categorySlug}`;
+	return picksHash ? `${base}:picks:${picksHash}` : base;
 }
 
 /**
- * Get a cached layout for a persona + category combination.
+ * Simple hash of picks IDs for cache key differentiation.
+ * Empty/undefined picks returns undefined (use standard cache).
+ */
+export function hashPicks(picksContext?: string): string | undefined {
+	if (!picksContext) return undefined;
+	// Simple hash: sum of char codes mod a large prime
+	let hash = 0;
+	for (let i = 0; i < picksContext.length; i++) {
+		hash = ((hash << 5) - hash + picksContext.charCodeAt(i)) | 0;
+	}
+	return Math.abs(hash).toString(36);
+}
+
+/**
+ * Get a cached layout for a persona + category + picks combination.
  * Returns null on cache miss or any error.
  */
-export async function getCachedLayout(persona: string, categorySlug: string): Promise<Layout | null> {
+export async function getCachedLayout(persona: string, categorySlug: string, picksHash?: string): Promise<Layout | null> {
 	const r = await getRedis();
 	if (!r) return null;
 
 	try {
-		return await r.get<Layout>(layoutKey(persona, categorySlug));
+		return await r.get<Layout>(layoutKey(persona, categorySlug, picksHash));
 	} catch {
 		return null;
 	}
@@ -54,12 +69,14 @@ export async function getCachedLayout(persona: string, categorySlug: string): Pr
 /**
  * Store a generated layout in the cache.
  */
-export async function cacheLayout(persona: string, categorySlug: string, layout: Layout): Promise<void> {
+export async function cacheLayout(persona: string, categorySlug: string, layout: Layout, picksHash?: string): Promise<void> {
 	const r = await getRedis();
 	if (!r) return;
 
 	try {
-		await r.set(layoutKey(persona, categorySlug), layout, { ex: LAYOUT_TTL_S });
+		// Picks-specific layouts get shorter TTL (picks change more often)
+		const ttl = picksHash ? Math.floor(LAYOUT_TTL_S / 4) : LAYOUT_TTL_S;
+		await r.set(layoutKey(persona, categorySlug, picksHash), layout, { ex: ttl });
 	} catch {
 		// Cache write failure is non-fatal
 	}

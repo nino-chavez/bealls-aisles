@@ -10,6 +10,7 @@ export interface ProductEnrichment {
 	bcEntityId: number;
 	personaFit: PersonaFitScores;
 	semanticTags: string[];
+	compatibleWith: string[];
 	priceTier: string | null;
 	style: string | null;
 	material: string | null;
@@ -28,7 +29,7 @@ export async function getEnrichmentByEntityIds(entityIds: number[]): Promise<Map
 			SELECT
 				bc_entity_id,
 				fit_gatherer, fit_hunter, fit_researcher, fit_gifter,
-				semantic_tags, price_tier, style, material
+				semantic_tags, compatible_with, price_tier, style, material
 			FROM enriched_products
 			WHERE bc_entity_id = ANY(${entityIds})
 		`;
@@ -44,6 +45,7 @@ export async function getEnrichmentByEntityIds(entityIds: number[]): Promise<Map
 					gifter: row.fit_gifter as number,
 				},
 				semanticTags: (row.semantic_tags as string[]) || [],
+				compatibleWith: (row.compatible_with as string[]) || [],
 				priceTier: row.price_tier as string | null,
 				style: row.style as string | null,
 				material: row.material as string | null,

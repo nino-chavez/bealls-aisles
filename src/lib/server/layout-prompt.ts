@@ -109,7 +109,20 @@ export function buildLayoutPrompt(
 	const brand = getBrand();
 	const personaDef = PERSONA_DEFINITIONS[persona] || PERSONA_DEFINITIONS.gatherer;
 
-	const productSummaries = products.map((p) => {
+	// Pre-filter to top 15 by persona-fit for layout efficiency.
+	// The AI only selects 4-8 products; sending 50 wastes tokens.
+	const MAX_LAYOUT_PRODUCTS = 15;
+	const filtered = products.length > MAX_LAYOUT_PRODUCTS
+		? [...products]
+			.sort((a, b) => {
+				const fitA = a.personaFit?.[persona as keyof NonNullable<typeof a.personaFit>] ?? 0.5;
+				const fitB = b.personaFit?.[persona as keyof NonNullable<typeof b.personaFit>] ?? 0.5;
+				return fitB - fitA;
+			})
+			.slice(0, MAX_LAYOUT_PRODUCTS)
+		: products;
+
+	const productSummaries = filtered.map((p) => {
 		const specs = Object.entries(p.specs)
 			.slice(0, 3)
 			.map(([k, v]) => `${k}: ${v}`)
@@ -132,7 +145,7 @@ ${personaDef}
 
 CATEGORY: ${categoryName}
 
-AVAILABLE PRODUCTS (${products.length} items):
+AVAILABLE PRODUCTS (${filtered.length} items, top by ${persona} fit):
 ${productSummaries}
 ${picksContext || ''}
 ${COMPONENT_GUIDE}

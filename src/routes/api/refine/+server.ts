@@ -94,38 +94,21 @@ AVAILABLE COMPONENTS: editorial-header, hero-product, product-grid, category-hea
 
 Generate a refined layout with a conversational response.`;
 
-		// Try Haiku first, fall back to Sonnet
-		let output;
-		let usage;
-		let model = 'anthropic/claude-haiku-4.5';
-		try {
-			const haiku = await generateText({
-				model: gateway('anthropic/claude-haiku-4.5'),
-				output: Output.object({ schema: RefineResponseSchema }),
-				prompt,
-				providerOptions: {
-					gateway: {
-						tags: ['feature:refine', `persona:${persona}`, `category:${categorySlug}`, 'model:haiku'],
-					},
+		// Haiku primary, Sonnet fallback — handled by AI Gateway
+		const aiResult = await generateText({
+			model: gateway('anthropic/claude-haiku-4.5'),
+			output: Output.object({ schema: RefineResponseSchema }),
+			prompt,
+			providerOptions: {
+				gateway: {
+					models: ['anthropic/claude-sonnet-4.6'],
+					tags: ['feature:refine', `persona:${persona}`, `category:${categorySlug}`],
 				},
-			});
-			output = haiku.output;
-			usage = haiku.usage;
-		} catch {
-			model = 'anthropic/claude-sonnet-4.6';
-			const sonnet = await generateText({
-				model: gateway('anthropic/claude-sonnet-4.6'),
-				output: Output.object({ schema: RefineResponseSchema }),
-				prompt,
-				providerOptions: {
-					gateway: {
-						tags: ['feature:refine', `persona:${persona}`, `category:${categorySlug}`, 'model:sonnet-fallback'],
-					},
-				},
-			});
-			output = sonnet.output;
-			usage = sonnet.usage;
-		}
+			},
+		});
+		const output = aiResult.output;
+		const usage = aiResult.usage;
+		const model = 'anthropic/claude-haiku-4.5';
 
 		const elapsed = Date.now() - startTime;
 
