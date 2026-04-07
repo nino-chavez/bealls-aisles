@@ -48,5 +48,6 @@ export const load: PageServerLoad = async ({ params, url, cookies, request, pare
 			searchQuery: inferenceContext.searchQuery,
 			signalCount: store.eventCount,
 		},
+		sessionId: cookies.get('aisles_session') || null,
 	};
 };

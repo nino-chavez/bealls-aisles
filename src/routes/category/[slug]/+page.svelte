@@ -136,7 +136,7 @@
 
 		async function fetchCost() {
 			try {
-				const sessionId = document.cookie.match(/aisles_session=([^;]+)/)?.[1];
+				const sessionId = data.sessionId;
 				if (!sessionId) return;
 				const res = await fetch(`/api/observe/logs?session=${sessionId}&limit=50&key=aisles-observe`);
 				const { logs } = await res.json();

@@ -90,8 +90,33 @@
 
 				{#if showQuickAdd}
 					<button
-						onclick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-						class="mt-3 w-full rounded-sm bg-surface-fg py-2 text-xs font-medium text-surface-bg transition-opacity hover:opacity-85"
+						onclick={async (e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							const btn = e.currentTarget;
+							btn.textContent = 'Adding...';
+							btn.disabled = true;
+							try {
+								const res = await fetch('/api/cart', {
+									method: 'POST',
+									headers: { 'Content-Type': 'application/json' },
+									body: JSON.stringify({ productEntityId: product.entityId }),
+								});
+								if (res.ok) {
+									const data = await res.json();
+									btn.textContent = 'Added!';
+									window.dispatchEvent(new CustomEvent('cart-updated', { detail: { itemCount: data.itemCount } }));
+									setTimeout(() => { btn.textContent = 'Add to Cart'; btn.disabled = false; }, 1500);
+								} else {
+									btn.textContent = 'Failed';
+									setTimeout(() => { btn.textContent = 'Add to Cart'; btn.disabled = false; }, 1500);
+								}
+							} catch {
+								btn.textContent = 'Failed';
+								setTimeout(() => { btn.textContent = 'Add to Cart'; btn.disabled = false; }, 1500);
+							}
+						}}
+						class="mt-3 w-full rounded-sm bg-surface-fg py-2 text-xs font-medium text-surface-bg transition-opacity hover:opacity-85 disabled:opacity-50"
 					>
 						Add to Cart
 					</button>
