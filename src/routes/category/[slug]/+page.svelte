@@ -9,6 +9,7 @@
 	import ResearcherLayout from '$lib/components/layouts/ResearcherLayout.svelte';
 	import GifterLayout from '$lib/components/layouts/GifterLayout.svelte';
 	import RefinementChat from '$lib/components/RefinementChat.svelte';
+	import { picksContextForPrompt } from '$lib/stores/picks.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -64,6 +65,7 @@
 				body: JSON.stringify({
 					persona,
 					categorySlug: data.category.slug,
+					picksContext: picksContextForPrompt(),
 				}),
 				signal: controller.signal,
 			});

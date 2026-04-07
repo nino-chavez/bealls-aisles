@@ -103,7 +103,8 @@ import { getBrand } from '$lib/brand/config';
 export function buildLayoutPrompt(
 	persona: string,
 	categoryName: string,
-	products: PromptProduct[]
+	products: PromptProduct[],
+	picksContext?: string,
 ): string {
 	const brand = getBrand();
 	const personaDef = PERSONA_DEFINITIONS[persona] || PERSONA_DEFINITIONS.gatherer;
@@ -133,7 +134,7 @@ CATEGORY: ${categoryName}
 
 AVAILABLE PRODUCTS (${products.length} items):
 ${productSummaries}
-
+${picksContext || ''}
 ${COMPONENT_GUIDE}
 
 Generate a layout for this ${persona} shopper browsing the ${categoryName} category.`;

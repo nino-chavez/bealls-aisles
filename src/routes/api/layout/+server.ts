@@ -13,7 +13,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	const sessionId = cookies.get('aisles_session') || undefined;
 
 	try {
-		const { persona, categorySlug } = await request.json();
+		const { persona, categorySlug, picksContext } = await request.json();
 
 		if (!persona || !categorySlug) {
 			return json({ error: 'Missing required fields: persona, categorySlug' }, { status: 400 });
@@ -52,7 +52,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		}
 
 		const { products, categoryName } = result;
-		const prompt = buildLayoutPrompt(persona, categoryName, products);
+		const prompt = buildLayoutPrompt(persona, categoryName, products, picksContext);
 
 		// Try Haiku first (2-4s), fall back to Sonnet (8-15s) on validation failure
 		let layout;
