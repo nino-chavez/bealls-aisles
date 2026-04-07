@@ -2,59 +2,72 @@
  * Pre-generate and cache layouts for common persona+category combinations.
  * Run after deployment to fill the cache so first visitors get instant layouts.
  *
- * Usage: npx tsx scripts/warm-cache.ts [base-url]
- * Default: https://aisles-signal-x-studio-labs.vercel.app
+ * Usage: npx tsx scripts/warm-cache.ts [brand|all]
+ * Examples:
+ *   npx tsx scripts/warm-cache.ts          # warm Haven (default)
+ *   npx tsx scripts/warm-cache.ts volt      # warm Volt
+ *   npx tsx scripts/warm-cache.ts all       # warm all brands
  */
 
-const BASE_URL = process.argv[2] || 'https://aisles-signal-x-studio-labs.vercel.app';
-
 const PERSONAS = ['gatherer', 'hunter', 'researcher', 'gifter'];
-const CATEGORIES = ['living-room', 'bedroom', 'dining', 'office', 'outdoor', 'kids'];
 
-// Prioritize the most common combinations first
-const PRIORITY_COMBOS = [
-	// Default persona for each category (first visit)
-	...CATEGORIES.map((c) => ({ persona: 'gatherer', categorySlug: c })),
-	// Hunter variants (second most common from search signals)
-	...CATEGORIES.map((c) => ({ persona: 'hunter', categorySlug: c })),
-];
+const BRANDS: Record<string, { url: string; categories: string[] }> = {
+	haven: {
+		url: 'https://aisles-signal-x-studio-labs.vercel.app',
+		categories: ['living-room', 'bedroom', 'dining', 'office', 'outdoor', 'kids'],
+	},
+	volt: {
+		url: 'https://volt-aisles-signal-x-studio-labs.vercel.app',
+		categories: ['headphones', 'earbuds', 'speakers', 'gaming'],
+	},
+	ember: {
+		url: 'https://ember-aisles-signal-x-studio-labs.vercel.app',
+		categories: ['fire-pits', 'camp-stoves', 'grills', 'accessories'],
+	},
+};
 
-async function warmOne(persona: string, categorySlug: string): Promise<{ ok: boolean; timeMs: number }> {
+async function warmOne(baseUrl: string, persona: string, categorySlug: string): Promise<{ ok: boolean; timeMs: number; cached: boolean }> {
 	const start = Date.now();
 	try {
-		const res = await fetch(`${BASE_URL}/api/layout`, {
+		const res = await fetch(`${baseUrl}/api/layout`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ persona, categorySlug }),
 		});
 		const data = await res.json();
 		const timeMs = Date.now() - start;
-
-		if (data.meta?.cacheHit) {
-			return { ok: true, timeMs };
-		}
-		return { ok: res.ok, timeMs };
+		return { ok: res.ok, timeMs, cached: !!data.meta?.cacheHit };
 	} catch {
-		return { ok: false, timeMs: Date.now() - start };
+		return { ok: false, timeMs: Date.now() - start, cached: false };
 	}
 }
 
-async function main() {
-	console.log(`Warming cache at ${BASE_URL}`);
-	console.log(`${PRIORITY_COMBOS.length} combinations to warm\n`);
+async function warmBrand(brandId: string) {
+	const brand = BRANDS[brandId];
+	if (!brand) {
+		console.error(`Unknown brand: ${brandId}`);
+		return;
+	}
 
-	let cached = 0;
-	let generated = 0;
-	let failed = 0;
+	// Warm gatherer + hunter for each category (most common first-visit combos)
+	const combos = [
+		...brand.categories.map((c) => ({ persona: 'gatherer', categorySlug: c })),
+		...brand.categories.map((c) => ({ persona: 'hunter', categorySlug: c })),
+	];
 
-	for (const { persona, categorySlug } of PRIORITY_COMBOS) {
+	console.log(`\n=== ${brandId.toUpperCase()} (${brand.url}) ===`);
+	console.log(`${combos.length} combinations\n`);
+
+	let cached = 0, generated = 0, failed = 0;
+
+	for (const { persona, categorySlug } of combos) {
 		process.stdout.write(`  ${persona}:${categorySlug}... `);
-		const result = await warmOne(persona, categorySlug);
+		const result = await warmOne(brand.url, persona, categorySlug);
 
 		if (!result.ok) {
 			console.log(`FAILED (${result.timeMs}ms)`);
 			failed++;
-		} else if (result.timeMs < 500) {
+		} else if (result.cached) {
 			console.log(`CACHED (${result.timeMs}ms)`);
 			cached++;
 		} else {
@@ -63,7 +76,19 @@ async function main() {
 		}
 	}
 
-	console.log(`\nDone: ${generated} generated, ${cached} already cached, ${failed} failed`);
+	console.log(`\n  ${generated} generated, ${cached} cached, ${failed} failed`);
+}
+
+async function main() {
+	const target = process.argv[2] || 'haven';
+
+	if (target === 'all') {
+		for (const brandId of Object.keys(BRANDS)) {
+			await warmBrand(brandId);
+		}
+	} else {
+		await warmBrand(target);
+	}
 }
 
 main();
