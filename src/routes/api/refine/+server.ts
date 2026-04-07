@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { generateText, Output, gateway } from 'ai';
 import { RefineResponseSchema } from '$lib/schema/refine';
-import { loadCategoryProducts } from '$lib/server/catalog';
+import { loadCategoryProducts, CATEGORY_MAP } from '$lib/server/catalog';
 import { logGeneration } from '$lib/server/generation-log';
 import { getBrand } from '$lib/brand/config';
 
@@ -17,13 +17,30 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 			return json({ error: 'Missing required fields: message, categorySlug' }, { status: 400 });
 		}
 
-		// Server owns data assembly
+		// Server owns data assembly — check for cross-category intent
 		const result = await loadCategoryProducts(categorySlug, persona);
 		if (!result) {
 			return json({ error: `Category "${categorySlug}" not found` }, { status: 404 });
 		}
 
-		const { products, categoryName } = result;
+		let { products, categoryName } = result;
+		let crossCategoryName: string | null = null;
+
+		// Detect cross-category intent by checking if the message mentions another category
+		const msgLower = message.toLowerCase();
+		const otherCategories = Object.entries(CATEGORY_MAP).filter(([slug]) => slug !== categorySlug);
+		for (const [slug, config] of otherCategories) {
+			const displayLower = config.displayName.toLowerCase();
+			if (msgLower.includes(displayLower) || msgLower.includes(slug.replace('-', ' '))) {
+				const crossResult = await loadCategoryProducts(slug, persona);
+				if (crossResult) {
+					crossCategoryName = crossResult.categoryName;
+					products = [...products, ...crossResult.products.map((p) => ({ ...p, category: crossResult.categoryName }))];
+				}
+				break;
+			}
+		}
+
 		const constraintHistory = (constraints || []).map((c: string) => `- ${c}`).join('\n');
 
 		const productSummaries = products.map((p) => {
@@ -36,12 +53,15 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		}).join('\n');
 
 		const brand = getBrand();
+		const availableCategories = Object.values(brand.categories).map((c) => c.displayName).join(', ');
 		const prompt = `You are a merchandising AI for ${brand.prompt.storeName}, ${brand.prompt.storeDescription}. A shopper is refining their browse experience through conversation.
 
 VOICE: ${brand.prompt.voiceGuidance}
 
 CURRENT PERSONA: ${persona}
 CATEGORY: ${categoryName}
+${crossCategoryName ? `CROSS-CATEGORY: Products from "${crossCategoryName}" have been included because the shopper mentioned it.` : ''}
+AVAILABLE CATEGORIES IN THIS STORE: ${availableCategories}
 
 SHOPPER'S MESSAGE: "${message}"
 
