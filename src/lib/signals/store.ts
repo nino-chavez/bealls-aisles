@@ -117,6 +117,7 @@ export class SignalStore {
 		let backNavigationCount = 0;
 		let maxScrollDepth = 0;
 		const dwellTimes: number[] = [];
+		let cartRemovalCount = 0;
 
 		for (const event of this.events) {
 			switch (event.type) {
@@ -172,6 +173,9 @@ export class SignalStore {
 					if (ms > 0) dwellTimes.push(ms);
 					break;
 				}
+				case 'commerce.remove_from_cart':
+					cartRemovalCount++;
+					break;
 			}
 
 			// Time context from the most recent event
@@ -206,6 +210,8 @@ export class SignalStore {
 			maxScrollDepth,
 			avgDwellTimeMs: dwellTimes.length > 0 ? dwellTimes.reduce((a, b) => a + b, 0) / dwellTimes.length : 0,
 			longDwellCount: dwellTimes.filter((d) => d >= 15000).length,
+			quickBounceCount: dwellTimes.filter((d) => d < 3000).length,
+			cartRemovalCount,
 		};
 	}
 }

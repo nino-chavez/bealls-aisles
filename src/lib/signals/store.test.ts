@@ -100,6 +100,8 @@ console.log('\nStore: inference result matches direct construction');
 		maxScrollDepth: 0,
 		avgDwellTimeMs: 0,
 		longDwellCount: 0,
+		quickBounceCount: 0,
+		cartRemovalCount: 0,
 	};
 
 	// Build same context via store

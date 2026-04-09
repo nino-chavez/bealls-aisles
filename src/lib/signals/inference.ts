@@ -296,6 +296,28 @@ const rules: InferenceRule[] = [
 			return { hunter: 0.2 };
 		},
 	},
+
+	// ─── Negative signals (Spotify skip-equivalent) ───────────
+
+	{
+		name: 'quick-bounce-pattern',
+		weight: 0.6,
+		evaluate: (ctx) => {
+			if (ctx.quickBounceCount < 2) return null;
+			// Multiple quick bounces (<3s dwell) = not finding what they want
+			// Reduces hunter confidence (a hunter who found their target wouldn't bounce)
+			return { gatherer: 0.2 };
+		},
+	},
+	{
+		name: 'cart-removal-indecision',
+		weight: 0.7,
+		evaluate: (ctx) => {
+			if (ctx.cartRemovalCount === 0) return null;
+			// Removing items from cart = reconsidering (researcher behavior)
+			return { researcher: 0.2, priceSensitivity: 0.15 };
+		},
+	},
 ];
 
 // ─── Engine ────────────────────────────────────────────────────────
@@ -438,6 +460,10 @@ function describeRuleMatch(ruleName: string, ctx: InferenceContext, adj: Persona
 			return `${ctx.productViewCount} products viewed, avg ${Math.round(ctx.avgDwellTimeMs / 1000)}s each — scanning quickly`;
 		case 'single-category-focus':
 			return `${ctx.categoryViewCount} views in ${ctx.uniqueCategoriesViewed[0] || ctx.currentCategory} only — focused intent`;
+		case 'quick-bounce-pattern':
+			return `${ctx.quickBounceCount} product pages bounced in <3s — not finding what they want`;
+		case 'cart-removal-indecision':
+			return `${ctx.cartRemovalCount} item(s) removed from cart — reconsidering choices`;
 		default: {
 			const boosts = PERSONAS.filter((p) => adj[p] && adj[p]! > 0).map((p) => `+${adj[p]!.toFixed(1)} ${p}`);
 			return boosts.length ? boosts.join(', ') : 'Rule matched';

@@ -35,6 +35,8 @@ const defaults: InferenceContext = {
 	maxScrollDepth: 0,
 	avgDwellTimeMs: 0,
 	longDwellCount: 0,
+	quickBounceCount: 0,
+	cartRemovalCount: 0,
 };
 
 function ctx(overrides: Partial<InferenceContext>): InferenceContext {

@@ -40,6 +40,7 @@ export type SignalEventType =
 	| 'interact.sort_change'
 	// Commerce signals (client-side)
 	| 'commerce.add_to_cart'
+	| 'commerce.remove_from_cart'
 	// Refinement signals (client-side)
 	| 'refine.message';
 
@@ -147,4 +148,7 @@ export interface InferenceContext {
 	maxScrollDepth: number;          // Deepest scroll % on any category page (0-100)
 	avgDwellTimeMs: number;          // Average time spent on product pages
 	longDwellCount: number;          // Product pages with 15s+ dwell time
+	// Negative signals (Spotify skip-equivalent)
+	quickBounceCount: number;        // Product pages with <3s dwell (bounced)
+	cartRemovalCount: number;        // Items removed from cart
 }
