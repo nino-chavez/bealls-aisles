@@ -199,6 +199,103 @@ const rules: InferenceRule[] = [
 			return { familiarityWithStore: familiarity * 0.3 };
 		},
 	},
+
+	// ─── Behavioral signals (in-session) ──────────────────────
+
+	{
+		name: 'broad-category-browsing',
+		weight: 0.6,
+		evaluate: (ctx) => {
+			if (ctx.uniqueCategoriesViewed.length < 3) return null;
+			// Browsing 3+ categories = exploratory gatherer behavior
+			return { gatherer: 0.3 };
+		},
+	},
+	{
+		name: 'rapid-cart-adds',
+		weight: 0.7,
+		evaluate: (ctx) => {
+			if (ctx.cartAddCount < 2) return null;
+			// Multiple cart adds in one session = decisive hunter
+			return { hunter: 0.3, urgency: 0.2 };
+		},
+	},
+	{
+		name: 'comparison-browsing',
+		weight: 0.6,
+		evaluate: (ctx) => {
+			if (ctx.backNavigationCount < 2) return null;
+			// Going back to grid multiple times = comparing products (researcher)
+			return { researcher: 0.3 };
+		},
+	},
+	{
+		name: 'in-session-search',
+		weight: 0.6,
+		evaluate: (ctx) => {
+			if (ctx.searchCount < 2) return null;
+			// Multiple searches in one session = refining what they want (hunter or researcher)
+			return { hunter: 0.15, researcher: 0.15 };
+		},
+	},
+	{
+		name: 'deep-product-exploration',
+		weight: 0.5,
+		evaluate: (ctx) => {
+			if (ctx.productViewCount < 4) return null;
+			// Viewing 4+ product pages = thorough research
+			return { researcher: 0.25 };
+		},
+	},
+	{
+		name: 'refinement-chat-engaged',
+		weight: 0.6,
+		evaluate: (ctx) => {
+			if (ctx.refineMessageCount === 0) return null;
+			// Using the chat at all shows high engagement
+			if (ctx.refineMessageCount >= 3) {
+				return { researcher: 0.2, priceSensitivity: 0.1 };
+			}
+			return { hunter: 0.1 };
+		},
+	},
+	{
+		name: 'deep-scroll-exploration',
+		weight: 0.5,
+		evaluate: (ctx) => {
+			if (ctx.maxScrollDepth < 75) return null;
+			// Scrolled to bottom of page = thorough browsing
+			return { gatherer: 0.15, researcher: 0.15 };
+		},
+	},
+	{
+		name: 'long-product-dwell',
+		weight: 0.6,
+		evaluate: (ctx) => {
+			if (ctx.longDwellCount === 0) return null;
+			// Spent 15s+ on product pages = reading carefully (not impulsive hunter)
+			return { researcher: 0.25 };
+		},
+	},
+	{
+		name: 'quick-product-scanning',
+		weight: 0.5,
+		evaluate: (ctx) => {
+			if (ctx.productViewCount < 3 || ctx.avgDwellTimeMs === 0) return null;
+			if (ctx.avgDwellTimeMs > 8000) return null;
+			// Short dwell + many views = scanning quickly (hunter behavior)
+			return { hunter: 0.2, urgency: 0.1 };
+		},
+	},
+	{
+		name: 'single-category-focus',
+		weight: 0.5,
+		evaluate: (ctx) => {
+			if (ctx.categoryViewCount < 3 || ctx.uniqueCategoriesViewed.length > 1) return null;
+			// Multiple views but all in one category = focused intent
+			return { hunter: 0.2 };
+		},
+	},
 ];
 
 // ─── Engine ────────────────────────────────────────────────────────
@@ -321,6 +418,26 @@ function describeRuleMatch(ruleName: string, ctx: InferenceContext, adj: Persona
 			return `Returning visitor, different category (was ${ctx.storedCategory}, now ${ctx.currentCategory})`;
 		case 'repeat-visitor-familiarity':
 			return `Visit #${ctx.visitCount} — familiarity increases with repeat visits`;
+		case 'broad-category-browsing':
+			return `Browsed ${ctx.uniqueCategoriesViewed.length} categories (${ctx.uniqueCategoriesViewed.join(', ')}) — exploratory behavior`;
+		case 'rapid-cart-adds':
+			return `${ctx.cartAddCount} items added to cart — decisive, goal-oriented shopping`;
+		case 'comparison-browsing':
+			return `${ctx.backNavigationCount} back-navigations — comparing products in grid`;
+		case 'in-session-search':
+			return `${ctx.searchCount} searches this session — refining intent`;
+		case 'deep-product-exploration':
+			return `${ctx.productViewCount} product pages viewed — thorough research pattern`;
+		case 'refinement-chat-engaged':
+			return `${ctx.refineMessageCount} refinement messages — high engagement with AI assistant`;
+		case 'deep-scroll-exploration':
+			return `Scrolled to ${ctx.maxScrollDepth}% depth — exploring the full page`;
+		case 'long-product-dwell':
+			return `${ctx.longDwellCount} product page(s) with 15s+ dwell time — reading carefully`;
+		case 'quick-product-scanning':
+			return `${ctx.productViewCount} products viewed, avg ${Math.round(ctx.avgDwellTimeMs / 1000)}s each — scanning quickly`;
+		case 'single-category-focus':
+			return `${ctx.categoryViewCount} views in ${ctx.uniqueCategoriesViewed[0] || ctx.currentCategory} only — focused intent`;
 		default: {
 			const boosts = PERSONAS.filter((p) => adj[p] && adj[p]! > 0).map((p) => `+${adj[p]!.toFixed(1)} ${p}`);
 			return boosts.length ? boosts.join(', ') : 'Rule matched';

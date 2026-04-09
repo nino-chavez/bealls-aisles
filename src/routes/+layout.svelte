@@ -47,12 +47,35 @@
 		const emitter = getEmitter();
 		if (!emitter || !to?.url) return;
 
-		const category = to.url.pathname.match(/^\/category\/([^/]+)/)?.[1] || null;
+		const toPath = to.url.pathname;
+		const fromPath = from?.url.pathname || null;
+
+		// Category navigation
+		const category = toPath.match(/^\/category\/([^/]+)/)?.[1] || null;
 		if (category) {
 			emitter.emit('nav.category_view', {
 				category,
-				fromCategory: from?.url.pathname.match(/^\/category\/([^/]+)/)?.[1] || null,
-				fromPage: from?.url.pathname || null,
+				fromCategory: fromPath?.match(/^\/category\/([^/]+)/)?.[1] || null,
+				fromPage: fromPath,
+			});
+		}
+
+		// Product page view
+		const product = toPath.match(/^\/product\/([^/]+)/)?.[1] || null;
+		if (product) {
+			emitter.emit('nav.product_view', {
+				productId: product,
+				fromPage: fromPath,
+			});
+		}
+
+		// Back navigation: went from product page back to category grid
+		const fromProduct = fromPath?.match(/^\/product\//);
+		const toCategory = toPath.match(/^\/category\//);
+		if (fromProduct && toCategory) {
+			emitter.emit('nav.back', {
+				fromProduct: fromPath,
+				toCategory: toPath,
 			});
 		}
 	});

@@ -6,6 +6,24 @@
 	let { data }: { data: PageData } = $props();
 	let product = $derived(data.product);
 	let relatedProducts = $derived(data.relatedProducts);
+
+	// Track dwell time on product pages
+	$effect(() => {
+		const startTime = Date.now();
+		const productId = product.id;
+
+		return () => {
+			const dwellMs = Date.now() - startTime;
+			const emitter = getEmitter();
+			if (emitter && dwellMs > 3000) {
+				emitter.emit('interact.dwell_time', {
+					productId,
+					dwellMs,
+					category: product.category,
+				});
+			}
+		};
+	});
 	let persona = $derived(data.persona);
 
 	let isAddingToCart = $state(false);

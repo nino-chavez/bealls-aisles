@@ -14,7 +14,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	const sessionId = cookies.get('aisles_session') || undefined;
 
 	try {
-		const { persona, categorySlug, picksContext } = await request.json();
+		const { persona, categorySlug, picksContext, probabilities } = await request.json();
 
 		if (!persona || !categorySlug) {
 			return json({ error: 'Missing required fields: persona, categorySlug' }, { status: 400 });
@@ -58,7 +58,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		const rules = await getActiveRules(persona, categorySlug);
 		const rulesContext = rulesToPromptContext(rules);
 
-		const prompt = buildLayoutPrompt(persona, categoryName, products, picksContext, rulesContext);
+		const prompt = buildLayoutPrompt(persona, categoryName, products, picksContext, rulesContext, probabilities);
 
 		// Haiku primary, Sonnet fallback — handled by AI Gateway
 		const aiResult = await generateText({

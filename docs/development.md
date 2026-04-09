@@ -258,6 +258,138 @@ For local development, `ANTHROPIC_API_KEY` is also used for layout generation if
 
 ---
 
+## Inference Debugging
+
+The inference engine is the core of Aisles' personalization logic. When the wrong layout is generated, the issue is almost always in the inference pipeline. This section describes how to trace and debug inference behavior.
+
+### Using Dev Mode Signal Breakdown
+
+Dev mode adds an overlay to category pages that shows the current inference state. Activate it by appending `?dev=true` to any category URL:
+
+```
+http://localhost:5173/category/living-room?dev=true
+```
+
+The persona badge in the header shows the primary persona and confidence score. Open the browser console — the signal emitter logs each event as it fires, and the `/api/signals` response includes the full `PersonaInference` object.
+
+To see the full inference breakdown including which rules fired, open the browser console after a page load and check for the `aisles-inference-update` CustomEvent dispatched by the signal emitter. This event contains the complete `PersonaInference` including `ruleMatches`.
+
+### Tracing Rule Attribution via /observe
+
+The Observe dashboard at `/observe?key=aisles-observe` shows signal and inference data in real time for any active session. To trace inference for a specific session:
+
+1. Open the storefront in one browser window
+2. Open `/observe?key=aisles-observe` in a second window
+3. Enable "Watch latest" in the session picker
+4. Interact with the storefront — search, navigate categories, use sort/filter
+
+The Signal Timeline panel shows every `SignalEvent` as it arrives. The Persona Vector panel updates on each inference run. The `ruleMatches` array is exposed in the session API response at `GET /api/observe/session?id={sessionId}&key=aisles-observe`.
+
+To inspect rule matches directly, fetch the session data from the API:
+
+```bash
+curl "http://localhost:5173/api/observe/session?id=YOUR_SESSION_ID&key=aisles-observe" | jq '.inference.ruleMatches'
+```
+
+Each entry shows which rule fired, its weight, the score adjustment it applied, and the human-readable reason from `describeRuleMatch()` in `src/lib/signals/inference.ts`.
+
+**Example output**:
+
+```json
+[
+  {
+    "ruleName": "search-hunter-keywords",
+    "weight": 0.9,
+    "adjustment": { "hunter": 0.4, "priceSensitivity": 0.5 },
+    "reason": "Search \"dorm desk under $150\" matches deal/budget keywords"
+  },
+  {
+    "ruleName": "mobile-evening-impulse",
+    "weight": 0.5,
+    "adjustment": { "hunter": 0.1, "urgency": 0.2 },
+    "reason": "Mobile device at 22:00 — evening impulse pattern"
+  }
+]
+```
+
+### Testing Inference Rules in Isolation
+
+The `infer()` function in `src/lib/signals/inference.ts` takes a plain `InferenceContext` object. You can test any rule combination without a running server:
+
+```typescript
+import { infer } from '$lib/signals/inference';
+
+const result = infer({
+  intentParam: null,
+  searchQuery: 'dorm desk under $150',
+  referrer: 'https://slickdeals.net',
+  utmSource: null,
+  utmMedium: null,
+  utmCampaign: null,
+  deviceType: 'mobile',
+  hourOfDay: 22,
+  dayOfWeek: 3,
+  storedPersona: 'gatherer',
+  storedCategory: 'bedroom',
+  visitCount: 2,
+  currentCategory: 'office',
+});
+
+console.log(result.primary);      // 'hunter'
+console.log(result.confidence);   // e.g. 0.28
+console.log(result.ruleMatches);  // rules that fired
+console.log(result.shift);        // { detected: true, from: 'gatherer', trigger: '...' }
+```
+
+Run this as a TypeScript script with `npx tsx`:
+
+```bash
+npx tsx scripts/test-inference.ts
+```
+
+### Adding a New Inference Rule
+
+To add a rule to the engine:
+
+1. Open `src/lib/signals/inference.ts`
+2. Add a new entry to the `rules` array. The rule must implement the `InferenceRule` interface from `src/lib/signals/types.ts`:
+
+```typescript
+{
+  name: 'my-new-rule',          // Unique string identifier
+  weight: 0.6,                  // Confidence multiplier (0.0–1.0)
+  evaluate: (ctx) => {
+    // Return null if the rule does not apply
+    if (!ctx.someField) return null;
+    // Return a PersonaScoreAdjustment if it does
+    return { hunter: 0.2, priceSensitivity: 0.1 };
+  },
+},
+```
+
+3. Add a `case` for the new rule in `describeRuleMatch()` so the Observe dashboard and debug output show a meaningful reason string:
+
+```typescript
+case 'my-new-rule':
+  return `Detected X because Y: ${ctx.someField}`;
+```
+
+4. If the rule reads a field that does not yet exist on `InferenceContext`, add it to:
+   - The `InferenceContext` interface in `src/lib/signals/types.ts`
+   - The `toInferenceContext()` method in `src/lib/signals/store.ts` (extract the value from accumulated events)
+
+5. Run the type check to verify all changes compile:
+
+```bash
+npm run check
+```
+
+6. Test the rule with a manual `infer()` call as described above, verifying the rule fires on expected input and returns null on non-matching input.
+
+See `docs/signals-and-inference.md` for the complete list of existing signal types and rules to avoid duplication.
+
+---
+
 ## Architecture Decisions
 
 See `docs/decisions/` for records of significant decisions:

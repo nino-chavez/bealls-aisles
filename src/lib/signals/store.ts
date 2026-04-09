@@ -107,6 +107,17 @@ export class SignalStore {
 		let hourOfDay = new Date().getHours();
 		let dayOfWeek = new Date().getDay();
 
+		// Behavioral counters
+		const categoriesViewed = new Set<string>();
+		let categoryViewCount = 0;
+		let productViewCount = 0;
+		let cartAddCount = 0;
+		let searchCount = 0;
+		let refineMessageCount = 0;
+		let backNavigationCount = 0;
+		let maxScrollDepth = 0;
+		const dwellTimes: number[] = [];
+
 		for (const event of this.events) {
 			switch (event.type) {
 				// Request-time signals (server-side)
@@ -122,19 +133,45 @@ export class SignalStore {
 					break;
 				case 'request.search_landing':
 					searchQuery = (event.data.query as string) || null;
+					searchCount++;
 					break;
 				case 'request.returning':
 					break;
 
-				// Client-side signals — override context when they arrive
+				// Client-side behavioral signals
 				case 'nav.search':
 					searchQuery = (event.data.query as string) || null;
+					searchCount++;
 					break;
 				case 'nav.category_view':
 					if (event.data.category) {
 						this.currentCategory = event.data.category as string;
+						categoriesViewed.add(this.currentCategory);
+						categoryViewCount++;
 					}
 					break;
+				case 'nav.product_view':
+					productViewCount++;
+					break;
+				case 'nav.back':
+					backNavigationCount++;
+					break;
+				case 'commerce.add_to_cart':
+					cartAddCount++;
+					break;
+				case 'refine.message':
+					refineMessageCount++;
+					break;
+				case 'interact.scroll_depth': {
+					const depth = (event.data.depth as number) || 0;
+					if (depth > maxScrollDepth) maxScrollDepth = depth;
+					break;
+				}
+				case 'interact.dwell_time': {
+					const ms = (event.data.dwellMs as number) || 0;
+					if (ms > 0) dwellTimes.push(ms);
+					break;
+				}
 			}
 
 			// Time context from the most recent event
@@ -159,6 +196,16 @@ export class SignalStore {
 			storedCategory: this.storedCategory,
 			visitCount: this.visitCount,
 			currentCategory: this.currentCategory,
+			categoryViewCount,
+			uniqueCategoriesViewed: [...categoriesViewed],
+			productViewCount,
+			cartAddCount,
+			searchCount,
+			refineMessageCount,
+			backNavigationCount,
+			maxScrollDepth,
+			avgDwellTimeMs: dwellTimes.length > 0 ? dwellTimes.reduce((a, b) => a + b, 0) / dwellTimes.length : 0,
+			longDwellCount: dwellTimes.filter((d) => d >= 15000).length,
 		};
 	}
 }

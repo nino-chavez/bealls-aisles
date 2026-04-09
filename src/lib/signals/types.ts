@@ -118,11 +118,10 @@ export interface InferenceRule {
 
 /**
  * The context available to inference rules.
- * Phase 2: populated from request-time signals (URL, cookies, headers).
- * Phase 3+: populated from the full SignalStore with behavioral events.
+ * Populated from the full SignalStore: request-time + behavioral events.
  */
 export interface InferenceContext {
-	// Request-time signals (available now)
+	// Request-time signals
 	intentParam: string | null;
 	searchQuery: string | null;
 	referrer: string | null;
@@ -137,4 +136,15 @@ export interface InferenceContext {
 	storedCategory: string | null;
 	visitCount: number;
 	currentCategory: string;
+	// Behavioral signals (accumulated in-session)
+	categoryViewCount: number;       // How many different categories browsed
+	uniqueCategoriesViewed: string[]; // Which categories
+	productViewCount: number;        // Product detail page views
+	cartAddCount: number;            // Items added to cart this session
+	searchCount: number;             // In-session searches performed
+	refineMessageCount: number;      // Refinement chat messages sent
+	backNavigationCount: number;     // Times user went back to grid from product
+	maxScrollDepth: number;          // Deepest scroll % on any category page (0-100)
+	avgDwellTimeMs: number;          // Average time spent on product pages
+	longDwellCount: number;          // Product pages with 15s+ dwell time
 }

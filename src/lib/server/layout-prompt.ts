@@ -106,6 +106,7 @@ export function buildLayoutPrompt(
 	products: PromptProduct[],
 	picksContext?: string,
 	rulesContext?: string,
+	probabilities?: { gatherer: number; hunter: number; researcher: number; gifter: number },
 ): string {
 	const brand = getBrand();
 	const personaDef = PERSONA_DEFINITIONS[persona] || PERSONA_DEFINITIONS.gatherer;
@@ -143,6 +144,9 @@ VOICE: ${brand.prompt.voiceGuidance}
 
 PERSONA:
 ${personaDef}
+${probabilities ? `
+PROBABILITY VECTOR: gatherer ${Math.round(probabilities.gatherer * 100)}% | hunter ${Math.round(probabilities.hunter * 100)}% | researcher ${Math.round(probabilities.researcher * 100)}% | gifter ${Math.round(probabilities.gifter * 100)}%
+The primary persona is ${persona}, but blend in elements from secondary personas if their score is above 25%. For example, if researcher is 30% alongside a hunter primary, show specs alongside the dense grid.` : ''}
 
 CATEGORY: ${categoryName}
 

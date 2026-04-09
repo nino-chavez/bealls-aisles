@@ -25,6 +25,16 @@ const defaults: InferenceContext = {
 	storedCategory: null,
 	visitCount: 0,
 	currentCategory: 'living-room',
+	categoryViewCount: 0,
+	uniqueCategoriesViewed: [],
+	productViewCount: 0,
+	cartAddCount: 0,
+	searchCount: 0,
+	refineMessageCount: 0,
+	backNavigationCount: 0,
+	maxScrollDepth: 0,
+	avgDwellTimeMs: 0,
+	longDwellCount: 0,
 };
 
 function ctx(overrides: Partial<InferenceContext>): InferenceContext {

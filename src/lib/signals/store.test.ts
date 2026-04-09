@@ -90,6 +90,16 @@ console.log('\nStore: inference result matches direct construction');
 		storedCategory: 'living-room',
 		visitCount: 3,
 		currentCategory: 'office',
+		categoryViewCount: 0,
+		uniqueCategoriesViewed: [],
+		productViewCount: 0,
+		cartAddCount: 0,
+		searchCount: 1,
+		refineMessageCount: 0,
+		backNavigationCount: 0,
+		maxScrollDepth: 0,
+		avgDwellTimeMs: 0,
+		longDwellCount: 0,
 	};
 
 	// Build same context via store

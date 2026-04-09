@@ -202,12 +202,86 @@ Three brands ship in the codebase: `haven`, `volt`, `ember`. Each is deployed as
 
 ---
 
+## Signal Pipeline Expansion
+
+The current signal pipeline is request-time only: inference runs once per page load from URL parameters, referrer, UTM tags, device, and cross-session cookies. Client-side signals update inference after the fact but do not yet feed behavioral rules.
+
+### The Gap
+
+10 of 14 signal types are defined in `src/lib/signals/types.ts` but not consumed by any inference rule. The `toInferenceContext()` method in `SignalStore` has `case` branches only for `request.pageview`, `request.device`, `request.search_landing`, and `nav.search`. All interaction, navigation depth, and commerce signals accumulate in the session buffer without influencing inference output.
+
+```
+Current pipeline:
+  HTTP request → SignalStore (request.* signals)
+                → toInferenceContext() → infer() → PersonaInference
+                → buildLayoutPrompt(primary) → AI → Layout
+
+  After page load:
+  Browser → emitter → POST /api/signals
+           → SignalStore (nav.*, interact.*, commerce.* signals — stored but not consumed)
+           → toInferenceContext() → infer() (still reads only request.* and nav.search)
+           → returns updated PersonaInference
+```
+
+### Planned Data Flow (Post-Expansion)
+
+The behavioral signal expansion (see `docs/specs/behavioral-signals.md`) will add feedback loops at three levels:
+
+```
+Expanded pipeline:
+
+  HTTP request → SignalStore (request.* signals)
+               → toInferenceContext() → infer() → PersonaInference
+               → buildLayoutPrompt(probabilities, confidence) → AI → Layout
+                                      ↑ full vector, not just label
+
+  Session behavioral loop:
+  Browser ─┬─ dwell_time events (IntersectionObserver)
+           ├─ scroll_depth events (threshold listener)
+           ├─ sort_change / filter_use events (component hooks)
+           ├─ nav.back (quick PDP return detector)
+           ├─ commerce.add_to_cart (immediate flush)
+           └─ nav.category_view sequence
+           ↓
+  POST /api/signals
+           ↓
+  SignalStore.toInferenceContext()
+  (now reads: categorySequence, cartAddCount, longDwellProductCount,
+   maxScrollDepth, priceSortUsed, filterCount, quickReturnCount, ...)
+           ↓
+  infer() — 15+ rules including behavioral rules
+           ↓
+  PersonaInference with updated probabilities
+           ↓
+  If primary changed and confidence >= 0.1: trigger layout refresh
+```
+
+### Session Arc Layer (Phase 5)
+
+Phase 5 adds a persona history to each Redis session key. After each `infer()` call, a lightweight snapshot (`PersonaSnapshot`) is appended to `personaHistory`. The inference output will include an arc classification (`stable`, `converging`, `oscillating`, `late-shift`) that can inform layout blending decisions independent of the current-state probabilities.
+
+### Streaming Platform Context
+
+The expansion is modeled on behavioral personalization lessons from Netflix, Spotify, and Hulu:
+
+- **Behavior over declared intent** (Netflix watch completion %): dwell time and scroll depth replace the current over-reliance on search queries and UTM tags
+- **Negative signals are most informative** (Spotify skip model): bounce detection, cart removal, and chat abandonment are the Aisles equivalent of a 10-second skip
+- **Session context matters** (Hulu grazing vs. committing): session arc modeling tracks trajectory, not just instantaneous state
+- **Full probability vectors, not categories** (continuous embeddings): Phase 4 passes `PersonaProbabilities` to layout generation to enable blended layouts for ambiguous sessions
+
+See `docs/product-vision.md` for the extended analysis and `docs/specs/behavioral-signals.md` for the implementation spec.
+
+---
+
 ## Related Documentation
 
 - `docs/multi-brand.md` — adding and configuring brands
 - `docs/api-reference.md` — all API endpoints
 - `docs/observe.md` — Observe dashboard for demos
 - `docs/development.md` — local setup and tooling
+- `docs/signals-and-inference.md` — complete signal and rule catalog
+- `docs/specs/behavioral-signals.md` — signal expansion implementation spec
+- `docs/product-vision.md` — product mission and streaming platform inspiration
 - `docs/decisions/001-enrichment-vs-feedonomics.md`
 - `docs/decisions/002-streaming-layout-generation.md`
 - `docs/decisions/003-prerender-vs-cache-warming.md`

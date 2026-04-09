@@ -10,6 +10,7 @@
 	import GifterLayout from '$lib/components/layouts/GifterLayout.svelte';
 	import RefinementChat from '$lib/components/RefinementChat.svelte';
 	import { picksContextForPrompt } from '$lib/stores/picks.svelte';
+	import { getEmitter } from '$lib/signals/emitter';
 
 	let { data }: { data: PageData } = $props();
 
@@ -67,6 +68,7 @@
 					persona,
 					categorySlug: data.category.slug,
 					picksContext: picksContextForPrompt(),
+					probabilities: data.inference?.probabilities,
 				}),
 				signal: controller.signal,
 			});
@@ -154,6 +156,40 @@
 		}
 
 		fetchCost();
+	});
+
+	// Track scroll depth on category pages
+	$effect(() => {
+		let maxDepth = 0;
+		let emitted25 = false;
+		let emitted50 = false;
+		let emitted75 = false;
+
+		const handleScroll = () => {
+			const scrollTop = window.scrollY;
+			const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+			if (docHeight <= 0) return;
+			const depth = Math.round((scrollTop / docHeight) * 100);
+			if (depth <= maxDepth) return;
+			maxDepth = depth;
+
+			const emitter = getEmitter();
+			if (!emitter) return;
+
+			if (depth >= 75 && !emitted75) {
+				emitted75 = true;
+				emitter.emit('interact.scroll_depth', { depth: 75, category: data.category.slug });
+			} else if (depth >= 50 && !emitted50) {
+				emitted50 = true;
+				emitter.emit('interact.scroll_depth', { depth: 50, category: data.category.slug });
+			} else if (depth >= 25 && !emitted25) {
+				emitted25 = true;
+				emitter.emit('interact.scroll_depth', { depth: 25, category: data.category.slug });
+			}
+		};
+
+		window.addEventListener('scroll', handleScroll, { passive: true });
+		return () => window.removeEventListener('scroll', handleScroll);
 	});
 
 	/** Format a probability as a percentage string */
