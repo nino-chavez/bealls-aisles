@@ -42,6 +42,15 @@ export interface BrandConfig {
 	/** Google Fonts import URL */
 	googleFontsUrl: string;
 
+	/** Homepage content — brand-specific editorial copy */
+	homepage: {
+		heroHeadline: string;
+		heroBody: string;
+		editorialHeadline: string;
+		editorialBody: string;
+		valueProps: Array<{ title: string; body: string }>;
+	};
+
 	/** LLM prompt context — injected into layout/refine/enrichment prompts */
 	prompt: {
 		storeName: string;
@@ -92,6 +101,18 @@ const BRANDS: Record<string, BrandConfig> = {
 		},
 
 		googleFontsUrl: 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500&display=swap',
+
+		homepage: {
+			heroHeadline: 'Furniture for how you actually live',
+			heroBody: 'Pieces that hold up to real life. Pet-friendly fabrics, washable covers, frames that don\'t creak at year five. Design you can see; quality you can feel.',
+			editorialHeadline: 'The kind of sofa people rearrange the room around',
+			editorialBody: 'Top-grain leather that softens with use. Kiln-dried hardwood frames with double-doweled joints. Built to look better in year three than year one.',
+			valueProps: [
+				{ title: 'Free shipping over $500', body: 'White-glove delivery on large items. Threshold delivery on everything else. No surprises at checkout.' },
+				{ title: '30-day returns', body: 'Live with it for a month. If it doesn\'t work in your space, send it back. We\'ll arrange the pickup.' },
+				{ title: '5-year warranty', body: 'Every piece warranted against defects in materials and workmanship. Real coverage, not fine-print exclusions.' },
+			],
+		},
 
 		prompt: {
 			storeName: 'Haven',
@@ -145,6 +166,18 @@ const BRANDS: Record<string, BrandConfig> = {
 
 		googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap',
 
+		homepage: {
+			heroHeadline: 'Sound that moves with you',
+			heroBody: 'Headphones, earbuds, speakers, and gaming audio — engineered for how you actually listen. Real specs, honest reviews, no marketing fluff.',
+			editorialHeadline: 'Your ears deserve better than "good enough"',
+			editorialBody: '40mm custom drivers. 35-hour battery life. LDAC codec support. We lead with the specs because the specs speak for themselves.',
+			valueProps: [
+				{ title: 'Free shipping', body: 'Every order ships free. No minimum, no catch. Standard delivery in 3-5 days, express available at checkout.' },
+				{ title: '30-day trial', body: 'Listen for a month. If the sound isn\'t right for you, return them — no restocking fees, no questions.' },
+				{ title: '2-year warranty', body: 'Every product covered against defects. Drivers, batteries, Bluetooth modules — if it breaks, we replace it.' },
+			],
+		},
+
 		prompt: {
 			storeName: 'Volt',
 			storeDescription: 'a DTC audio and electronics brand — bold, technical, performance-driven',
@@ -196,6 +229,18 @@ const BRANDS: Record<string, BrandConfig> = {
 		},
 
 		googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap',
+
+		homepage: {
+			heroHeadline: 'Gather around something real',
+			heroBody: 'Fire pits, camp stoves, grills, and everything you need to bring people together outdoors. Smokeless burns, real materials, built for the backyard you actually use.',
+			editorialHeadline: 'The backyard upgrade nobody regrets',
+			editorialBody: 'Double-wall stainless steel. Secondary combustion that burns off smoke before it reaches your eyes. 19 inches of fire that fits six chairs around it.',
+			valueProps: [
+				{ title: 'Free shipping on fire pits', body: 'Every fire pit ships free to the lower 48. Stoves and accessories ship free over $100. No surprises.' },
+				{ title: 'Season-proof guarantee', body: 'Leave it outside year-round. Our stainless and corten steel are built for rain, snow, and sun. No cover required (but we sell one).' },
+				{ title: 'Lifetime burn warranty', body: 'The burn chamber is warrantied for life. If the airflow system fails, we replace the unit. Period.' },
+			],
+		},
 
 		prompt: {
 			storeName: 'Ember',

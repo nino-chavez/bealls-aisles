@@ -6,7 +6,7 @@
 
 <svelte:head>
 	<title>{data.brandName} — {data.brandTagline}</title>
-	<meta name="description" content="{data.brandTagline}. Powered by Aisles." />
+	<meta name="description" content="{data.homepage.heroBody}" />
 </svelte:head>
 
 <!-- Returning visitor banner -->
@@ -23,10 +23,10 @@
 	<div class="mx-auto max-w-7xl px-6 py-20 sm:py-28 lg:py-36">
 		<div class="max-w-xl">
 			<h1 class="text-4xl leading-tight sm:text-5xl lg:text-6xl">
-				{data.brandTagline}
+				{data.homepage.heroHeadline}
 			</h1>
 			<p class="mt-6 text-lg leading-relaxed text-surface-muted-fg">
-				Browse {data.brandDomain} — personalized to how you shop.
+				{data.homepage.heroBody}
 			</p>
 			<div class="mt-10 flex flex-wrap gap-3">
 				{#each data.categories.map((c, i) => ({ label: c.name, href: `/category/${c.slug}`, primary: i === 0 })) as cta}
@@ -106,9 +106,9 @@
 	<div class="mx-auto max-w-7xl px-6 py-16 lg:py-20">
 		<div class="grid items-center gap-12 lg:grid-cols-2">
 			<div>
-				<h2 class="text-3xl">{data.brandTagline}</h2>
+				<h2 class="text-3xl">{data.homepage.editorialHeadline}</h2>
 				<p class="mt-4 text-surface-muted-fg leading-relaxed">
-					Browse {data.brandDomain} — curated and personalized by AI to match how you shop.
+					{data.homepage.editorialBody}
 				</p>
 				{#if data.categories[0]}
 					<a
@@ -119,10 +119,9 @@
 					</a>
 				{/if}
 			</div>
-			<!-- Featured product image -->
 			{#if data.featured[0]?.image}
 				<div class="aspect-[4/3] overflow-hidden rounded-sm bg-surface-border">
-					<img src={data.featured[0].image} alt={data.featured[0].imageAlt} class="h-full w-full object-cover" loading="lazy" />
+					<img src={data.featured[0].image} alt={data.featured[0].imageAlt} class="h-full w-full object-cover" loading="lazy" decoding="async" />
 				</div>
 			{:else}
 				<div class="aspect-[4/3] rounded-sm bg-surface-border"></div>
@@ -134,26 +133,13 @@
 <!-- Value props -->
 <section class="mx-auto max-w-7xl px-6 py-16 lg:py-20">
 	<div class="grid gap-12 sm:grid-cols-3">
-		<div>
-			<h3 class="font-display text-lg">Free shipping over $500</h3>
-			<p class="mt-2 text-sm leading-relaxed text-surface-muted-fg">
-				White-glove delivery on large items. Threshold delivery on everything else.
-				No surprises at checkout.
-			</p>
-		</div>
-		<div>
-			<h3 class="font-display text-lg">30-day returns</h3>
-			<p class="mt-2 text-sm leading-relaxed text-surface-muted-fg">
-				Live with it for a month. If it doesn't work in your space, send it back.
-				We'll arrange the pickup.
-			</p>
-		</div>
-		<div>
-			<h3 class="font-display text-lg">5-year warranty</h3>
-			<p class="mt-2 text-sm leading-relaxed text-surface-muted-fg">
-				Every piece warranted against defects in materials and workmanship.
-				Real coverage, not fine-print exclusions.
-			</p>
-		</div>
+		{#each data.homepage.valueProps as prop}
+			<div>
+				<h3 class="font-display text-lg">{prop.title}</h3>
+				<p class="mt-2 text-sm leading-relaxed text-surface-muted-fg">
+					{prop.body}
+				</p>
+			</div>
+		{/each}
 	</div>
 </section>
