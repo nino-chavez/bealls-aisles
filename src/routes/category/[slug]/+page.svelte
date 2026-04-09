@@ -270,9 +270,58 @@
 				</details>
 			{/if}
 
-			<!-- Raw inference JSON -->
+			<!-- Signal breakdown — which rules fired and why -->
+			{#if inf.ruleMatches?.length > 0}
+				<details class="mt-2" open>
+					<summary class="cursor-pointer text-xs text-accent hover:underline">Signal breakdown ({inf.ruleMatches.length} rules fired)</summary>
+					<div class="mt-2 overflow-x-auto">
+						<table class="w-full text-xs">
+							<thead>
+								<tr class="border-b border-surface-border text-left text-surface-muted-fg">
+									<th class="pb-1 pr-3">Rule</th>
+									<th class="pb-1 pr-3">Reason</th>
+									<th class="pb-1 pr-3">Weight</th>
+									<th class="pb-1">Score Impact</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each inf.ruleMatches as match}
+									<tr class="border-b border-surface-border/50">
+										<td class="py-1.5 pr-3 font-mono text-surface-fg">{match.ruleName}</td>
+										<td class="py-1.5 pr-3 text-surface-muted-fg">{match.reason}</td>
+										<td class="py-1.5 pr-3 tabular-nums text-surface-muted-fg">{match.weight.toFixed(1)}</td>
+										<td class="py-1.5">
+											{#each ['gatherer', 'hunter', 'researcher', 'gifter'] as p}
+												{#if (match.adjustment as any)[p]}
+													<span class="mr-1.5 rounded-sm px-1 py-0.5 text-[10px] font-medium
+														{p === inf.primary ? 'bg-accent/15 text-accent' : 'bg-surface-muted text-surface-muted-fg'}">
+														{p}: +{((match.adjustment as any)[p] * match.weight).toFixed(2)}
+													</span>
+												{/if}
+											{/each}
+											{#if match.adjustment.priceSensitivity}
+												<span class="mr-1.5 rounded-sm bg-warning/10 px-1 py-0.5 text-[10px] text-warning">price +{(match.adjustment.priceSensitivity * match.weight).toFixed(2)}</span>
+											{/if}
+											{#if match.adjustment.urgency}
+												<span class="mr-1.5 rounded-sm bg-error/10 px-1 py-0.5 text-[10px] text-error">urgency +{(match.adjustment.urgency * match.weight).toFixed(2)}</span>
+											{/if}
+											{#if match.adjustment.familiarityWithStore}
+												<span class="rounded-sm bg-info/10 px-1 py-0.5 text-[10px] text-info">familiarity +{(match.adjustment.familiarityWithStore * match.weight).toFixed(2)}</span>
+											{/if}
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				</details>
+			{:else}
+				<p class="mt-2 text-xs text-surface-muted-fg">No inference rules fired — using base prior (gatherer: 0.3, hunter: 0.2, researcher: 0.2, gifter: 0.1)</p>
+			{/if}
+
+			<!-- Raw inference JSON (collapsed) -->
 			<details class="mt-2">
-				<summary class="cursor-pointer text-xs text-accent hover:underline">View raw inference</summary>
+				<summary class="cursor-pointer text-xs text-accent hover:underline">View raw inference JSON</summary>
 				<pre class="mt-2 max-h-48 overflow-auto rounded-sm bg-neutral-950 p-3 text-xs text-neutral-300">{JSON.stringify(inf, null, 2)}</pre>
 			</details>
 		</div>

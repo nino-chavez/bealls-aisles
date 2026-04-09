@@ -440,6 +440,43 @@
 									{/if}
 								</div>
 							{/if}
+
+							<!-- Rule attribution -->
+							{#if inf.ruleMatches?.length > 0}
+								<div class="mt-3 border-t border-neutral-800 pt-3">
+									<h3 class="mb-2 font-mono text-[10px] tracking-widest text-neutral-600 uppercase">
+										Rules Fired ({inf.ruleMatches.length})
+									</h3>
+									<div class="space-y-1">
+										{#each inf.ruleMatches as match}
+											<div class="rounded bg-neutral-900 px-2 py-1.5 font-mono text-[10px]">
+												<div class="flex items-center justify-between">
+													<span class="text-neutral-400">{match.ruleName}</span>
+													<span class="text-neutral-600">w:{match.weight.toFixed(1)}</span>
+												</div>
+												<div class="mt-0.5 text-neutral-500">{match.reason}</div>
+												<div class="mt-0.5 flex flex-wrap gap-1">
+													{#each ['gatherer', 'hunter', 'researcher', 'gifter'] as p}
+														{#if (match.adjustment as any)[p]}
+															<span class="rounded px-1 py-0.5 {PERSONA_TEXT_COLORS[p]} bg-neutral-800">
+																{p[0]}:+{((match.adjustment as any)[p] * match.weight).toFixed(2)}
+															</span>
+														{/if}
+													{/each}
+													{#if match.adjustment.priceSensitivity}
+														<span class="rounded bg-neutral-800 px-1 py-0.5 text-amber-500">price:+{(match.adjustment.priceSensitivity * match.weight).toFixed(2)}</span>
+													{/if}
+													{#if match.adjustment.familiarityWithStore}
+														<span class="rounded bg-neutral-800 px-1 py-0.5 text-blue-400">fam:+{(match.adjustment.familiarityWithStore * match.weight).toFixed(2)}</span>
+													{/if}
+												</div>
+											</div>
+										{/each}
+									</div>
+								</div>
+							{:else}
+								<div class="mt-3 text-[10px] text-neutral-700">No rules fired — base prior only</div>
+							{/if}
 						{/if}
 					</div>
 

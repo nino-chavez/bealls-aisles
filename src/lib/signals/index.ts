@@ -16,4 +16,5 @@ export type {
 	InferenceContext,
 	InferenceRule,
 	PersonaScoreAdjustment,
+	RuleMatch,
 } from './types';

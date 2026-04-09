@@ -16,7 +16,9 @@ import {
 	type InferenceRule,
 	type PersonaInference,
 	type PersonaProbabilities,
+	type PersonaScoreAdjustment,
 	type Persona,
+	type RuleMatch,
 } from './types';
 
 // ─── Rules ─────────────────────────────────────────────────────────
@@ -216,6 +218,7 @@ export function infer(ctx: InferenceContext): PersonaInference {
 	let familiarityWithStore = ctx.visitCount > 1 ? 0.1 : 0;
 	let signalCount = 0;
 	let dominantSource: 'request' | 'navigation' = 'request';
+	const ruleMatches: RuleMatch[] = [];
 
 	// Evaluate all rules
 	for (const rule of rules) {
@@ -223,6 +226,14 @@ export function infer(ctx: InferenceContext): PersonaInference {
 		if (!adjustment) continue;
 
 		signalCount++;
+
+		// Record the match with a human-readable reason
+		ruleMatches.push({
+			ruleName: rule.name,
+			weight: rule.weight,
+			adjustment,
+			reason: describeRuleMatch(rule.name, ctx, adjustment),
+		});
 
 		for (const persona of PERSONAS) {
 			if (adjustment[persona]) {
@@ -273,7 +284,48 @@ export function infer(ctx: InferenceContext): PersonaInference {
 		signalCount,
 		lastUpdated: Date.now(),
 		dominantSource,
+		ruleMatches,
 	};
+}
+
+/** Generate a human-readable explanation for why a rule matched */
+function describeRuleMatch(ruleName: string, ctx: InferenceContext, adj: PersonaScoreAdjustment): string {
+	switch (ruleName) {
+		case 'intent-param':
+			return `URL param ?intent=${ctx.intentParam}`;
+		case 'search-hunter-keywords':
+			return `Search "${ctx.searchQuery}" matches deal/budget keywords`;
+		case 'search-researcher-keywords':
+			return `Search "${ctx.searchQuery}" matches research/comparison keywords`;
+		case 'search-gifter-keywords':
+			return `Search "${ctx.searchQuery}" matches gift/occasion keywords`;
+		case 'search-gatherer-keywords':
+			return `Search "${ctx.searchQuery}" matches inspiration/browse keywords`;
+		case 'referrer-social':
+			return `Referrer from social/visual platform: ${ctx.referrer}`;
+		case 'referrer-deal-site':
+			return `Referrer from deal site: ${ctx.referrer}`;
+		case 'referrer-review-site':
+			return `Referrer from review site: ${ctx.referrer}`;
+		case 'utm-gift-campaign':
+			return `UTM campaign "${ctx.utmCampaign}" indicates gifting intent`;
+		case 'utm-sale-campaign':
+			return `UTM campaign "${ctx.utmCampaign}" indicates deal-seeking`;
+		case 'mobile-evening-impulse':
+			return `Mobile device at ${ctx.hourOfDay}:00 — evening impulse pattern`;
+		case 'desktop-weekday-deliberate':
+			return `Desktop on weekday at ${ctx.hourOfDay}:00 — deliberate browsing`;
+		case 'returning-same-category':
+			return `Returning visitor, same category (${ctx.storedCategory}) — continuity boost for ${ctx.storedPersona}`;
+		case 'returning-different-category':
+			return `Returning visitor, different category (was ${ctx.storedCategory}, now ${ctx.currentCategory})`;
+		case 'repeat-visitor-familiarity':
+			return `Visit #${ctx.visitCount} — familiarity increases with repeat visits`;
+		default: {
+			const boosts = PERSONAS.filter((p) => adj[p] && adj[p]! > 0).map((p) => `+${adj[p]!.toFixed(1)} ${p}`);
+			return boosts.length ? boosts.join(', ') : 'Rule matched';
+		}
+	}
 }
 
 function detectShift(

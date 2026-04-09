@@ -79,6 +79,13 @@ export interface PersonaShift {
 	trigger: string | null;
 }
 
+export interface RuleMatch {
+	ruleName: string;
+	weight: number;
+	adjustment: PersonaScoreAdjustment;
+	reason: string;
+}
+
 export interface PersonaInference {
 	probabilities: PersonaProbabilities;
 	primary: Persona;
@@ -88,6 +95,7 @@ export interface PersonaInference {
 	signalCount: number;
 	lastUpdated: number;
 	dominantSource: SignalSource;
+	ruleMatches: RuleMatch[];  // Which inference rules fired and why
 }
 
 // ─── Inference Rules ───────────────────────────────────────────────
