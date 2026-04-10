@@ -104,6 +104,7 @@ The most recent layout or refinement generation for the selected session.
 - **Generation time**: milliseconds from request to response
 - **Token usage**: input tokens / output tokens
 - **Estimated cost**: cost in USD for this single generation
+- **Schema validation**: `first-try` (Haiku produced a valid output) or `fallback-sonnet` (Haiku failed, Sonnet recovered) or `fallback-static` (both models failed, static Svelte layout served)
 
 **Cumulative stats** (all generations for this session):
 - Total generations
@@ -118,6 +119,21 @@ The most recent layout or refinement generation for the selected session.
 - Sonnet fallback = typically 8–15s, $0.001–0.003
 
 For a typical demo session (5–10 category views, a search, and a refinement), expect total cost under $0.01.
+
+### Panel 3a: Schema Validation Health Metric
+
+A top-level health indicator tracking the percentage of LLM calls that produce schema-valid outputs on the first try. This is the operational measurement of the core correctness invariant (`∀I, ∀P, f(I, P) → S ∈ V`) — see `docs/decisions/004-vocabulary-constraint-invariant.md`.
+
+**The metric**: first-try validation success rate, computed as `(generations validated on Haiku first try) / (total generations excluding cache hits)`, over a rolling 1-hour window.
+
+**Thresholds**:
+- **≥ 95%**: healthy. The prompt is working, the schema is tight, Haiku is behaving as expected.
+- **90-95%**: warning. Investigate failing cases — is there a prompt regression, a schema change the model is struggling with, or a product catalog with unusual properties?
+- **< 90%**: critical. The system is falling back to Sonnet too frequently, which is slower and more expensive. The invariant still holds (fallback guarantees a valid S) but the cost and latency profile is degraded.
+
+**Why this matters**: the invariant `∀I, ∀P, f(I, P) → S ∈ V` is the foundational architectural principle of Aisles. It is enforced in code through the Zod schema, structured LLM output, and the Haiku → Sonnet → static fallback cascade. This metric is how you know the enforcement is working in production. A drop in first-try validation rate is the earliest signal that something is wrong with the prompt, the schema, or the model behavior — often before shoppers notice any impact.
+
+**Implementation status**: the measurement requires the `generation_logs` table to distinguish between "first try valid" and "recovered by fallback." Currently the `model` field shows which model served the final output but not whether Haiku was attempted first and failed. Closing this gap is an action item from ADR-004.
 
 ---
 

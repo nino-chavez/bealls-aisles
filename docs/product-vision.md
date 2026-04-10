@@ -14,6 +14,8 @@ The business user — a merchandiser, brand manager, or growth lead — sees exa
 
 This tension — invisible to the shopper, transparent to the operator — is the product's core design principle.
 
+Transparency is only meaningful if the system's behavior is *explainable*, and explainability is only possible because the AI operates under a formal correctness invariant: every layout the AI produces must be an element of a finite, typed set of valid configurations defined in code. This invariant (`∀I, ∀P, f(I, P) → S ∈ V`) is what makes the Observe dashboard possible — you can surface "which component the AI chose and why" only if the components come from a known vocabulary. Without the vocabulary constraint, the system would be a black box even to its own operators. See `docs/decisions/004-vocabulary-constraint-invariant.md` for the full rationale and enforcement.
+
 ### Speed Over Accuracy: The Fail-Fast Principle
 
 A slightly wrong layout served in 100ms is recoverable. A perfect layout served in 8 seconds is a bounce.

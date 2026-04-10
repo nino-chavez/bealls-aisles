@@ -12,6 +12,26 @@ Three brands run on a single codebase, differentiated entirely by configuration.
 
 ---
 
+## The Core Invariant
+
+The foundational architectural principle of Aisles is a formal correctness invariant on every AI-generated layout:
+
+> **For all possible user inputs I and all possible personalization vectors P, the layout generation function f must produce an interface state S that is an element of the set V of valid configurations.**
+>
+> **∀I, ∀P, f(I, P) → S ∈ V**
+
+The set V is defined literally by the Zod schema in `src/lib/schema/layout.ts`. Every valid layout is an object that passes Zod validation against this schema. Every invalid layout is rejected and the pipeline falls back to a more capable model (Haiku → Sonnet) or to a static Svelte layout.
+
+This is the invariant that makes AI-generated UI work in production rather than only in demos. It is enforced in three layers:
+
+1. **Schema as definition of V**: the Zod schema explicitly enumerates the valid component types (`editorial-header`, `hero-product`, `product-grid`, `category-header`), their allowed prop values, and their composition rules
+2. **Structured LLM output**: the Vercel AI SDK passes the schema to the LLM as a token-generation constraint via `generateObject` / `streamObject`, producing schema-compliant outputs by construction
+3. **Fallback cascade**: Haiku → Sonnet → static Svelte layouts guarantee a valid S always exists, even under model failure
+
+Every other subsystem in Aisles — the inference loop, the cache, the Observe dashboard, the signal pipeline — depends on this invariant holding. See `docs/decisions/004-vocabulary-constraint-invariant.md` for the full rationale, the operational consequences (schema validation success rate as a health metric, vocabulary evolution process, cache invalidation), and the trade-off between vocabulary size and invariant strength.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -288,3 +308,4 @@ See `docs/product-vision.md` for the extended analysis and `docs/specs/behaviora
 - `docs/decisions/001-enrichment-vs-feedonomics.md`
 - `docs/decisions/002-streaming-layout-generation.md`
 - `docs/decisions/003-prerender-vs-cache-warming.md`
+- `docs/decisions/004-vocabulary-constraint-invariant.md` — the core correctness invariant and its enforcement

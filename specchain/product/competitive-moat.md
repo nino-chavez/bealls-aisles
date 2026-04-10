@@ -44,7 +44,41 @@ First-mover advantage lasts exactly as long as it takes a well-resourced competi
 
 ## What IS Genuinely Hard to Replicate
 
-Four capabilities are structurally difficult for competitors to match quickly, regardless of whether they copy the concept.
+Five capabilities are structurally difficult for competitors to match quickly, regardless of whether they copy the concept. The first of these is the foundation; the other four are built on top of it.
+
+### 0. The Vocabulary Constraint Invariant (The Foundation)
+
+This is the single most important technical decision in Aisles and the reason the system works in production rather than only in demos. See `docs/decisions/004-vocabulary-constraint-invariant.md` for the full treatment.
+
+The formal statement:
+
+> **∀I, ∀P, f(I, P) → S ∈ V**
+>
+> For all possible user inputs and all possible personalization vectors, the layout generation function must produce an interface state that is an element of the set V of valid configurations.
+
+V is defined literally by a Zod schema. The LLM's output is constrained to be schema-compliant through structured output APIs. A fallback cascade (Haiku → Sonnet → static Svelte) guarantees a valid S always exists, even under failure.
+
+**Why this is the foundational moat:**
+
+1. **It is the reason AI UI projects usually fail.** Every AI-generated interface system that does not explicitly constrain V produces unreliable outputs. Most projects start with "let the AI write HTML" or "let the AI choose from hundreds of components" and ship demos that break in production. The ones that succeed — a very short list — are the ones that recognized the invariant problem and solved it with a constrained vocabulary. Aisles is in that short list. Most competitors will start in the first group and learn the hard way over 12-18 months of production failures.
+
+2. **It is what makes the Observe dashboard possible.** If the output were free-form, you could not build an explainable dashboard. You can only surface "which component the AI chose and why" if the components come from a known set. The Observe dashboard is not a separate feature from the vocabulary constraint — it is a *direct consequence* of the vocabulary being finite and typed.
+
+3. **It is the boundary between demo and product.** A demo works because you can hand-pick inputs that produce good outputs. A product works because it handles every input. The formal invariant is the line between these two regimes. Aisles has crossed this line. Most competitors have not, and they will learn by shipping broken products to real merchants.
+
+4. **It defines the operational trade-off between flexibility and reliability.** A smaller V means stronger guarantees (fewer invalid outputs, predictable behavior, reliable merchant experience). A larger V means more flexibility (richer layouts, more variation). Most teams will not understand this trade-off until they have shipped and failed. Aisles' current choice (four components) errs on the side of reliability — a deliberate decision that competitors copying the concept will likely get wrong in both directions (too small and rigid, or too large and unreliable).
+
+5. **It changes the testing strategy entirely.** Traditional QA enumerates inputs and verifies outputs. Invariant-based QA verifies that the schema is sound, that all vocabulary components render correctly, and that the LLM's first-try structured output rate is above threshold. These are fundamentally different testing approaches. Competitors who attempt to test a constrained AI UI system using traditional QA methods will ship unreliable products.
+
+**What competitors must replicate to match this:**
+
+- Design a Zod schema (or equivalent) that is tight enough to prevent invalid outputs but expressive enough to produce meaningful variation
+- Learn to write prompts that guide the LLM toward schema compliance without being so restrictive that the model loses creativity
+- Build a fallback cascade that maintains the invariant under every failure mode
+- Set up visual regression testing across the full V × persona × viewport space
+- Establish a vocabulary evolution process that protects the invariant as new components are added
+
+This is months of engineering work, and most of it is invisible — it is the kind of discipline that does not show up in marketing materials but that determines whether a product survives in production. Competitors will underestimate this because it looks like "just a schema" from the outside.
 
 ### 1. The Inference-to-Layout Loop at Sub-Second Latency
 
@@ -76,17 +110,7 @@ The enrichment pipeline in Aisles:
 
 This is the pattern streaming platforms use: Netflix pre-computes recommendations in a batch pipeline and serves them from a cache at request time. Request-time inference is slower, more expensive, and has worse cold-start quality. Aisles' enrichment-at-ingestion approach is the architecturally correct one, and competitors will learn this the hard way.
 
-### 3. The Component Vocabulary Constraint
-
-The AI cannot invent UI. It selects from a fixed, validated vocabulary (`editorial-header`, `hero-product`, `product-grid`, `category-header`). This is the "Chipotle analogy" made architectural: the AI is a line cook assembling pre-approved ingredients, not a chef inventing new dishes.
-
-Most AI-generated UI projects fail because they give the model too much freedom. The output is inconsistent, occasionally broken, and impossible to brand-control. A constrained vocabulary produces reliable outputs but requires discipline in schema design.
-
-Competitors who copy the concept without understanding the constraint will ship broken layouts. Those who do understand it will need to design their own vocabulary, which takes multiple iteration cycles to get right — the current Aisles vocabulary is the product of multiple revisions and is still evolving.
-
-The moat here is not the vocabulary itself (which can be copied) but the **discipline of constraining the AI** and the institutional understanding of why that constraint exists. Merchants who get personalization platforms that generate free-form layouts will reject them within weeks.
-
-### 4. The Observe Dashboard — Explainable Intelligence for Business Users
+### 3. The Observe Dashboard — Explainable Intelligence for Business Users
 
 This is the commercial moat. It is the product feature that makes merchants *trust* the system.
 
