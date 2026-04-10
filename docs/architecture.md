@@ -177,6 +177,7 @@ Two layers of caching reduce cost and latency:
 - Cache hit: sub-100ms response, no AI call
 - Cache miss: 2–15s generation, then cached for subsequent visitors
 - Invalidated manually or after enrichment runs
+- Design stance: serve stale-but-fast over fresh-but-slow. A recoverable wrong answer (cached layout for a slightly drifted persona) beats a delayed right answer. See "Speed Over Accuracy" in `docs/product-vision.md`.
 
 **Session store (Redis, `aisles:session:{sessionId}`)**
 - 30-minute TTL, sliding
@@ -282,6 +283,8 @@ See `docs/product-vision.md` for the extended analysis and `docs/specs/behaviora
 - `docs/signals-and-inference.md` — complete signal and rule catalog
 - `docs/specs/behavioral-signals.md` — signal expansion implementation spec
 - `docs/product-vision.md` — product mission and streaming platform inspiration
+- `docs/specs/intent-driven-commerce.md` — intent-driven commerce features (incentives, alternatives, cross-sells)
+- `docs/specs/layout-transitions.md` — layout transition animations (section fade-in, skeleton morph, persona shift swap)
 - `docs/decisions/001-enrichment-vs-feedonomics.md`
 - `docs/decisions/002-streaming-layout-generation.md`
 - `docs/decisions/003-prerender-vs-cache-warming.md`
