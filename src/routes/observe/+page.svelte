@@ -272,7 +272,7 @@
 	<div class="min-h-screen bg-neutral-950 text-neutral-200">
 		<!-- ─── Top Bar: Session Picker ───────────────────────────── -->
 		<header class="border-b border-neutral-800 bg-neutral-900/80 backdrop-blur">
-			<div class="flex items-center gap-4 px-4 py-3">
+			<div class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
 				<div class="flex items-center gap-2">
 					<span class="font-mono text-xs tracking-widest text-neutral-500 uppercase">Observe</span>
 					<span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -320,9 +320,9 @@
 			</div>
 		{:else}
 			<!-- ─── Dashboard Grid ───────────────────────────────── -->
-			<div class="grid h-[calc(100vh-52px)] grid-cols-[1fr_420px] gap-px bg-neutral-800">
+			<div class="grid h-[calc(100vh-52px)] grid-cols-[minmax(0,1fr)_420px] gap-px overflow-hidden bg-neutral-800">
 				<!-- ─── Left: Signal Timeline ─────────────────────── -->
-				<div class="flex flex-col bg-neutral-950">
+				<div class="flex min-w-0 flex-col bg-neutral-950">
 					<div class="border-b border-neutral-800 px-4 py-2">
 						<h2 class="font-mono text-xs tracking-widest text-neutral-500 uppercase">Signal Timeline</h2>
 					</div>
@@ -331,7 +331,7 @@
 							{@const sourceStyle = SOURCE_COLORS[event.source] || SOURCE_COLORS.external}
 							{@const isNew = newEventIds.has(event.id)}
 							<div
-								class="mb-1 flex items-start gap-3 rounded px-2 py-1.5 font-mono text-xs transition-all duration-500"
+								class="mb-1 flex min-w-0 items-start gap-3 rounded px-2 py-1.5 font-mono text-xs transition-all duration-500"
 								class:bg-neutral-900={!isNew}
 								class:bg-neutral-800={isNew}
 								class:animate-slide-in={isNew}
@@ -344,9 +344,9 @@
 								>
 									{sourceStyle.label}
 								</span>
-								<span class="text-neutral-300">{event.type}</span>
+								<span class="shrink-0 text-neutral-300">{event.type}</span>
 								{#if Object.keys(event.data).length > 0}
-									<span class="truncate text-neutral-600">
+									<span class="min-w-0 flex-1 truncate text-neutral-600">
 										{JSON.stringify(event.data)}
 									</span>
 								{/if}
@@ -360,7 +360,7 @@
 				</div>
 
 				<!-- ─── Right Panels ──────────────────────────────── -->
-				<div class="flex flex-col gap-px bg-neutral-800">
+				<div class="flex min-w-0 flex-col gap-px overflow-y-auto bg-neutral-800">
 					<!-- ─── Persona Vector ────────────────────────── -->
 					<div class="bg-neutral-950 p-4">
 						<h2 class="mb-3 font-mono text-xs tracking-widest text-neutral-500 uppercase">Persona Vector</h2>
@@ -557,7 +557,7 @@
 						</button>
 
 						{#if enrichmentOpen}
-							<div class="mt-3 max-h-64 overflow-y-auto">
+							<div class="mt-3 max-h-64 overflow-auto">
 								{#if enrichmentLoading}
 									<p class="py-4 text-center font-mono text-[10px] text-neutral-600">Loading enrichment data...</p>
 								{:else if enrichmentProducts.length === 0}
@@ -568,17 +568,26 @@
 									</p>
 								{:else}
 									{@const currentPersona = sessionData?.inference?.primary || 'gatherer'}
-									<table class="w-full font-mono text-[10px]">
+									<table class="w-full table-fixed font-mono text-[10px]">
+										<colgroup>
+											<col style="width: 38%" />
+											<col style="width: 10%" />
+											<col style="width: 8%" />
+											<col style="width: 8%" />
+											<col style="width: 8%" />
+											<col style="width: 8%" />
+											<col style="width: 20%" />
+										</colgroup>
 										<thead>
 											<tr class="border-b border-neutral-800 text-left text-neutral-600">
 												<th class="pb-1.5 pr-2">Product</th>
-												<th class="pb-1.5 px-2 text-right">
+												<th class="pb-1.5 px-1 text-right">
 													<span class={PERSONA_TEXT_COLORS[currentPersona]}>fit</span>
 												</th>
-												<th class="pb-1.5 px-2 text-right">g</th>
-												<th class="pb-1.5 px-2 text-right">h</th>
-												<th class="pb-1.5 px-2 text-right">r</th>
-												<th class="pb-1.5 px-2 text-right">gi</th>
+												<th class="pb-1.5 px-1 text-right">g</th>
+												<th class="pb-1.5 px-1 text-right">h</th>
+												<th class="pb-1.5 px-1 text-right">r</th>
+												<th class="pb-1.5 px-1 text-right">gi</th>
 												<th class="pb-1.5 pl-2">Tags</th>
 											</tr>
 										</thead>
@@ -587,29 +596,27 @@
 												{@const fit = product.personaFit}
 												{@const primaryFit = fit?.[currentPersona as keyof typeof fit] ?? 0.5}
 												<tr class="border-b border-neutral-900 {i < 3 ? 'bg-neutral-900/50' : ''}">
-													<td class="py-1 pr-2 text-neutral-300 truncate max-w-[140px]" title={product.name}>
+													<td class="py-1 pr-2 text-neutral-300 truncate" title={product.name}>
 														{#if i < 3}<span class="text-amber-500 mr-1">*</span>{/if}{product.name}
 													</td>
-													<td class="py-1 px-2 text-right tabular-nums {PERSONA_TEXT_COLORS[currentPersona]}">
+													<td class="py-1 px-1 text-right tabular-nums {PERSONA_TEXT_COLORS[currentPersona]}">
 														{(primaryFit * 100).toFixed(0)}
 													</td>
-													<td class="py-1 px-2 text-right tabular-nums text-neutral-600">
+													<td class="py-1 px-1 text-right tabular-nums text-neutral-600">
 														{fit ? (fit.gatherer * 100).toFixed(0) : '-'}
 													</td>
-													<td class="py-1 px-2 text-right tabular-nums text-neutral-600">
+													<td class="py-1 px-1 text-right tabular-nums text-neutral-600">
 														{fit ? (fit.hunter * 100).toFixed(0) : '-'}
 													</td>
-													<td class="py-1 px-2 text-right tabular-nums text-neutral-600">
+													<td class="py-1 px-1 text-right tabular-nums text-neutral-600">
 														{fit ? (fit.researcher * 100).toFixed(0) : '-'}
 													</td>
-													<td class="py-1 px-2 text-right tabular-nums text-neutral-600">
+													<td class="py-1 px-1 text-right tabular-nums text-neutral-600">
 														{fit ? (fit.gifter * 100).toFixed(0) : '-'}
 													</td>
-													<td class="py-1 pl-2">
-														<div class="flex flex-wrap gap-1">
-															{#each product.semanticTags.slice(0, 3) as tag}
-																<span class="rounded bg-neutral-800 px-1 py-0.5 text-neutral-500">{tag}</span>
-															{/each}
+													<td class="py-1 pl-2 align-top">
+														<div class="truncate text-neutral-500" title={product.semanticTags.slice(0, 3).join(', ')}>
+															{product.semanticTags[0] ?? ''}
 														</div>
 													</td>
 												</tr>
