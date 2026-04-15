@@ -269,18 +269,18 @@
 		</div>
 	</div>
 {:else}
-	<div class="min-h-screen bg-neutral-950 text-neutral-200">
+	<div class="min-h-screen bg-neutral-950 font-sans text-[13px] text-neutral-200 antialiased">
 		<!-- ─── Top Bar: Session Picker ───────────────────────────── -->
 		<header class="border-b border-neutral-800 bg-neutral-900/80 backdrop-blur">
-			<div class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+			<div class="flex flex-wrap items-center gap-x-5 gap-y-2 px-5 py-3">
 				<div class="flex items-center gap-2">
-					<span class="font-mono text-xs tracking-widest text-neutral-500 uppercase">Observe</span>
+					<span class="text-[11px] font-semibold tracking-[0.18em] text-neutral-400 uppercase">Observe</span>
 					<span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
 				</div>
 
 				<select
 					bind:value={selectedSessionId}
-					class="rounded border border-neutral-700 bg-neutral-800 px-3 py-1.5 font-mono text-xs text-neutral-300 outline-none"
+					class="rounded border border-neutral-700 bg-neutral-800 px-3 py-1.5 font-mono text-[11px] text-neutral-300 outline-none focus:border-neutral-500"
 				>
 					<option value={null}>Select session...</option>
 					{#each sessionIds as id}
@@ -288,7 +288,7 @@
 					{/each}
 				</select>
 
-				<label class="flex items-center gap-2 text-xs text-neutral-500">
+				<label class="flex items-center gap-2 text-[12px] text-neutral-400">
 					<input
 						type="checkbox"
 						bind:checked={watchLatest}
@@ -298,55 +298,150 @@
 				</label>
 
 				{#if sessionData?.crossSession}
-					<div class="ml-auto flex items-center gap-4 font-mono text-xs text-neutral-500">
-						<span>visits: {sessionData.crossSession.visitCount}</span>
+					<div class="ml-auto flex items-center gap-5 text-[12px]">
+						<div class="flex items-baseline gap-1.5">
+							<span class="text-neutral-500">visits</span>
+							<span class="font-mono tabular-nums text-neutral-200">{sessionData.crossSession.visitCount}</span>
+						</div>
 						{#if sessionData.crossSession.storedPersona}
-							<span>stored: <span class={PERSONA_TEXT_COLORS[sessionData.crossSession.storedPersona]}>{sessionData.crossSession.storedPersona}</span></span>
+							<div class="flex items-baseline gap-1.5">
+								<span class="text-neutral-500">stored</span>
+								<span class="{PERSONA_TEXT_COLORS[sessionData.crossSession.storedPersona]} font-medium">{sessionData.crossSession.storedPersona}</span>
+							</div>
 						{/if}
 						{#if sessionData.crossSession.currentCategory}
-							<span>category: {sessionData.crossSession.currentCategory}</span>
+							<div class="flex items-baseline gap-1.5">
+								<span class="text-neutral-500">category</span>
+								<span class="text-neutral-200">{sessionData.crossSession.currentCategory}</span>
+							</div>
 						{/if}
-						<span>events: {sessionData.eventCount}</span>
+						<div class="flex items-baseline gap-1.5">
+							<span class="text-neutral-500">events</span>
+							<span class="font-mono tabular-nums text-neutral-200">{sessionData.eventCount}</span>
+						</div>
 					</div>
 				{/if}
 			</div>
 		</header>
 
 		{#if !selectedSessionId || !sessionData}
-			<div class="flex h-[calc(100vh-52px)] items-center justify-center">
-				<p class="font-mono text-sm text-neutral-600">
+			<div class="flex h-[calc(100vh-56px)] items-center justify-center">
+				<p class="text-[13px] text-neutral-500">
 					{sessionIds.length === 0 ? 'No active sessions. Browse the storefront to create one.' : 'Select a session to observe.'}
 				</p>
 			</div>
 		{:else}
+			<!-- ─── Persona Strip (session-level summary) ────────── -->
+			{#if sessionData.inference}
+				{@const inf = sessionData.inference}
+				<section class="border-b border-neutral-800 bg-neutral-900/40 px-5 py-4">
+					<div class="flex flex-wrap items-start gap-x-8 gap-y-4">
+						<!-- Persona bars -->
+						<div class="flex min-w-0 flex-1 flex-col gap-1.5" style="min-width: 360px;">
+							<div class="mb-0.5 flex items-baseline justify-between">
+								<span class="text-[10px] font-semibold tracking-[0.18em] text-neutral-500 uppercase">Persona</span>
+								<span class="text-[11px] text-neutral-500">
+									confidence gap
+									<span class="ml-1 font-mono tabular-nums text-neutral-300">{formatPercent(inf.confidence)}</span>
+								</span>
+							</div>
+							{#each ['gatherer', 'hunter', 'researcher', 'gifter'] as persona}
+								{@const prob = inf.probabilities[persona as keyof typeof inf.probabilities]}
+								{@const isPrimary = inf.primary === persona}
+								<div class="flex items-center gap-3">
+									<span class="w-20 text-[12px] {isPrimary ? PERSONA_TEXT_COLORS[persona] + ' font-semibold' : 'text-neutral-400'}">
+										{persona}
+									</span>
+									<div class="relative h-[6px] flex-1 overflow-hidden rounded-full bg-neutral-800">
+										<div
+											class="h-full rounded-full transition-all duration-700 ease-out {PERSONA_COLORS[persona]}"
+											style="width: {prob * 100}%"
+										></div>
+									</div>
+									<span class="w-10 text-right font-mono text-[11px] tabular-nums {isPrimary ? 'text-neutral-200' : 'text-neutral-500'}">
+										{formatPercent(prob)}
+									</span>
+								</div>
+							{/each}
+						</div>
+
+						<!-- Modifiers -->
+						<div class="flex flex-col gap-1.5" style="min-width: 220px;">
+							<span class="mb-0.5 text-[10px] font-semibold tracking-[0.18em] text-neutral-500 uppercase">Modifiers</span>
+							{#each [
+								['price sensitivity', inf.modifiers.priceSensitivity],
+								['urgency', inf.modifiers.urgency],
+								['familiarity', inf.modifiers.familiarityWithStore],
+							] as [label, value]}
+								<div class="flex items-center gap-3">
+									<span class="w-28 text-[11px] text-neutral-400">{label}</span>
+									<div class="relative h-[4px] flex-1 overflow-hidden rounded-full bg-neutral-800">
+										<div
+											class="h-full rounded-full bg-neutral-400 transition-all duration-700"
+											style="width: {(value as number) * 100}%"
+										></div>
+									</div>
+									<span class="w-8 text-right font-mono text-[10px] tabular-nums text-neutral-500">
+										{formatPercent(value as number)}
+									</span>
+								</div>
+							{/each}
+						</div>
+
+						<!-- Shift detection -->
+						{#if inf.shift.detected}
+							<div
+								class="flex flex-col justify-center rounded-md border px-3 py-2 text-[11px] transition-colors duration-300"
+								class:border-amber-600={shiftFlash}
+								class:bg-amber-950={shiftFlash}
+								class:text-amber-300={shiftFlash}
+								class:border-neutral-700={!shiftFlash}
+								class:text-neutral-400={!shiftFlash}
+								style="min-width: 180px;"
+							>
+								<div class="text-[10px] font-semibold tracking-[0.14em] uppercase">Shift Detected</div>
+								<div class="mt-1">
+									<span class={PERSONA_TEXT_COLORS[inf.shift.from ?? ''] ?? 'text-neutral-500'}>{inf.shift.from}</span>
+									<span class="text-neutral-500"> → </span>
+									<span class="{PERSONA_TEXT_COLORS[inf.primary]} font-semibold">{inf.primary}</span>
+								</div>
+								{#if inf.shift.trigger}
+									<div class="mt-0.5 text-[10px] text-neutral-500">{inf.shift.trigger}</div>
+								{/if}
+							</div>
+						{/if}
+					</div>
+				</section>
+			{/if}
+
 			<!-- ─── Dashboard Grid ───────────────────────────────── -->
-			<div class="grid h-[calc(100vh-52px)] grid-cols-[minmax(0,1fr)_420px] gap-px overflow-hidden bg-neutral-800">
+			<div class="grid h-[calc(100vh-var(--observe-chrome))] grid-cols-[minmax(0,1fr)_400px] gap-px overflow-hidden bg-neutral-800" style="--observe-chrome: 260px;">
 				<!-- ─── Left: Signal Timeline ─────────────────────── -->
 				<div class="flex min-w-0 flex-col bg-neutral-950">
-					<div class="border-b border-neutral-800 px-4 py-2">
-						<h2 class="font-mono text-xs tracking-widest text-neutral-500 uppercase">Signal Timeline</h2>
+					<div class="flex items-baseline justify-between border-b border-neutral-800 px-5 py-3">
+						<h2 class="text-[11px] font-semibold tracking-[0.18em] text-neutral-400 uppercase">Signal Timeline</h2>
+						<span class="text-[11px] text-neutral-600">{sortedEvents.length} events</span>
 					</div>
-					<div class="flex-1 overflow-y-auto px-4 py-2" id="signal-timeline">
+					<div class="flex-1 overflow-y-auto px-3 py-2" id="signal-timeline">
 						{#each sortedEvents as event (event.id)}
 							{@const sourceStyle = SOURCE_COLORS[event.source] || SOURCE_COLORS.external}
 							{@const isNew = newEventIds.has(event.id)}
 							<div
-								class="mb-1 flex min-w-0 items-start gap-3 rounded px-2 py-1.5 font-mono text-xs transition-all duration-500"
-								class:bg-neutral-900={!isNew}
-								class:bg-neutral-800={isNew}
+								class="group mb-0.5 flex min-w-0 items-center gap-3 rounded px-2 py-[5px] text-[12px] transition-all duration-500 hover:bg-neutral-900"
+								class:bg-neutral-900={isNew}
 								class:animate-slide-in={isNew}
 							>
-								<span class="shrink-0 tabular-nums text-neutral-600">
+								<span class="w-[58px] shrink-0 font-mono text-[11px] tabular-nums text-neutral-600">
 									{formatTime(event.timestamp)}
 								</span>
 								<span
-									class="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase {sourceStyle.bg} {sourceStyle.text}"
+									class="w-9 shrink-0 rounded px-1.5 py-0.5 text-center text-[9px] font-semibold tracking-wider uppercase {sourceStyle.bg} {sourceStyle.text}"
 								>
 									{sourceStyle.label}
 								</span>
-								<span class="shrink-0 text-neutral-300">{event.type}</span>
+								<span class="w-[160px] shrink-0 truncate font-mono text-[11px] text-neutral-300">{event.type}</span>
 								{#if Object.keys(event.data).length > 0}
-									<span class="min-w-0 flex-1 truncate text-neutral-600">
+									<span class="min-w-0 flex-1 truncate font-mono text-[11px] text-neutral-600">
 										{JSON.stringify(event.data)}
 									</span>
 								{/if}
@@ -354,241 +449,170 @@
 						{/each}
 
 						{#if sortedEvents.length === 0}
-							<p class="py-8 text-center text-xs text-neutral-700">Waiting for signals...</p>
+							<p class="py-10 text-center text-[12px] text-neutral-600">Waiting for signals...</p>
 						{/if}
 					</div>
 				</div>
 
 				<!-- ─── Right Panels ──────────────────────────────── -->
 				<div class="flex min-w-0 flex-col gap-px overflow-y-auto bg-neutral-800">
-					<!-- ─── Persona Vector ────────────────────────── -->
-					<div class="bg-neutral-950 p-4">
-						<h2 class="mb-3 font-mono text-xs tracking-widest text-neutral-500 uppercase">Persona Vector</h2>
+					<!-- ─── Rules Fired ────────────────────────────── -->
+					<div class="bg-neutral-950 p-5">
+						<div class="mb-3 flex items-baseline justify-between">
+							<h2 class="text-[11px] font-semibold tracking-[0.18em] text-neutral-400 uppercase">Rules Fired</h2>
+							{#if sessionData.inference?.ruleMatches?.length}
+								<span class="text-[11px] text-neutral-600">{sessionData.inference.ruleMatches.length}</span>
+							{/if}
+						</div>
 
-						{#if sessionData.inference}
-							{@const inf = sessionData.inference}
+						{#if sessionData.inference?.ruleMatches?.length > 0}
 							<div class="space-y-2">
-								{#each ['gatherer', 'hunter', 'researcher', 'gifter'] as persona}
-									{@const prob = inf.probabilities[persona as keyof typeof inf.probabilities]}
-									{@const isPrimary = inf.primary === persona}
-									<div class="flex items-center gap-3">
-										<span
-											class="w-20 font-mono text-xs {isPrimary ? PERSONA_TEXT_COLORS[persona] + ' font-bold' : 'text-neutral-500'}"
-										>
-											{persona}
-										</span>
-										<div class="relative h-4 flex-1 overflow-hidden rounded bg-neutral-800">
-											<div
-												class="h-full rounded transition-all duration-700 ease-out {PERSONA_COLORS[persona]}"
-												style="width: {prob * 100}%"
-											></div>
+								{#each sessionData.inference.ruleMatches as match}
+									<div class="rounded-md border border-neutral-800 bg-neutral-900/60 px-3 py-2">
+										<div class="flex items-baseline justify-between gap-2">
+											<span class="truncate text-[12px] font-medium text-neutral-200">{match.ruleName}</span>
+											<span class="shrink-0 font-mono text-[10px] text-neutral-500">w {match.weight.toFixed(1)}</span>
 										</div>
-										<span class="w-10 text-right font-mono text-xs tabular-nums {isPrimary ? 'text-neutral-200' : 'text-neutral-600'}">
-											{formatPercent(prob)}
-										</span>
+										<div class="mt-1 text-[11px] leading-snug text-neutral-500">{match.reason}</div>
+										<div class="mt-1.5 flex flex-wrap gap-1">
+											{#each ['gatherer', 'hunter', 'researcher', 'gifter'] as p}
+												{#if (match.adjustment as any)[p]}
+													<span class="rounded px-1.5 py-0.5 font-mono text-[10px] {PERSONA_TEXT_COLORS[p]} bg-neutral-800/80">
+														{p[0]}+{((match.adjustment as any)[p] * match.weight).toFixed(2)}
+													</span>
+												{/if}
+											{/each}
+											{#if match.adjustment.priceSensitivity}
+												<span class="rounded bg-neutral-800/80 px-1.5 py-0.5 font-mono text-[10px] text-amber-400">price+{(match.adjustment.priceSensitivity * match.weight).toFixed(2)}</span>
+											{/if}
+											{#if match.adjustment.familiarityWithStore}
+												<span class="rounded bg-neutral-800/80 px-1.5 py-0.5 font-mono text-[10px] text-blue-400">fam+{(match.adjustment.familiarityWithStore * match.weight).toFixed(2)}</span>
+											{/if}
+										</div>
 									</div>
 								{/each}
 							</div>
-
-							<!-- Confidence gap -->
-							<div class="mt-3 flex items-center gap-2 font-mono text-xs text-neutral-600">
-								<span>confidence gap:</span>
-								<span class="text-neutral-400">{formatPercent(inf.confidence)}</span>
-							</div>
-
-							<!-- Modifiers -->
-							<div class="mt-3 space-y-1.5">
-								<h3 class="font-mono text-[10px] tracking-widest text-neutral-600 uppercase">Modifiers</h3>
-								{#each [
-									['price sensitivity', inf.modifiers.priceSensitivity],
-									['urgency', inf.modifiers.urgency],
-									['familiarity', inf.modifiers.familiarityWithStore],
-								] as [label, value]}
-									<div class="flex items-center gap-3">
-										<span class="w-28 font-mono text-[10px] text-neutral-600">{label}</span>
-										<div class="relative h-1.5 flex-1 overflow-hidden rounded bg-neutral-800">
-											<div
-												class="h-full rounded bg-neutral-500 transition-all duration-700"
-												style="width: {(value as number) * 100}%"
-											></div>
-										</div>
-										<span class="w-8 text-right font-mono text-[10px] tabular-nums text-neutral-600">
-											{formatPercent(value as number)}
-										</span>
-									</div>
-								{/each}
-							</div>
-
-							<!-- Shift detection -->
-							{#if inf.shift.detected}
-								<div
-									class="mt-3 rounded border px-3 py-2 font-mono text-xs transition-colors duration-300"
-									class:border-amber-600={shiftFlash}
-									class:bg-amber-950={shiftFlash}
-									class:text-amber-300={shiftFlash}
-									class:border-neutral-700={!shiftFlash}
-									class:text-neutral-400={!shiftFlash}
-								>
-									<div class="font-semibold uppercase">Shift Detected</div>
-									<div class="mt-1">
-										<span class={PERSONA_TEXT_COLORS[inf.shift.from ?? ''] ?? 'text-neutral-500'}>{inf.shift.from}</span>
-										<span class="text-neutral-600"> &rarr; </span>
-										<span class={PERSONA_TEXT_COLORS[inf.primary]}>{inf.primary}</span>
-									</div>
-									{#if inf.shift.trigger}
-										<div class="mt-1 text-[10px] text-neutral-600">{inf.shift.trigger}</div>
-									{/if}
-								</div>
-							{/if}
-
-							<!-- Rule attribution -->
-							{#if inf.ruleMatches?.length > 0}
-								<div class="mt-3 border-t border-neutral-800 pt-3">
-									<h3 class="mb-2 font-mono text-[10px] tracking-widest text-neutral-600 uppercase">
-										Rules Fired ({inf.ruleMatches.length})
-									</h3>
-									<div class="space-y-1">
-										{#each inf.ruleMatches as match}
-											<div class="rounded bg-neutral-900 px-2 py-1.5 font-mono text-[10px]">
-												<div class="flex items-center justify-between">
-													<span class="text-neutral-400">{match.ruleName}</span>
-													<span class="text-neutral-600">w:{match.weight.toFixed(1)}</span>
-												</div>
-												<div class="mt-0.5 text-neutral-500">{match.reason}</div>
-												<div class="mt-0.5 flex flex-wrap gap-1">
-													{#each ['gatherer', 'hunter', 'researcher', 'gifter'] as p}
-														{#if (match.adjustment as any)[p]}
-															<span class="rounded px-1 py-0.5 {PERSONA_TEXT_COLORS[p]} bg-neutral-800">
-																{p[0]}:+{((match.adjustment as any)[p] * match.weight).toFixed(2)}
-															</span>
-														{/if}
-													{/each}
-													{#if match.adjustment.priceSensitivity}
-														<span class="rounded bg-neutral-800 px-1 py-0.5 text-amber-500">price:+{(match.adjustment.priceSensitivity * match.weight).toFixed(2)}</span>
-													{/if}
-													{#if match.adjustment.familiarityWithStore}
-														<span class="rounded bg-neutral-800 px-1 py-0.5 text-blue-400">fam:+{(match.adjustment.familiarityWithStore * match.weight).toFixed(2)}</span>
-													{/if}
-												</div>
-											</div>
-										{/each}
-									</div>
-								</div>
-							{:else}
-								<div class="mt-3 text-[10px] text-neutral-700">No rules fired — base prior only</div>
-							{/if}
+						{:else}
+							<p class="text-[11px] text-neutral-600">No rules fired — base prior only.</p>
 						{/if}
 					</div>
 
-					<!-- ─── Layout Decision Log ──────────────────── -->
-					<div class="bg-neutral-950 p-4">
-						<h2 class="mb-3 font-mono text-xs tracking-widest text-neutral-500 uppercase">Layout Decision</h2>
+					<!-- ─── Layout Decision ────────────────────────── -->
+					<div class="bg-neutral-950 p-5">
+						<h2 class="mb-3 text-[11px] font-semibold tracking-[0.18em] text-neutral-400 uppercase">Layout Decision</h2>
 
 						{#if latestLog}
-							<div class="grid grid-cols-2 gap-x-4 gap-y-1 font-mono text-xs">
-								<span class="text-neutral-600">type</span>
-								<span class="text-neutral-300">{latestLog.type}</span>
-								<span class="text-neutral-600">persona</span>
-								<span class={PERSONA_TEXT_COLORS[latestLog.persona] ?? 'text-neutral-300'}>{latestLog.persona}</span>
-								<span class="text-neutral-600">category</span>
-								<span class="text-neutral-300">{latestLog.categorySlug}</span>
-								<span class="text-neutral-600">model</span>
-								<span class="tabular-nums {latestLog.model?.includes('sonnet') ? 'text-amber-400' : 'text-emerald-400'}">
-									{latestLog.model ? latestLog.model.split('/').pop() : '?'}
-								</span>
-								<span class="text-neutral-600">cache</span>
-								<span class={latestLog.cacheHit ? 'text-emerald-400' : 'text-amber-400'}>
-									{latestLog.cacheHit ? 'HIT' : 'MISS'}
-								</span>
-								<span class="text-neutral-600">generation</span>
-								<span class="tabular-nums text-neutral-300">{latestLog.generationMs}ms</span>
-								<span class="text-neutral-600">tokens</span>
-								<span class="tabular-nums text-neutral-300">
-									{latestLog.inputTokens ?? '?'} in / {latestLog.outputTokens ?? '?'} out
-								</span>
-								<span class="text-neutral-600">cost</span>
-								<span class="tabular-nums text-neutral-300">
-									{latestLog.estimatedCost != null ? `$${latestLog.estimatedCost.toFixed(4)}` : '—'}
-								</span>
-								<span class="text-neutral-600">time</span>
-								<span class="text-neutral-500">{new Date(latestLog.createdAt).toLocaleTimeString()}</span>
-							</div>
+							<dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[12px]">
+								<dt class="text-neutral-500">type</dt>
+								<dd class="text-neutral-200">{latestLog.type}</dd>
 
-							<!-- Session cost stats -->
+								<dt class="text-neutral-500">persona</dt>
+								<dd class="{PERSONA_TEXT_COLORS[latestLog.persona] ?? 'text-neutral-200'} font-medium">{latestLog.persona}</dd>
+
+								<dt class="text-neutral-500">category</dt>
+								<dd class="text-neutral-200">{latestLog.categorySlug}</dd>
+
+								<dt class="text-neutral-500">model</dt>
+								<dd class="font-mono text-[11px] tabular-nums {latestLog.model?.includes('sonnet') ? 'text-amber-400' : 'text-emerald-400'}">
+									{latestLog.model ? latestLog.model.split('/').pop() : '—'}
+								</dd>
+
+								<dt class="text-neutral-500">cache</dt>
+								<dd class="font-mono text-[11px] font-semibold {latestLog.cacheHit ? 'text-emerald-400' : 'text-amber-400'}">
+									{latestLog.cacheHit ? 'HIT' : 'MISS'}
+								</dd>
+
+								<dt class="text-neutral-500">generation</dt>
+								<dd class="font-mono text-[11px] tabular-nums text-neutral-200">{latestLog.generationMs}ms</dd>
+
+								<dt class="text-neutral-500">tokens</dt>
+								<dd class="font-mono text-[11px] tabular-nums text-neutral-200">
+									{latestLog.inputTokens ?? '?'} in / {latestLog.outputTokens ?? '?'} out
+								</dd>
+
+								<dt class="text-neutral-500">cost</dt>
+								<dd class="font-mono text-[11px] tabular-nums text-neutral-200">
+									{latestLog.estimatedCost != null ? `$${latestLog.estimatedCost.toFixed(4)}` : '—'}
+								</dd>
+
+								<dt class="text-neutral-500">time</dt>
+								<dd class="font-mono text-[11px] text-neutral-500">{new Date(latestLog.createdAt).toLocaleTimeString()}</dd>
+							</dl>
+
 							{@const stats = cumulativeStats}
-							<div class="mt-3 border-t border-neutral-800 pt-3">
-								<h3 class="mb-1 font-mono text-[10px] tracking-widest text-neutral-600 uppercase">Session Cost ({stats.count} generations)</h3>
-								<div class="grid grid-cols-3 gap-x-4 gap-y-2 font-mono text-xs">
+							<div class="mt-4 border-t border-neutral-800 pt-3">
+								<h3 class="mb-2 text-[10px] font-semibold tracking-[0.18em] text-neutral-500 uppercase">Session Cost · {stats.count} gens</h3>
+								<div class="grid grid-cols-3 gap-x-3 gap-y-3 text-[11px]">
 									<div>
-										<div class="text-neutral-600">cache hit</div>
-										<div class="tabular-nums text-neutral-300">{stats.cacheHitRate}%</div>
+										<div class="text-neutral-500">cache hit</div>
+										<div class="mt-0.5 font-mono tabular-nums text-[13px] text-neutral-100">{stats.cacheHitRate}%</div>
 									</div>
 									<div>
-										<div class="text-neutral-600">avg time</div>
-										<div class="tabular-nums text-neutral-300">{stats.avgMs}ms</div>
+										<div class="text-neutral-500">avg time</div>
+										<div class="mt-0.5 font-mono tabular-nums text-[13px] text-neutral-100">{stats.avgMs}ms</div>
 									</div>
 									<div>
-										<div class="text-neutral-600">total tokens</div>
-										<div class="tabular-nums text-neutral-300">{stats.totalTokens.toLocaleString()}</div>
+										<div class="text-neutral-500">tokens</div>
+										<div class="mt-0.5 font-mono tabular-nums text-[13px] text-neutral-100">{stats.totalTokens.toLocaleString()}</div>
 									</div>
 									<div>
-										<div class="text-neutral-600">total cost</div>
-										<div class="tabular-nums text-neutral-300">${stats.totalCost.toFixed(4)}</div>
+										<div class="text-neutral-500">total cost</div>
+										<div class="mt-0.5 font-mono tabular-nums text-[13px] text-neutral-100">${stats.totalCost.toFixed(4)}</div>
 									</div>
 									<div>
-										<div class="text-neutral-600">sonnet fallbacks</div>
-										<div class="tabular-nums {stats.sonnetFallbacks > 0 ? 'text-amber-400' : 'text-neutral-300'}">{stats.sonnetFallbacks}</div>
+										<div class="text-neutral-500">sonnet fb</div>
+										<div class="mt-0.5 font-mono tabular-nums text-[13px] {stats.sonnetFallbacks > 0 ? 'text-amber-400' : 'text-neutral-100'}">{stats.sonnetFallbacks}</div>
 									</div>
 								</div>
 							</div>
 						{:else}
-							<p class="font-mono text-xs text-neutral-700">No generations yet.</p>
+							<p class="text-[11px] text-neutral-600">No generations yet.</p>
 						{/if}
 					</div>
 
 					<!-- ─── Product Enrichment (expandable) ──────── -->
-					<div class="bg-neutral-950 p-4">
+					<div class="bg-neutral-950 p-5">
 						<button
 							onclick={() => enrichmentOpen = !enrichmentOpen}
-							class="flex w-full items-center justify-between font-mono text-xs tracking-widest text-neutral-500 uppercase hover:text-neutral-400"
+							class="flex w-full items-center justify-between text-[11px] font-semibold tracking-[0.18em] text-neutral-400 uppercase hover:text-neutral-200"
 						>
 							<span>Product Enrichment</span>
-							<span class="text-lg leading-none">{enrichmentOpen ? '\u2212' : '+'}</span>
+							<span class="text-base leading-none text-neutral-500">{enrichmentOpen ? '−' : '+'}</span>
 						</button>
 
 						{#if enrichmentOpen}
-							<div class="mt-3 max-h-64 overflow-auto">
+							<div class="mt-3 max-h-72 overflow-auto">
 								{#if enrichmentLoading}
-									<p class="py-4 text-center font-mono text-[10px] text-neutral-600">Loading enrichment data...</p>
+									<p class="py-4 text-center text-[11px] text-neutral-500">Loading enrichment data…</p>
 								{:else if enrichmentProducts.length === 0}
-									<p class="py-4 text-center font-mono text-[10px] text-neutral-600">
+									<p class="py-4 text-center text-[11px] text-neutral-500">
 										{sessionData?.crossSession?.currentCategory
 											? `No enrichment data for "${sessionData.crossSession.currentCategory}".`
 											: 'Browse a category to see enrichment data.'}
 									</p>
 								{:else}
 									{@const currentPersona = sessionData?.inference?.primary || 'gatherer'}
-									<table class="w-full table-fixed font-mono text-[10px]">
+									<table class="w-full table-fixed text-[11px]">
 										<colgroup>
-											<col style="width: 38%" />
-											<col style="width: 10%" />
+											<col style="width: 44%" />
+											<col style="width: 12%" />
 											<col style="width: 8%" />
 											<col style="width: 8%" />
 											<col style="width: 8%" />
 											<col style="width: 8%" />
-											<col style="width: 20%" />
+											<col style="width: 12%" />
 										</colgroup>
 										<thead>
-											<tr class="border-b border-neutral-800 text-left text-neutral-600">
-												<th class="pb-1.5 pr-2">Product</th>
-												<th class="pb-1.5 px-1 text-right">
+											<tr class="border-b border-neutral-800 text-left text-[10px] font-semibold tracking-wider text-neutral-500 uppercase">
+												<th class="pb-2 pr-2">Product</th>
+												<th class="pb-2 px-1 text-right">
 													<span class={PERSONA_TEXT_COLORS[currentPersona]}>fit</span>
 												</th>
-												<th class="pb-1.5 px-1 text-right">g</th>
-												<th class="pb-1.5 px-1 text-right">h</th>
-												<th class="pb-1.5 px-1 text-right">r</th>
-												<th class="pb-1.5 px-1 text-right">gi</th>
-												<th class="pb-1.5 pl-2">Tags</th>
+												<th class="pb-2 px-1 text-right font-mono">g</th>
+												<th class="pb-2 px-1 text-right font-mono">h</th>
+												<th class="pb-2 px-1 text-right font-mono">r</th>
+												<th class="pb-2 px-1 text-right font-mono">gi</th>
+												<th class="pb-2 pl-2">Tag</th>
 											</tr>
 										</thead>
 										<tbody>
@@ -596,26 +620,26 @@
 												{@const fit = product.personaFit}
 												{@const primaryFit = fit?.[currentPersona as keyof typeof fit] ?? 0.5}
 												<tr class="border-b border-neutral-900 {i < 3 ? 'bg-neutral-900/50' : ''}">
-													<td class="py-1 pr-2 text-neutral-300 truncate" title={product.name}>
-														{#if i < 3}<span class="text-amber-500 mr-1">*</span>{/if}{product.name}
+													<td class="py-1.5 pr-2 truncate text-neutral-200" title={product.name}>
+														{#if i < 3}<span class="mr-1 text-amber-500">★</span>{/if}{product.name}
 													</td>
-													<td class="py-1 px-1 text-right tabular-nums {PERSONA_TEXT_COLORS[currentPersona]}">
+													<td class="py-1.5 px-1 text-right font-mono tabular-nums {PERSONA_TEXT_COLORS[currentPersona]}">
 														{(primaryFit * 100).toFixed(0)}
 													</td>
-													<td class="py-1 px-1 text-right tabular-nums text-neutral-600">
-														{fit ? (fit.gatherer * 100).toFixed(0) : '-'}
+													<td class="py-1.5 px-1 text-right font-mono tabular-nums text-neutral-500">
+														{fit ? (fit.gatherer * 100).toFixed(0) : '−'}
 													</td>
-													<td class="py-1 px-1 text-right tabular-nums text-neutral-600">
-														{fit ? (fit.hunter * 100).toFixed(0) : '-'}
+													<td class="py-1.5 px-1 text-right font-mono tabular-nums text-neutral-500">
+														{fit ? (fit.hunter * 100).toFixed(0) : '−'}
 													</td>
-													<td class="py-1 px-1 text-right tabular-nums text-neutral-600">
-														{fit ? (fit.researcher * 100).toFixed(0) : '-'}
+													<td class="py-1.5 px-1 text-right font-mono tabular-nums text-neutral-500">
+														{fit ? (fit.researcher * 100).toFixed(0) : '−'}
 													</td>
-													<td class="py-1 px-1 text-right tabular-nums text-neutral-600">
-														{fit ? (fit.gifter * 100).toFixed(0) : '-'}
+													<td class="py-1.5 px-1 text-right font-mono tabular-nums text-neutral-500">
+														{fit ? (fit.gifter * 100).toFixed(0) : '−'}
 													</td>
-													<td class="py-1 pl-2 align-top">
-														<div class="truncate text-neutral-500" title={product.semanticTags.slice(0, 3).join(', ')}>
+													<td class="py-1.5 pl-2 align-top">
+														<div class="truncate text-[10px] text-neutral-500" title={product.semanticTags.slice(0, 3).join(', ')}>
 															{product.semanticTags[0] ?? ''}
 														</div>
 													</td>
@@ -623,8 +647,8 @@
 											{/each}
 										</tbody>
 									</table>
-									<div class="mt-2 text-[10px] text-neutral-700">
-										<span class="text-amber-500">*</span> = hero/featured candidates &middot; sorted by {currentPersona} fit &middot; {enrichmentProducts.length} products
+									<div class="mt-2 text-[10px] text-neutral-600">
+										<span class="text-amber-500">★</span> hero candidates · sorted by {currentPersona} fit · {enrichmentProducts.length} products
 									</div>
 								{/if}
 							</div>

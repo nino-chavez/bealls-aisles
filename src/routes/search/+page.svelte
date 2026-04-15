@@ -2,8 +2,11 @@
 	import type { PageData } from './$types';
 	import HunterLayout from '$lib/components/layouts/HunterLayout.svelte';
 	import GathererLayout from '$lib/components/layouts/GathererLayout.svelte';
+	import RefinementChat from '$lib/components/RefinementChat.svelte';
+	import type { Layout } from '$lib/schema/layout';
 
 	let { data }: { data: PageData } = $props();
+	let refinedLayout = $state<Layout | null>(null);
 </script>
 
 <svelte:head>
@@ -76,3 +79,13 @@
 		</div>
 	{/if}
 </div>
+
+<!-- Refinement chat — floats over the page, same as category pages -->
+{#if data.results.length > 0 && (data.suggestedCategory || data.persona)}
+	<RefinementChat
+		persona={data.persona}
+		categorySlug={data.suggestedCategory || 'living-room'}
+		currentLayout={refinedLayout}
+		onLayoutUpdate={(newLayout) => { refinedLayout = newLayout; }}
+	/>
+{/if}
