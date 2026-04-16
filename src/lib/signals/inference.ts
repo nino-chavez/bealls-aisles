@@ -1,13 +1,21 @@
 /**
  * Inference engine: consumes an InferenceContext and outputs a PersonaInference.
  *
- * Phase 2: rule-based heuristics using request-time signals (URL params, cookies,
- * referrer, device, time). Same inputs as Phase 1's regex detection, but outputs
- * a probability vector instead of a single label.
+ * Math: the engine computes a Bayesian posterior over the 4 personas.
  *
- * The rules are weighted and composable. Each rule examines some aspect of the
- * context and returns score adjustments. The engine sums them, normalizes to a
- * probability distribution, and computes confidence + shift detection.
+ *     log P(persona | signals) = log P(persona) + Σ log P(signal_i | persona) + C
+ *
+ * Each rule contributes `weight × adjustment` as a log-likelihood-ratio for the
+ * named persona(s). The persona-independent evidence term C cancels under
+ * softmax normalization, so we only track the unnormalized log-posterior and
+ * softmax at the end.
+ *
+ * Two calibration constants (PRIOR_STRENGTH, TEMPERATURE) account for the fact
+ * that the current rule weights are hand-tuned rather than empirically fitted.
+ * Once session outcomes (conversion, dwell-to-buy, return visits) are logged
+ * and used to fit real likelihood ratios, both should move to 1.0.
+ *
+ * See docs/signals-and-inference.md for the full derivation.
  */
 
 import {
@@ -20,6 +28,30 @@ import {
 	type Persona,
 	type RuleMatch,
 } from './types';
+import learnedWeights from './learned-weights.json';
+
+// ─── Learned weights (optional empirical override) ─────────────────
+//
+// scripts/fit-inference-lrs.ts produces a JSON map of rule → per-persona
+// log-likelihood-ratios from labeled session outcomes. When a rule has an
+// entry here with enough samples, its learned log-LR replaces the hand-tuned
+// `adjustment × weight` product for that persona in the accumulation loop.
+// Rules not present in the learned set fall back to the hand-tuned weights.
+
+interface LearnedRuleEntry {
+	fires: number;
+	logLR: Record<Persona, number>;
+}
+
+interface LearnedWeightsFile {
+	fittedAt: string | null;
+	totalSessions: number;
+	minSamples: number;
+	rules: Record<string, LearnedRuleEntry>;
+}
+
+const LEARNED: LearnedWeightsFile = learnedWeights as LearnedWeightsFile;
+const HAS_LEARNED_WEIGHTS = LEARNED.totalSessions > 0 && Object.keys(LEARNED.rules).length > 0;
 
 // ─── Rules ─────────────────────────────────────────────────────────
 
@@ -320,33 +352,141 @@ const rules: InferenceRule[] = [
 	},
 ];
 
-// ─── Engine ────────────────────────────────────────────────────────
+// ─── Bayesian Engine ───────────────────────────────────────────────
 
-/** Base prior — slight lean toward gatherer (most common cold-start persona) */
-const BASE_SCORES: PersonaProbabilities = {
-	gatherer: 0.3,
-	hunter: 0.2,
-	researcher: 0.2,
-	gifter: 0.1,
+/**
+ * Default prior P(persona) for a cold-start session. Leans toward gatherer
+ * because the exploratory layout is the safest default for an unknown
+ * shopper. Must sum to 1.0.
+ */
+const DEFAULT_PRIOR: PersonaProbabilities = {
+	gatherer: 0.375,
+	hunter: 0.25,
+	researcher: 0.25,
+	gifter: 0.125,
 };
 
+/**
+ * Category-conditional priors: P(persona | category). When a category
+ * pattern matches `ctx.currentCategory`, its prior overrides the default.
+ * These are hand-set from domain knowledge — swap for learned priors once
+ * we have enough outcome data per category.
+ *
+ * Pattern match is a case-insensitive substring on the category slug.
+ */
+const CATEGORY_PRIORS: Array<{ pattern: RegExp; prior: PersonaProbabilities }> = [
+	{
+		// Sale / clearance / outlet — hunters lead, researchers second
+		pattern: /sale|clearance|outlet|deal/i,
+		prior: { gatherer: 0.15, hunter: 0.5, researcher: 0.25, gifter: 0.1 },
+	},
+	{
+		// Gifts / registry — gifters dominate, rest flat
+		pattern: /gift|registry|present|wedding/i,
+		prior: { gatherer: 0.2, hunter: 0.2, researcher: 0.15, gifter: 0.45 },
+	},
+	{
+		// New / trending / inspiration / lookbook — gatherers strongly lead
+		pattern: /new|trend|inspir|lookbook|editorial/i,
+		prior: { gatherer: 0.55, hunter: 0.15, researcher: 0.2, gifter: 0.1 },
+	},
+	{
+		// Review / comparison / spec pages — researchers lead
+		pattern: /review|compare|spec|guide/i,
+		prior: { gatherer: 0.2, hunter: 0.2, researcher: 0.5, gifter: 0.1 },
+	},
+];
+
+export function priorFor(currentCategory: string): PersonaProbabilities {
+	if (currentCategory) {
+		for (const { pattern, prior } of CATEGORY_PRIORS) {
+			if (pattern.test(currentCategory)) return prior;
+		}
+	}
+	return DEFAULT_PRIOR;
+}
+
+/**
+ * Damping factor on the log-prior. The hand-tuned rule adjustments are small
+ * in magnitude (≈0.1–0.8), so using the full log-prior (log(0.375) ≈ -0.98)
+ * would overwhelm a single behavioral rule match. Weakening the prior keeps
+ * the system responsive to in-session signals without discarding the prior
+ * entirely. Once empirical likelihood ratios are fit from session outcomes,
+ * this should move to 1.0.
+ */
+const PRIOR_STRENGTH = 0.3;
+
+/**
+ * Softmax temperature. T < 1 sharpens the posterior (more decisive), T > 1
+ * flattens it. Our rule weights are conservative, so we sharpen to preserve
+ * the decisiveness the linear-additive scoring had. When empirical LRs are
+ * available this should move to 1.0.
+ */
+const TEMPERATURE = 0.5;
+
+function logPriorFor(currentCategory: string): PersonaProbabilities {
+	const prior = priorFor(currentCategory);
+	return {
+		gatherer: Math.log(prior.gatherer) * PRIOR_STRENGTH,
+		hunter: Math.log(prior.hunter) * PRIOR_STRENGTH,
+		researcher: Math.log(prior.researcher) * PRIOR_STRENGTH,
+		gifter: Math.log(prior.gifter) * PRIOR_STRENGTH,
+	};
+}
+
+/** Shannon entropy of a probability distribution, in nats. */
+function posteriorEntropy(p: PersonaProbabilities): number {
+	let h = 0;
+	for (const persona of PERSONAS) {
+		const x = p[persona];
+		if (x > 0) h -= x * Math.log(x);
+	}
+	return h;
+}
+
+/** Softmax a log-posterior into a normalized probability distribution. */
+function softmax(logs: PersonaProbabilities, temperature: number): PersonaProbabilities {
+	const scaled = {
+		gatherer: logs.gatherer / temperature,
+		hunter: logs.hunter / temperature,
+		researcher: logs.researcher / temperature,
+		gifter: logs.gifter / temperature,
+	};
+	// Subtract the max for numerical stability before exponentiation
+	const max = Math.max(scaled.gatherer, scaled.hunter, scaled.researcher, scaled.gifter);
+	const e = {
+		gatherer: Math.exp(scaled.gatherer - max),
+		hunter: Math.exp(scaled.hunter - max),
+		researcher: Math.exp(scaled.researcher - max),
+		gifter: Math.exp(scaled.gifter - max),
+	};
+	const sum = e.gatherer + e.hunter + e.researcher + e.gifter;
+	return {
+		gatherer: e.gatherer / sum,
+		hunter: e.hunter / sum,
+		researcher: e.researcher / sum,
+		gifter: e.gifter / sum,
+	};
+}
+
 export function infer(ctx: InferenceContext): PersonaInference {
-	const scores = { ...BASE_SCORES };
+	// Accumulate the unnormalized log-posterior. Start from the damped log-prior
+	// conditioned on the current category; each matching rule adds its weighted
+	// log-likelihood-ratio.
+	const logPosterior: PersonaProbabilities = { ...logPriorFor(ctx.currentCategory) };
 	let priceSensitivity = 0;
 	let urgency = 0;
 	let familiarityWithStore = ctx.visitCount > 1 ? 0.1 : 0;
 	let signalCount = 0;
-	let dominantSource: 'request' | 'navigation' = 'request';
+	const dominantSource: 'request' | 'navigation' = 'request';
 	const ruleMatches: RuleMatch[] = [];
 
-	// Evaluate all rules
 	for (const rule of rules) {
 		const adjustment = rule.evaluate(ctx);
 		if (!adjustment) continue;
 
 		signalCount++;
 
-		// Record the match with a human-readable reason
 		ruleMatches.push({
 			ruleName: rule.name,
 			weight: rule.weight,
@@ -354,9 +494,23 @@ export function infer(ctx: InferenceContext): PersonaInference {
 			reason: describeRuleMatch(rule.name, ctx, adjustment),
 		});
 
-		for (const persona of PERSONAS) {
-			if (adjustment[persona]) {
-				scores[persona] += adjustment[persona]! * rule.weight;
+		// Each (weight × adjustment) is a log-likelihood-ratio contribution to
+		// log P(persona | signals). Summed across rules under a naive-Bayes
+		// independence assumption between signals. If a learned log-LR exists
+		// for this rule, it replaces the hand-tuned product.
+		const learned = HAS_LEARNED_WEIGHTS ? LEARNED.rules[rule.name] : undefined;
+		if (learned) {
+			// Empirical override — add the learned log-LR for every persona
+			// (including ones the hand-tuned rule doesn't mention, since
+			// empirical ratios capture full co-occurrence structure)
+			for (const persona of PERSONAS) {
+				logPosterior[persona] += learned.logLR[persona];
+			}
+		} else {
+			for (const persona of PERSONAS) {
+				if (adjustment[persona]) {
+					logPosterior[persona] += adjustment[persona]! * rule.weight;
+				}
 			}
 		}
 		if (adjustment.priceSensitivity) {
@@ -370,14 +524,13 @@ export function infer(ctx: InferenceContext): PersonaInference {
 		}
 	}
 
-	// Normalize to probability distribution
-	const total = scores.gatherer + scores.hunter + scores.researcher + scores.gifter;
-	const probabilities: PersonaProbabilities = {
-		gatherer: scores.gatherer / total,
-		hunter: scores.hunter / total,
-		researcher: scores.researcher / total,
-		gifter: scores.gifter / total,
-	};
+	// Posterior = softmax(log-posterior / T)
+	const probabilities = softmax(logPosterior, TEMPERATURE);
+
+	// Shannon entropy in nats: H(p) = -Σ p log p
+	// 0 if one persona has all the mass, log(4) ≈ 1.386 if uniform
+	const entropy = posteriorEntropy(probabilities);
+	const certainty = 1 - entropy / Math.log(PERSONAS.length);
 
 	// Find primary persona and confidence
 	const sorted = PERSONAS
@@ -394,6 +547,8 @@ export function infer(ctx: InferenceContext): PersonaInference {
 		probabilities,
 		primary,
 		confidence,
+		entropy,
+		certainty,
 		modifiers: {
 			priceSensitivity,
 			urgency,

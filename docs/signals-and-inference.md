@@ -185,18 +185,31 @@ A `PersonaScoreAdjustment` can contain any combination of:
 
 ### Base Prior
 
-Before any rule fires, scores start at:
+The engine computes a Bayesian posterior:
+
+```
+log P(persona | signals) = log P(persona) + Σ log P(signal_i | persona) + C
+```
+
+where each rule's `weight × adjustment` contributes a log-likelihood-ratio for the named persona(s), and the persona-independent evidence term `C` cancels under softmax normalization at the end. The cold-start prior is:
 
 ```typescript
-const BASE_SCORES: PersonaProbabilities = {
-  gatherer: 0.3,
-  hunter: 0.2,
-  researcher: 0.2,
-  gifter: 0.1,
+const BASE_PRIOR: PersonaProbabilities = {
+  gatherer: 0.375,
+  hunter: 0.25,
+  researcher: 0.25,
+  gifter: 0.125,
 };
 ```
 
-On a cold-start session with no rules matching, normalization yields approximately `gatherer: 0.375, hunter: 0.25, researcher: 0.25, gifter: 0.125`. This is deliberate — the default experience is the most exploratory layout, which is a safer default than efficiency-first for an unknown shopper.
+The prior leans toward gatherer because the exploratory layout is a safer default than efficiency-first for an unknown shopper.
+
+Two calibration constants account for the fact that current rule weights are hand-tuned rather than empirically fitted:
+
+- `PRIOR_STRENGTH = 0.3` damps `log(BASE_PRIOR)` so a single strong behavioral rule can still overturn the prior. Without this, log-prior gaps (≈0.4 nats between adjacent personas) would dominate most rule magnitudes (≈0.1–0.4).
+- `TEMPERATURE = 0.5` sharpens the softmax so the posterior is as decisive as the old linear-additive normalization was.
+
+Both move to 1.0 once session outcomes are logged and real likelihood ratios are fit from data.
 
 ### Request-Time Rules (15)
 
@@ -248,27 +261,22 @@ Negative rules detect behaviors that disconfirm a persona. They act as correctiv
 
 ---
 
-## Score Computation and Normalization
+## Posterior Computation
 
 The engine runs every rule against the current `InferenceContext`. For each rule that returns a non-null adjustment:
 
-1. Each persona score in the adjustment is multiplied by `rule.weight` and added to the running score for that persona.
+1. Each persona's `adjustment × rule.weight` is added to the running **log-posterior** for that persona.
 2. Each modifier value (if any) is multiplied by `rule.weight` and clamped to `[0, 1]`.
 3. A `RuleMatch` entry is appended to `ruleMatches` with a human-readable reason from `describeRuleMatch()`.
 
-After all rules are evaluated, scores are normalized to a probability distribution:
+After all rules are evaluated, the log-posterior is converted to a probability distribution via temperature-scaled softmax:
 
 ```typescript
-const total = scores.gatherer + scores.hunter + scores.researcher + scores.gifter;
-const probabilities = {
-  gatherer: scores.gatherer / total,
-  hunter: scores.hunter / total,
-  researcher: scores.researcher / total,
-  gifter: scores.gifter / total,
-};
+// logPosterior[p] = log(BASE_PRIOR[p]) * PRIOR_STRENGTH + Σ rule.weight * adj[p]
+const probabilities = softmax(logPosterior, TEMPERATURE);
 ```
 
-Normalization means absolute score magnitudes do not matter — only relative differences. A single high-weight rule (e.g., `intent-param` at weight 1.0 adding +0.8 to hunter) will dominate a cold-start session; multiple lower-weight rules can collectively overcome a single strong signal.
+Since softmax is monotone in its input, the relative ordering of personas only depends on differences in the log-posterior — absolute magnitudes do not matter. A single high-weight rule (e.g., `intent-param` at weight 1.0 adding +0.8 log-LR to hunter) will dominate a cold-start session; multiple lower-weight rules can collectively overcome a single strong signal by additive accumulation in log-space.
 
 ---
 
@@ -361,6 +369,36 @@ if their score is above 25%.
 ```
 
 This allows the AI to blend layout styles for ambiguous sessions. A session where `hunter: 0.51, researcher: 0.49` will produce a different layout than one where `hunter: 0.90, researcher: 0.05`, even though both have `hunter` as the primary persona.
+
+---
+
+## Known Limitations
+
+### Signal independence is violated
+
+The posterior computation assumes each rule's evidence is conditionally independent given the persona — the naive-Bayes assumption. In Aisles' signals, several pairs are correlated:
+
+| Correlated pair | Why they correlate |
+|---|---|
+| `interact.scroll_depth` × `interact.dwell_time` | Long dwell usually coincides with deep scroll (reading) |
+| `referrer` × `utm_source` | Campaign links carry both the referrer and UTM params |
+| `request.search_landing` × `intent_param` | Campaigns that set `?intent=X` often also set `?q=Y` |
+| `rapid-cart-adds` × `quick-product-scanning` | A hunter who adds fast also dwells briefly |
+| `deep-product-exploration` × `long-product-dwell` | Both are measures of "reading carefully" |
+
+**Consequence**: naive Bayes double-counts the evidence from correlated signals, so posteriors are overconfident — they assign more probability mass to the winning persona than the true P(persona | signals) would warrant.
+
+**Accepted mitigation**: the `TEMPERATURE = 0.5` sharpening in `infer()` is working in the opposite direction (making the posterior *more* decisive), and once empirical likelihood ratios are fit from real outcomes (`scripts/fit-inference-lrs.ts`), the learned values will partially correct for correlation by measuring actual co-occurrence rather than assumed independence. This is a known trade-off, not a bug.
+
+**Not fixing**: explicit dependency modeling (factor graphs, TAN Bayes, etc.) is overkill for 27 rules. Revisit only if calibration checks show >15% systematic overconfidence that empirical LRs can't correct.
+
+### Labels are biased
+
+The LR fitting pipeline only uses high-confidence labeled sessions (explicit intent-param, confident conversion, strong single-persona behavior). Unlabeled sessions — the majority — don't contribute. Learned LRs are therefore calibrated against the *labelable* distribution, not the full visitor distribution. Expect better accuracy on sessions that look like explicit intent-param sessions and worse accuracy on ambiguous mid-funnel visitors.
+
+### Sequential updates recompute from scratch
+
+`infer()` is called fresh on every signal flush and rebuilds the full log-posterior from the stored event log. This is correct but not optimal — a true sequential Bayesian update would only process new events since the last inference. Optimization deferred; not a correctness issue.
 
 ---
 

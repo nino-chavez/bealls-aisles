@@ -216,6 +216,62 @@ console.log('\nEdge: Cold start with no signals');
 	);
 }
 
+console.log('\nEdge: Category-conditional priors');
+{
+	const sale = infer(ctx({ currentCategory: 'sale-furniture' }));
+	const newArrivals = infer(ctx({ currentCategory: 'new-arrivals' }));
+	const gifts = infer(ctx({ currentCategory: 'gift-guide' }));
+	const reviews = infer(ctx({ currentCategory: 'desk-reviews' }));
+
+	assert(
+		'Sale category biases toward hunter',
+		sale.primary === 'hunter',
+		`sale primary=${sale.primary} (${JSON.stringify(sale.probabilities)})`,
+	);
+	assert(
+		'New-arrivals biases toward gatherer',
+		newArrivals.primary === 'gatherer',
+		`new-arrivals primary=${newArrivals.primary}`,
+	);
+	assert(
+		'Gift category biases toward gifter',
+		gifts.primary === 'gifter',
+		`gifts primary=${gifts.primary}`,
+	);
+	assert(
+		'Review category biases toward researcher',
+		reviews.primary === 'researcher',
+		`reviews primary=${reviews.primary}`,
+	);
+}
+
+console.log('\nEdge: Entropy is maximal on cold start, lower on strong signal');
+{
+	const cold = infer(ctx({}));
+	const sharp = infer(ctx({ intentParam: 'hunter' }));
+
+	assert(
+		'Cold start has high entropy (close to log(4))',
+		cold.entropy > 1.2,
+		`cold entropy = ${cold.entropy.toFixed(3)}`,
+	);
+	assert(
+		'Sharp signal has lower entropy than cold start',
+		sharp.entropy < cold.entropy,
+		`sharp=${sharp.entropy.toFixed(3)} cold=${cold.entropy.toFixed(3)}`,
+	);
+	assert(
+		'Certainty is in [0, 1]',
+		sharp.certainty >= 0 && sharp.certainty <= 1 && cold.certainty >= 0 && cold.certainty <= 1,
+		`sharp=${sharp.certainty}, cold=${cold.certainty}`,
+	);
+	assert(
+		'Sharp signal certainty > cold certainty',
+		sharp.certainty > cold.certainty,
+		`sharp=${sharp.certainty.toFixed(3)}, cold=${cold.certainty.toFixed(3)}`,
+	);
+}
+
 // ─── Summary ───────────────────────────────────────────────────────
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

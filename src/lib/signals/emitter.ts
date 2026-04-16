@@ -100,6 +100,32 @@ export class SignalEmitter {
 		}
 		this.flush(); // Final flush
 	}
+
+	/**
+	 * Send a best-effort finalize beacon on page unload. Uses navigator.sendBeacon
+	 * when available so the request survives the unload. Called from a pagehide
+	 * listener set up by initEmitter().
+	 */
+	finalize(converted = false) {
+		if (typeof navigator === 'undefined') return;
+		const body = JSON.stringify({ converted });
+		try {
+			if ('sendBeacon' in navigator) {
+				const blob = new Blob([body], { type: 'application/json' });
+				navigator.sendBeacon('/api/signals/finalize', blob);
+				return;
+			}
+			// Fallback: keepalive fetch
+			fetch('/api/signals/finalize', {
+				method: 'POST',
+				body,
+				headers: { 'content-type': 'application/json' },
+				keepalive: true,
+			}).catch(() => {});
+		} catch {
+			// Swallow — best effort
+		}
+	}
 }
 
 function inferSource(type: SignalEventType): SignalSource {
@@ -119,6 +145,15 @@ let instance: SignalEmitter | null = null;
 export function initEmitter(): SignalEmitter {
 	instance?.destroy();
 	instance = new SignalEmitter();
+
+	// Finalize the session on page hide. pagehide fires for tab close, nav
+	// away, and backgrounding on mobile — more reliable than beforeunload.
+	if (typeof window !== 'undefined') {
+		window.addEventListener('pagehide', () => {
+			instance?.finalize();
+		});
+	}
+
 	return instance;
 }
 

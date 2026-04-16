@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Aisles Demo Prep — AI Champions</title>
+<style>
+	:root {
+		--bg: #0a0a0a;
+		--panel: #111111;
+		--panel-2: #171717;
+		--border: #262626;
+		--text: #e5e5e5;
+		--text-2: #a3a3a3;
+		--text-3: #737373;
+		--accent: #10b981;
+		--accent-2: #059669;
+		--danger: #f87171;
+		--warn: #fbbf24;
+		--link: #60a5fa;
+		--mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+		--sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif;
+	}
+	* { box-sizing: border-box; }
+	html, body { margin: 0; padding: 0; }
+	body {
+		font-family: var(--sans);
+		font-size: 15px;
+		line-height: 1.55;
+		background: var(--bg);
+		color: var(--text);
+	}
+	main {
+		padding: 40px 48px 120px;
+		max-width: 920px;
+		margin-left: 260px;
+	}
+
+	/* Side navigation — fixed left column */
+	.sidenav {
+		position: fixed;
+		top: 0;
+		left: 0;
+		bottom: 0;
+		width: 240px;
+		background: var(--panel);
+		border-right: 1px solid var(--border);
+		padding: 32px 22px 32px 28px;
+		overflow-y: auto;
+		font-size: 13px;
+	}
+	.sidenav h3 {
+		margin: 0 0 10px;
+		color: var(--accent);
+		font-size: 10px;
+		letter-spacing: 0.14em;
+	}
+	.sidenav nav ul {
+		list-style: none;
+		margin: 0 0 18px;
+		padding: 0;
+	}
+	.sidenav nav li {
+		padding: 3px 0;
+	}
+	.sidenav nav a {
+		color: var(--text-2);
+		display: block;
+		padding: 4px 8px;
+		border-radius: 4px;
+		border-left: 2px solid transparent;
+	}
+	.sidenav nav a:hover {
+		color: var(--text);
+		background: var(--panel-2);
+		border-left-color: var(--accent-2);
+		text-decoration: none;
+	}
+	.sidenav .controls {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		margin-top: 12px;
+		padding-top: 14px;
+		border-top: 1px solid var(--border);
+	}
+	.sidenav .controls button {
+		font-size: 11px;
+		padding: 6px 10px;
+		border: 1px solid var(--border);
+		border-radius: 4px;
+		color: var(--text-2);
+		background: var(--panel-2);
+		cursor: pointer;
+		font-family: var(--sans);
+		text-align: left;
+	}
+	.sidenav .controls button:hover {
+		color: var(--accent);
+		border-color: var(--accent);
+	}
+
+	@media (max-width: 900px) {
+		.sidenav {
+			position: static;
+			width: auto;
+			border-right: none;
+			border-bottom: 1px solid var(--border);
+			padding: 20px 24px;
+		}
+		main {
+			margin-left: 0;
+			padding: 24px 24px 80px;
+		}
+	}
+	h1 {
+		font-size: 30px;
+		margin: 0 0 6px;
+		letter-spacing: -0.01em;
+	}
+	h2 {
+		font-size: 20px;
+		margin: 44px 0 14px;
+		padding-bottom: 8px;
+		border-bottom: 1px solid var(--border);
+		letter-spacing: -0.005em;
+	}
+	h3 { font-size: 15px; color: var(--text-2); margin: 20px 0 8px; letter-spacing: 0.06em; text-transform: uppercase; }
+	p { margin: 10px 0; }
+	code, pre { font-family: var(--mono); font-size: 13px; }
+	code { color: var(--accent); background: var(--panel-2); padding: 1px 5px; border-radius: 3px; }
+	pre { background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
+	pre code { color: var(--text); background: none; padding: 0; }
+	a { color: var(--link); text-decoration: none; }
+	a:hover { text-decoration: underline; }
+	hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+	.meta {
+		color: var(--text-3);
+		font-size: 13px;
+		margin-bottom: 32px;
+	}
+	.meta strong { color: var(--text-2); font-weight: 500; }
+
+	/* Pinned facts card */
+	.facts {
+		background: var(--panel);
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		padding: 18px 22px;
+		margin: 24px 0;
+	}
+	.facts h3 { margin-top: 0; color: var(--accent); }
+	.facts table { width: 100%; border-collapse: collapse; font-size: 13px; }
+	.facts td { padding: 5px 0; vertical-align: top; }
+	.facts td:first-child { color: var(--text-2); width: 42%; }
+	.facts td:last-child { color: var(--text); font-family: var(--mono); }
+
+	/* Q&A */
+	.qa {
+		margin: 10px 0;
+		background: var(--panel);
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		overflow: hidden;
+	}
+	.qa > summary {
+		list-style: none;
+		cursor: pointer;
+		padding: 14px 18px;
+		font-weight: 500;
+		color: var(--text);
+		display: flex;
+		align-items: flex-start;
+		gap: 10px;
+		user-select: none;
+	}
+	.qa > summary::-webkit-details-marker { display: none; }
+	.qa > summary::before {
+		content: '▸';
+		color: var(--text-3);
+		font-size: 12px;
+		padding-top: 2px;
+		flex-shrink: 0;
+		transition: transform 0.15s;
+	}
+	.qa[open] > summary::before { transform: rotate(90deg); }
+	.qa[open] > summary { border-bottom: 1px solid var(--border); background: var(--panel-2); }
+	.qa > summary:hover { background: var(--panel-2); }
+
+	.qa-body {
+		padding: 14px 18px 18px 38px;
+	}
+	.qa-body p:first-child { margin-top: 0; }
+	.qa-body p:last-child { margin-bottom: 0; }
+
+	/* Follow-ups nested inside a q&a body */
+	.followups {
+		margin-top: 14px;
+		padding-top: 14px;
+		border-top: 1px dashed var(--border);
+	}
+	.followups h4 {
+		margin: 0 0 8px;
+		font-size: 11px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--text-3);
+	}
+	.followup {
+		margin: 4px 0;
+		border-left: 2px solid var(--border);
+		padding-left: 14px;
+	}
+	.followup > summary {
+		list-style: none;
+		cursor: pointer;
+		color: var(--link);
+		font-size: 14px;
+		padding: 6px 0;
+		user-select: none;
+	}
+	.followup > summary::-webkit-details-marker { display: none; }
+	.followup > summary::before {
+		content: '→ ';
+		color: var(--text-3);
+	}
+	.followup > summary:hover { color: #93c5fd; }
+	.followup[open] > summary { color: var(--accent); }
+	.followup .fa-body {
+		padding: 6px 0 10px;
+		font-size: 14px;
+		color: var(--text);
+	}
+
+	/* Callouts */
+	.landmine, .preempt, .dont {
+		padding: 10px 14px;
+		border-radius: 6px;
+		margin: 12px 0;
+		font-size: 14px;
+	}
+	.landmine { background: rgba(248,113,113,0.08); border-left: 3px solid var(--danger); }
+	.landmine::before { content: 'LANDMINE — '; color: var(--danger); font-weight: 600; font-size: 11px; letter-spacing: 0.08em; }
+	.preempt { background: rgba(251,191,36,0.08); border-left: 3px solid var(--warn); }
+	.preempt::before { content: 'PREEMPT — '; color: var(--warn); font-weight: 600; font-size: 11px; letter-spacing: 0.08em; }
+	.dont { background: rgba(248,113,113,0.05); border-left: 3px solid var(--danger); color: var(--text-2); }
+	.dont::before { content: '✗ '; color: var(--danger); font-weight: 700; }
+
+	.gap {
+		background: rgba(251,191,36,0.06);
+		border: 1px dashed var(--warn);
+		padding: 10px 14px;
+		border-radius: 6px;
+		margin: 10px 0;
+		font-size: 14px;
+		color: var(--text-2);
+	}
+	.gap::before { content: 'GAP — '; color: var(--warn); font-weight: 600; font-size: 11px; letter-spacing: 0.08em; }
+
+	/* Print: expand everything, remove backgrounds */
+	@media print {
+		body { background: white; color: black; font-size: 11pt; }
+		main { max-width: none; margin-left: 0; padding: 20px 30px; }
+		.sidenav { display: none; }
+		h1, h2, h3 { color: black; }
+		h2 { border-bottom: 1px solid #999; page-break-after: avoid; }
+		details, details > summary { display: block; }
+		details[open] > summary::before, details > summary::before { content: ''; }
+		.qa, .followup, .facts, .toc, .landmine, .preempt, .dont, .gap {
+			background: white; border: 1px solid #999; color: black;
+			page-break-inside: avoid;
+		}
+		.qa > summary, .followup > summary { background: #f0f0f0; color: black; font-weight: 600; }
+		.followup { border-left: 2px solid #999; }
+		.followups h4 { color: #666; }
+		details:not([open]) > *:not(summary) { display: block !important; }
+		a { color: black; text-decoration: underline; }
+	}
+</style>
+</head>
+<body>
+
+<aside class="sidenav">
+	<nav>
+		<h3>CONTENTS</h3>
+		<ul>
+			<li><a href="#facts">Numbers to memorize</a></li>
+			<li><a href="#arch">Architecture &amp; model choice</a></li>
+			<li><a href="#quality">Quality, evaluation, failure</a></li>
+			<li><a href="#moat">The moat question</a></li>
+			<li><a href="#integration">Integration with stacks</a></li>
+			<li><a href="#personas">Personas, data, config</a></li>
+			<li><a href="#vendor">Vendor risk</a></li>
+			<li><a href="#commercial">Commercial &amp; legal</a></li>
+			<li><a href="#preempt">Preempt list</a></li>
+			<li><a href="#dont">Things NOT to say</a></li>
+			<li><a href="#recovery">Recovery lines</a></li>
+			<li><a href="#meta">How this reel was built</a></li>
+		</ul>
+		<div class="controls">
+			<button onclick="document.querySelectorAll('details').forEach(d=>d.open=true)">Expand all</button>
+			<button onclick="document.querySelectorAll('details').forEach(d=>d.open=false)">Collapse all</button>
+		</div>
+	</nav>
+</aside>
+
+<main>
+
+<h1>Aisles Demo — AI Champions Prep</h1>
+<p class="meta">
+	<strong>Audience:</strong> Technical internal AI evangelists. Built things with LLMs. Will push hardest on the parts of the demo that sound too clean.<br/>
+	<strong>Companion:</strong> <code>docs/demo-script.md</code> (the talk track). This doc is for Q&amp;A and recovery.<br/>
+	<strong>Tip:</strong> Click any question to expand. Click follow-ups to drill. Print with Ctrl+P — everything expands for paper.
+</p>
+
+<h2 id="facts">Numbers to memorize</h2>
+<div class="facts">
+	<h3>If you forget a number, say "under a penny per generation, fractions of a cent on cache hits."</h3>
+	<table>
+		<tr><td>Cost per refine generation</td><td>~$0.006</td></tr>
+		<tr><td>Cost per layout generation (miss)</td><td>~$0.001–0.003</td></tr>
+		<tr><td>Haiku 4.5 p50 generation</td><td>2–4 seconds</td></tr>
+		<tr><td>Full demo session cost</td><td>&lt; $0.02</td></tr>
+		<tr><td>Cache TTL — standard layouts</td><td>60 minutes</td></tr>
+		<tr><td>Cache TTL — picks-scoped layouts</td><td>15 minutes</td></tr>
+		<tr><td>Brand config</td><td>~150 lines per brand</td></tr>
+		<tr><td>Active inference rules</td><td>27</td></tr>
+		<tr><td>Personas</td><td>4 (gatherer, hunter, researcher, gifter)</td></tr>
+		<tr><td>Layout schema section cap</td><td>1–8 sections</td></tr>
+		<tr><td>Projected cache hit rate — category pages</td><td>80%+ (aspirational)</td></tr>
+		<tr><td>Projected cache hit rate — refinements</td><td>0% (structural)</td></tr>
+	</table>
+</div>
+
+
+<!-- ─────────────────────────────────────── Q&A ─────────────────────────────────────── -->
+
+<h2 id="arch">Q&amp;A — Architecture &amp; model choice</h2>
+
+<details class="qa"><summary>Q: What model, why Haiku, and what's cached?</summary><div class="qa-body">
+	<p>Haiku 4.5 primary for layout and refine, Sonnet 4.6 as a <strong>failure fallback via Vercel AI Gateway</strong> — if Haiku errors (rate limit, 5xx, timeout), the gateway retries on Sonnet automatically. Reliability fallback, not quality fallback. Both models target the same schema.</p>
+	<p>Validation is <strong>Zod structured output via Vercel AI SDK</strong> (<code>Output.object({ schema: LayoutSchema })</code>). Haiku picked because layout isn't a reasoning task — it's structured output against a constrained vocabulary. Anthropic prompt caching on the stable prefix: brand config, rules context, product summaries. Varying suffix: request-time signals.</p>
+	<div class="landmine">Don't claim Claude is "better at commerce." Say: <em>"Haiku hits the latency and cost envelope. Sonnet is there when Haiku's infrastructure drops requests, not when Haiku's output is low-quality."</em></div>
+	<div class="followups">
+		<h4>Natural follow-ups</h4>
+		<details class="followup"><summary>What does "validation" actually enforce?</summary><div class="fa-body">
+			<p><code>LayoutSchema</code> in <code>src/lib/schema/layout.ts</code> enforces:</p>
+			<ul>
+				<li><code>persona</code> must be one of four enum values</li>
+				<li><code>sections</code> is <code>z.array(...).min(1).max(8)</code> — never empty, never more than eight</li>
+				<li>Each section is a <strong>discriminated union</strong> on <code>component</code> — only four legal values: <code>editorial-header</code>, <code>hero-product</code>, <code>product-grid</code>, <code>category-header</code></li>
+				<li>Each section shape is enforced: <code>product-grid</code> requires <code>columns ∈ {2,3,4}</code>, <code>imageRatio ∈ {landscape, square}</code>, three boolean flags</li>
+				<li><code>productOrder: z.array(z.string())</code> — an array of product IDs</li>
+			</ul>
+			<p>Schema failures retry inside a single AI SDK call. No custom validation layer on top.</p>
+			<div class="gap"><code>productOrder</code> has <strong>no minimum length</strong> constraint. The model can legally emit a 2-product grid on a 20-product catalog. That's a quality-fallback loop you haven't built yet. Say so if asked.</div>
+		</div></details>
+		<details class="followup"><summary>What if Haiku returns schema-valid but low-quality output?</summary><div class="fa-body">
+			<p>Nothing routes that to Sonnet today. The gateway fallback only fires on infrastructure errors. If Haiku returns a valid but under-filled layout (two products instead of twelve), it ships. The fix is either a minimum-length Zod constraint, or a post-generation quality check that triggers a regenerate. Neither is wired.</p>
+			<p><strong>What to say:</strong> "That's a real gap. The structural guarantee is strong. The quality guarantee depends on Haiku consistently using the whole vocabulary, and we don't currently enforce that with code. It's on the roadmap as part of the outcomes loop."</p>
+		</div></details>
+		<details class="followup"><summary>What's actually in the cached prefix?</summary><div class="fa-body">
+			<p>Three blocks: brand config rendered as prompt text (~100 lines), active inference rules context (27 rules rendered as rule descriptions, ~30–50 lines), product summaries for the category (ID + name + price + spec highlights per product). Everything before the request-specific <code>persona: hunter, probabilities: {...}, signals: [...]</code> tail. That's what gets cached at Anthropic; the per-request suffix is short and cheap to pay for every call.</p>
+		</div></details>
+		<details class="followup"><summary>Is it one-shot or agent?</summary><div class="fa-body">
+			<p>Single-shot structured output with vocabulary constraint. No agent loop, no tools, no reasoning extension. One call per layout, one call per refine. Deliberately simple — agents add latency and spend without a demonstrated quality gain for a structured-output task. A reasoning model would pay off for multi-step planning; a discriminated union layout doesn't need planning.</p>
+		</div></details>
+	</div>
+</div></details>
+
+<details class="qa"><summary>Q: Cache key, and real hit rate in production?</summary><div class="qa-body">
+	<p>Cache key (from <code>src/lib/server/cache.ts</code>): <code>aisles:layout:{persona}:{categorySlug}</code>. Optional picks suffix when personalization is scoped to a pick set: <code>:picks:{picksHash}</code>. <strong>TTL: 60 minutes for standard layouts, 15 minutes for picks-scoped layouts.</strong></p>
+	<p>Projected hit rate 80%+ on category pages, 0% on refinements. Demo numbers are unrepresentative because traffic is low. Be explicit about that.</p>
+	<div class="followups">
+		<h4>Natural follow-ups</h4>
+		<details class="followup"><summary>What does the cache cover — 4 personas × N categories?</summary><div class="fa-body">
+			<p>Exactly. 4 personas × ~6 categories per brand = 24 generations per brand at steady state, minus any picks-scoped variants. The first shopper in each (persona, category) pair pays the generation cost; subsequent shoppers get sub-100ms cache hits. The math is why marginal AI cost approaches zero at scale — it's bounded by the number of distinct (persona, category) pairs, not the number of visitors.</p>
+		</div></details>
+		<details class="followup"><summary>What invalidates the cache?</summary><div class="fa-body">
+			<p>Three things: (1) TTL expiration — 60 minutes for standard, 15 for picks; (2) manual invalidation via <code>invalidateLayoutCache(persona, categorySlug)</code>, typically called after enrichment pipelines run or brand config changes; (3) redis key flush.</p>
+			<div class="gap">The cache key does <strong>not</strong> include <code>promptVersion</code>. If you bump the prompt template, existing caches will keep serving old generations until TTL expires or you manually flush. For the talk: say <em>"prompt changes require a manual cache flush today; promptVersion keying is an obvious follow-up."</em></div>
+		</div></details>
+		<details class="followup"><summary>Do refinements cache at all?</summary><div class="fa-body">
+			<p>No. The refinement prompt includes the full constraint history, which is session-specific and compounds with every message. Every refine is a cache miss by design. That's why Observe shows refine at ~$0.006 and layout at closer to $0.001–0.003. If a shopper refines 5 times in a session, that's ~3 cents — still order-of-magnitude cheaper than a display ad impression.</p>
+		</div></details>
+		<details class="followup"><summary>What about cross-session personalization — same shopper, second visit?</summary><div class="fa-body">
+			<p>Cookie-based. <code>aisles_persona</code>, <code>aisles_last_category</code>, <code>aisles_visits</code> are read at request time and factor into inference. A returning gatherer with 3 prior visits gets a higher <code>familiarity</code> modifier, which can tip probability distributions. The cache key doesn't include those signals directly, so returning shoppers still hit cache — but the cached layout already reflects gatherer. The personalization is in the persona classification, not the layout cache key.</p>
+		</div></details>
+	</div>
+</div></details>
+
+<details class="qa"><summary>Q: Cold start on a new category?</summary><div class="qa-body">
+	<p>2–8 seconds first hit, cached thereafter. The streaming endpoint (<code>/api/layout/stream</code>) sends partial layout JSON as it generates — editorial header renders in ~1 second, grid catches up progressively. Bring this up even if nobody asks; it's your answer to "but AI is slow."</p>
+	<div class="followups">
+		<h4>Natural follow-ups</h4>
+		<details class="followup"><summary>What percentage of traffic hits cold start in production?</summary><div class="fa-body">
+			<p>Depends on catalog churn, cache TTL, and invalidation events. Projected &lt;5% of category-page requests under steady state. Unverified — you haven't run at production volume. Frame as a projection, not a measurement.</p>
+		</div></details>
+		<details class="followup"><summary>If streaming sends partials, how do you guarantee the final layout is valid?</summary><div class="fa-body">
+			<p>The stream fires intermediate partial objects for incremental render, but only the final <code>__done</code> event carries the validated layout. The renderer reconciles on <code>__done</code>. If the stream errors mid-flight, the page shows the partial render it got, and a fresh full generation is queued for the cache.</p>
+		</div></details>
+		<details class="followup"><summary>What does the shopper see during those 2–8 seconds?</summary><div class="fa-body">
+			<p>With streaming: editorial header text appears in ~1s, then skeleton cards fill with products as the <code>productOrder</code> array streams. Without streaming (the legacy endpoint): a skeleton shimmer until done. Streaming is the default for category pages; direct calls to the non-streaming endpoint are fallbacks.</p>
+		</div></details>
+	</div>
+</div></details>
+
+<h2 id="quality">Q&amp;A — Quality, evaluation, and failure</h2>
+
+<details class="qa"><summary>Q: How do you know the AI's choices are any good?</summary><div class="qa-body">
+	<p>Today: <strong>schema validation catches structural failures.</strong> Tomorrow: outcomes loop tying generation IDs to <code>cart_add</code> and <code>purchase</code> events, currently not wired. Say this plainly: <em>"We validate structure. We have not yet validated outcomes. The outcomes table is the next build."</em></p>
+	<div class="landmine">If you bluff this, someone will ask for numbers. Admit the gap — AI champions respect it.</div>
+	<div class="followups">
+		<h4>Natural follow-ups</h4>
+		<details class="followup"><summary>Do you A/B test layouts?</summary><div class="fa-body">
+			<p>Not yet. The outcomes loop is the prerequisite — you need conversion events attributable to specific generation IDs before A/B testing produces meaningful signal. Once wired, the three A/B cuts to run are: AI-default vs. hand-built template baseline; AI with strict rule set vs. loose rule set; AI persona routing vs. fixed default persona.</p>
+		</div></details>
+		<details class="followup"><summary>What's the minimum traffic to detect a real signal?</summary><div class="fa-body">
+			<p>Back-of-envelope: detecting a 10% lift at 80% power, 95% confidence, 3% baseline conversion rate ≈ 20k sessions per variant. So ~100k sessions for a clean two-arm test. Bigger than a demo. Smaller than Amazon. Mid-market e-commerce hits that in weeks, not months.</p>
+		</div></details>
+		<details class="followup"><summary>What would you measure first if the loop were wired today?</summary><div class="fa-body">
+			<p>Three layers: (1) layout-level — <code>cart_add</code> rate per generation ID; (2) persona-level — hunter-classified traffic conversion at hunter layouts vs. at gatherer layouts (confirms the persona model has economic content); (3) rule-level — searches that triggered the hunter-keyword rule, do they actually shop hunter-style? The rule-level measurement is what makes the inference engine empirical instead of aspirational.</p>
+		</div></details>
+	</div>
+</div></details>
+
+<details class="qa"><summary>Q: What happens when generation is bad — wrong price, hallucinated spec?</summary><div class="qa-body">
+	<p>Price, inventory, specs are server-assembled in <code>loadCategoryProducts</code>. The AI never sees the live price stream. It emits product IDs; the server fills canonical data. <strong>The AI physically cannot write a price into output.</strong> Hallucinated <em>copy</em> is the real risk — brand voice guidance in config is the mitigation, plus a potential copy-eval pass before serving. Copy eval exists for structure, not semantics.</p>
+	<div class="followups">
+		<h4>Natural follow-ups</h4>
+		<details class="followup"><summary>Worst-case copy scenario?</summary><div class="fa-body">
+			<p>AI writes copy that contradicts a product claim — "waterproof" for a non-waterproof product, or "made in USA" for an import. Mitigation: enrichment data includes authorized claims per product; the layout prompt instructs "only reference properties listed in enrichment." Structural but not bulletproof. Industry practice: a second, cheaper classifier pass ("does this copy align with enrichment?") as a guardrail. Not wired yet — worth adding before any regulated-vertical deployment.</p>
+		</div></details>
+		<details class="followup"><summary>What if inventory goes to zero mid-session?</summary><div class="fa-body">
+			<p>The layout references product IDs. If an ID is missing when the server assembles data, it's dropped from the render. You don't regenerate — you render the remaining products in the layout's declared order. Degraded, not broken. The shopper sees a shorter grid; the next generation will omit the out-of-stock product entirely.</p>
+		</div></details>
+		<details class="followup"><summary>Does the model ever emit products that aren't in the catalog?</summary><div class="fa-body">
+			<p>Theoretically possible via hallucination. In practice the prompt is fed with the exact product ID list for the category, and the vocabulary constraint means the model generates from that list. You could tighten further with a server-side "known IDs only" filter on <code>productOrder</code> — a one-line defense that catches any stray hallucinated ID. Worth doing.</p>
+		</div></details>
+	</div>
+</div></details>
+
+<details class="qa"><summary>Q: Prompt injection — the search query goes into a prompt, right?</summary><div class="qa-body">
+	<p>Yes, but indirectly. The search query feeds the <strong>inference pipeline</strong> as a classified signal, not the layout prompt as free text. Layout prompt context is structured and fixed. The <strong>vocabulary constraint</strong> (ADR-004) means the model can only emit tokens from a fixed enumerated set — section types, product IDs from the server-provided list, layout primitives. A prompt injection saying "IGNORE PRIOR INSTRUCTIONS" physically cannot produce valid layout JSON that serves malicious content.</p>
+	<div class="preempt">Volunteer this: <em>"Structurally sound, not yet adversarially tested."</em> Say it before anyone asks.</div>
+	<div class="followups">
+		<h4>Natural follow-ups</h4>
+		<details class="followup"><summary>Refine endpoint takes free text from the user — that goes straight to the model?</summary><div class="fa-body">
+			<p>Yes. The refine prompt includes the shopper's raw message. Mitigation is the same schema constraint: the output must be valid refine response JSON, which means <code>layout</code> (Zod-validated), <code>chatResponse</code> (string), <code>newConstraint</code> (string). A prompt injection can change <em>what</em> layout gets generated within vocabulary bounds — e.g., narrow the product set differently — but it can't emit HTML, change the response shape, or exfiltrate anything.</p>
+		</div></details>
+		<details class="followup"><summary>Worst-case injection?</summary><div class="fa-body">
+			<p>"Show me products from a different brand" or "ignore previous constraints and reset to no filters." The model might honor this within vocabulary — return a different product set or drop constraints. <strong>This is a constraint violation, not a security breach.</strong> Fix: enforce constraint persistence in server code, not in the prompt. Today the constraint history is maintained client-side and passed to each refine request; a server-side session constraint store would close this hole.</p>
+		</div></details>
+		<details class="followup"><summary>Have you red-teamed?</summary><div class="fa-body">
+			<p>No. Structurally sound, not adversarially tested. Honest answer.</p>
+		</div></details>
+		<details class="followup"><summary>What about the search query firing inference rules — can that be manipulated?</summary><div class="fa-body">
+			<p>Yes. A search query for "cheap" or "dorm" or "gift" will fire the corresponding rule regardless of intent. But the only consequence is a different layout — hunter vs. gatherer vs. gifter. No data exfiltration, no cross-user effects. The "attack" is the same as a legitimate shopper's behavior.</p>
+		</div></details>
+	</div>
+</div></details>
+
+<h2 id="moat">Q&amp;A — The moat question (rehearse this one)</h2>
+
+<details class="qa"><summary>Q: Anyone with an API key can do this. What's defensible?</summary><div class="qa-body">
+	<p>Three parts:</p>
+	<ol>
+		<li><strong>Inference rules + persona definitions</strong> are empirical domain knowledge. 27 rules, tuned iteratively. Getting "dorm+desk → hunter" to fire without over-triggering took iteration.</li>
+		<li><strong>Enrichment pipeline + vocabulary-constrained schema.</strong> Nobody rebuilds these from scratch. Months of per-brand data work.</li>
+		<li><strong>Feed model bet:</strong> configuration-as-content scales where hand-built templates don't. Anyone can run Claude. Reaching consistent output quality is a data problem, not a model problem.</li>
+	</ol>
+	<p><strong>The moat is the system around the AI, not the AI.</strong></p>
+	<div class="landmine">If you describe this as "better prompts," you lose the technical audience. Frame it as schema + rules + enrichment + config — a system, not a prompt.</div>
+	<div class="followups">
+		<h4>Natural follow-ups</h4>
+		<details class="followup"><summary>How many rules, and how long did they take to tune?</summary><div class="fa-body">
+			<p>27 active rules in <code>src/lib/signals/inference.ts</code>. Tuning is iterative — the obvious rules came first (search for "cheap X" fires hunter, repeat visits increase familiarity), the subtle ones took real catalog traffic to find (visit count &gt; 3 after a long gap increases familiarity modifier, single-category focus over 4+ pageviews shifts toward hunter). No single hard number for hours spent. The rules aren't just boolean — each emits a weighted probability adjustment across personas plus modifier bumps, so tuning is multi-dimensional.</p>
+		</div></details>
+		<details class="followup"><summary>Could someone replicate this in a weekend?</summary><div class="fa-body">
+			<p>The storefront? Yes, with Claude and a Zod schema. The rules? No — domain iteration. The enrichment? No — per-brand semantic taxonomy with batch jobs. The brand voice guidance strings? No — institutional taste from product managers. <strong>The moat is cumulative.</strong> An individual engineer can build a weekend version; an organization takes months to match the quality.</p>
+		</div></details>
+		<details class="followup"><summary>What about open-source alternatives?</summary><div class="fa-body">
+			<p>None I know of at this architecture level. Plenty of "AI-powered merchandising" vendors exist, but they bolt LLMs onto a rules engine they already had. Aisles is the opposite: inference rules inform the persona classification, persona classification drives generation, generation emits a structured layout against a Zod vocabulary. The rules-first architecture is unusual.</p>
+		</div></details>
+		<details class="followup"><summary>Why should a customer buy this instead of building it?</summary><div class="fa-body">
+			<p>Same reason anyone buys infrastructure: the team that built it has absorbed the failure modes you haven't hit yet. The rules catalog, the enrichment schema, the vocabulary constraint, the brand config pattern — each is obvious in hindsight and expensive to discover. A buyer is paying for the mistakes you already made.</p>
+		</div></details>
+	</div>
+</div></details>
+
+<h2 id="integration">Q&amp;A — Integration with existing stacks</h2>
+
+<details class="qa"><summary>Q: How does this coexist with Adobe Target / Dynamic Yield / Bloomreach?</summary><div class="qa-body">
+	<p>Merchandiser overrides sit <strong>above</strong> layout generation as priority. "If Target says pin product X to slot 1, the AI generates around the pin." If the wiring doesn't exist yet, say so — the schema supports it, the integration doesn't.</p>
+	<div class="followups">
+		<h4>Natural follow-ups</h4>
+		<details class="followup"><summary>Real-time override or regenerate?</summary><div class="fa-body">
+			<p>Real-time, ideally. The override is a post-generation mutation of the layout JSON before render. No regeneration, no extra AI cost. Cleanest integration: the AI produces a default layout, the merchandising rule engine mutates it, the renderer renders the mutated result.</p>
+		</div></details>
+		<details class="followup"><summary>What if the override conflicts with the inferred persona?</summary><div class="fa-body">
+			<p>Override wins. The merchandiser is the authority. You could log the conflict for analysis — "override was applied in contexts where hunter-layout was inferred" — but at request time, the merchandiser's decision is final. This is non-negotiable for any enterprise deployment.</p>
+		</div></details>
+		<details class="followup"><summary>Can Target's personalization model coexist with the Aisles inference model?</summary><div class="fa-body">
+			<p>Yes, stacked. Target does segment classification, Aisles does persona classification, the two can disagree. Resolution: pick one as primary. In practice Target segments are coarser (demographic/behavioral) and Aisles personas are shopping-mode-oriented — they're different axes. You could feed Target segment as a signal into Aisles inference and let the combination decide.</p>
+		</div></details>
+	</div>
+</div></details>
+
+<details class="qa"><summary>Q: SEO — does Google crawl AI-generated layouts?</summary><div class="qa-body">
+	<p>Yes. Server-side rendering. First visit to any URL generates at request time, HTML is fully rendered server-side, cache ensures crawlers hit the same content on repeat visits. The risk would be <em>different</em> H1s on every crawl — the cache prevents that. Stable H1s per (persona, category) pair.</p>
+	<div class="followups">
+		<h4>Natural follow-ups</h4>
+		<details class="followup"><summary>What persona does Googlebot get?</summary><div class="fa-body">
+			<p>Googlebot hits with no cookies, a bot user agent, no search query. The engine classifies as default gatherer. Crawlers see the editorial layout. That's the "canonical" layout for any given URL as far as Google is concerned.</p>
+		</div></details>
+		<details class="followup"><summary>Can you serve crawlers a different layout specifically?</summary><div class="fa-body">
+			<p>You could gate on user-agent, but that's <strong>cloaking</strong> and Google penalizes it. Safer: let crawlers see the default gatherer layout. Everyone else gets persona-classified after first signal.</p>
+		</div></details>
+		<details class="followup"><summary>What about structured data — schema.org product markup?</summary><div class="fa-body">
+			<p>The renderer emits JSON-LD from server-assembled product data, not from AI output. So structured data is always canonical. The AI never touches schema.org markup.</p>
+		</div></details>
+	</div>
+</div></details>
+
+<details class="qa"><summary>Q: Accessibility — who signs off on generated HTML?</summary><div class="qa-body">
+	<p>The component library is hand-authored with a11y baked in. The AI only composes from that vocabulary. It physically cannot produce an unlabeled button or an image without alt text — those fields are required by the schema and components fill them from structured data.</p>
+	<p><strong>This is your best answer to "generated HTML is dangerous." Lead with it.</strong></p>
+	<div class="followups">
+		<h4>Natural follow-ups</h4>
+		<details class="followup"><summary>WCAG level?</summary><div class="fa-body">
+			<p>Target AA. Formal audit: none yet. Next step: axe-core in CI on every PR, running against every component and every generated layout fixture.</p>
+		</div></details>
+		<details class="followup"><summary>What if someone adds a non-a11y component to the library?</summary><div class="fa-body">
+			<p>It would enter the schema vocabulary and the AI could emit it. Adding a component is a gated action — the PR should require an a11y audit before merge. This is process, not structure. The structural guarantee only holds if the library gate holds.</p>
+		</div></details>
+		<details class="followup"><summary>Can the AI emit copy that's accessible-unfriendly even if the components are OK?</summary><div class="fa-body">
+			<p>Yes — e.g., all-caps headings, color-only information, ambiguous link text. Mitigation is voice guidance in brand config ("use sentence case") and schema constraints (no <code>style</code> prop on components). Not bulletproof. Audit generated copy samples before production.</p>
+		</div></details>
+	</div>
+</div></details>
+
+<h2 id="personas">Q&amp;A — Personas, data, config</h2>
+
+<details class="qa"><summary>Q: Four personas — empirical?</summary><div class="qa-body">
+	<p>Academic buying-mode taxonomy (inspirational / task-directed / comparison / gift), not Aisles-traffic-validated yet. Be honest. Frame as a starting taxonomy refined from conversion data once the outcomes loop is wired.</p>
+	<div class="followups">
+		<h4>Natural follow-ups</h4>
+		<details class="followup"><summary>How did you pick these four specifically?</summary><div class="fa-body">
+			<p>Common denominators across retail research: the shopper browsing for ideas (gatherer), the shopper who knows what they want (hunter), the shopper comparing before committing (researcher), the shopper buying for someone else (gifter). Omitted: the window shopper (collapsed into gatherer) and the urgent shopper (handled by the <code>urgency</code> modifier rather than a separate persona).</p>
+		</div></details>
+		<details class="followup"><summary>What if a visitor is a mix?</summary><div class="fa-body">
+			<p>They always are. The probability vector is explicit — a shopper might be gatherer 0.40, hunter 0.30, researcher 0.20, gifter 0.10. The primary wins the layout decision, but the other probabilities inform product ranking via the enrichment fit scores. A hunter-with-researcher-tendencies sees a hunter layout, but the products in it are ones that also score well for researchers.</p>
+		</div></details>
+		<details class="followup"><summary>When would you add a fifth persona?</summary><div class="fa-body">
+			<p>When the outcomes loop shows a significant population whose conversion behavior isn't explained by the current four. Current intuition: there isn't one. But intuition isn't data. The answer requires measurement.</p>
+		</div></details>
+		<details class="followup"><summary>Does the persona ever flip mid-session?</summary><div class="fa-body">
+			<p>Yes — that's the whole point of the demo. Scene 4 shows gatherer → hunter after a search query. Inference re-runs on every request; the probability vector updates as new signals arrive. The <code>shift</code> field in the inference output flags when the primary changes from one to another within a session, along with the triggering signal.</p>
+		</div></details>
+	</div>
+</div></details>
+
+<details class="qa"><summary>Q: Brand config — really 150 lines?</summary><div class="qa-body">
+	<p>Yes. Channel ID, category map, theme tokens, persona definitions, voice guidance, domain description. The persona definitions and voice guidance are the non-obvious parts. Show the Ember block live if the laptop is ready.</p>
+	<div class="followups">
+		<h4>Natural follow-ups</h4>
+		<details class="followup"><summary>Walk through voiceGuidance.</summary><div class="fa-body">
+			<p>Prose string telling the AI the register and anti-patterns. Ember's is: <em>"Warm and rugged. Evocative but honest. 'Double-wall stainless, smokeless burn, 19-inch diameter, fits six chairs around it' beats 'the ultimate outdoor experience.' Seasonal urgency is real, not manufactured."</em></p>
+			<p>That specific sentence — the "double-wall stainless" example — is why Ember copy is concrete and not flowery. The AI picks up both the anti-pattern and the positive example from the same string.</p>
+		</div></details>
+		<details class="followup"><summary>What's the minimum config for a new brand?</summary><div class="fa-body">
+			<p>Brand ID, BigCommerce channel ID, category map (3–6 categories), theme palette, four persona definitions (one paragraph each), voice guidance, domain description. Everything else inherits defaults. Realistic total: 120–180 lines.</p>
+		</div></details>
+		<details class="followup"><summary>Who writes it?</summary><div class="fa-body">
+			<p>Aspiration: product manager with engineering review. Reality today: you (engineering) write it. Product would need training on what each field controls and how the fields compose. That training is a half-day exercise, not a quarter-long onboarding.</p>
+		</div></details>
+		<details class="followup"><summary>What's the enrichment pipeline — when is it run?</summary><div class="fa-body">
+			<p>Batch job per brand. Iterates every product in the brand's BigCommerce channel, extracts per-product: persona fit scores (across the four personas), semantic tags, category fit, style descriptors. Stored in Supabase, keyed by BC entityId. Re-run on catalog updates. At request time, the generation prompt reads enrichment rather than raw product data — that's how the AI knows that product X scores 0.9 for hunters and 0.3 for gatherers.</p>
+		</div></details>
+	</div>
+</div></details>
+
+<h2 id="vendor">Q&amp;A — Vendor risk</h2>
+
+<details class="qa"><summary>Q: Anthropic raises prices or deprecates Haiku — then what?</summary><div class="qa-body">
+	<p>Layout schema and inference engine are provider-agnostic. Generation wraps Vercel AI SDK's <code>generateText</code> with <code>gateway()</code>. Swap the provider flag, re-tune the prompt, re-validate vocabulary constraints on the new model. Weeks, not a rewrite.</p>
+	<div class="followups">
+		<h4>Natural follow-ups</h4>
+		<details class="followup"><summary>Have you tested GPT or Gemini?</summary><div class="fa-body">
+			<p>No. Architecture supports it, testing is future work.</p>
+		</div></details>
+		<details class="followup"><summary>What's the biggest porting risk?</summary><div class="fa-body">
+			<p>Three things: (1) tokenizer differences — Haiku tokenizes persona names and product IDs one way, GPT another; prompt cost shifts; (2) structured output reliability — Anthropic's tool calling and structured output handling may behave better or worse than OpenAI's on your specific schema; (3) <strong>prompt caching is Anthropic-specific</strong>. Moving to OpenAI loses the prefix cache benefit entirely, which roughly triples the effective cost per generation. That's the big one.</p>
+		</div></details>
+		<details class="followup"><summary>Self-host?</summary><div class="fa-body">
+			<p>Architecturally yes. Llama 3.3 70B or Mistral Large would be the first targets — both support structured output decently. Phi-4 if you want something that fits on consumer hardware for local testing. Real deployment needs a dedicated inference box or a hosted open-model provider (Together, Fireworks, Groq). Untested end to end.</p>
+		</div></details>
+	</div>
+</div></details>
+
+<h2 id="commercial">Q&amp;A — Commercial &amp; legal</h2>
+
+<details class="qa"><summary>Q: Who owns the AI-generated copy?</summary><div class="qa-body">
+	<p>Per Anthropic's terms, customer owns output. Keep brand config, generation logs, prompt version for audit trail.</p>
+	<div class="followups">
+		<h4>Natural follow-ups</h4>
+		<details class="followup"><summary>What's the audit trail?</summary><div class="fa-body">
+			<p>Generation log table in <code>src/lib/server/generation-log.ts</code>: model, prompt version, input/output tokens, cost estimate, timestamp, persona, category, cache hit. Not the full prompt text by default — storage cost. Reconstruction = prompt version + brand config at that version, reproducible deterministically.</p>
+		</div></details>
+		<details class="followup"><summary>How long are logs retained?</summary><div class="fa-body">
+			<p>Supabase default table retention — effectively indefinite. Tighten if compliance requires; no PII is stored in the log, just request metadata and token counts.</p>
+		</div></details>
+	</div>
+</div></details>
+
+<details class="qa"><summary>Q: Regulated verticals — pharma, finance?</summary><div class="qa-body">
+	<p>Not tested. The architectural answer: compliance constraints become vocabulary constraints. If a regulator requires disclaimers on every product card, they go in the <strong>component</strong>, not in the AI output. The AI physically cannot omit them. Again: the moat is the system around the AI.</p>
+	<div class="followups">
+		<h4>Natural follow-ups</h4>
+		<details class="followup"><summary>Can you attest AI output for regulator review?</summary><div class="fa-body">
+			<p>Generation logs + schema version + brand config version = reproducible output for any recorded generation. If a regulator asks "what did a shopper see at URL Y on date X," you can reconstruct deterministically from logged inputs. Aspirational — verify your log retention matches your regulatory audit window.</p>
+		</div></details>
+	</div>
+</div></details>
+
+<details class="qa"><summary>Q: Brand safety — can brand A data leak into brand B?</summary><div class="qa-body">
+	<p>Separate Vercel deployments per brand, separate Redis namespaces, separate Supabase tables keyed by brand flag. No shared request-time state. The AI call is stateless and scoped to a single brand's context.</p>
+	<div class="followups">
+		<h4>Natural follow-ups</h4>
+		<details class="followup"><summary>Shared cache?</summary><div class="fa-body">
+			<p>Cache keys include the brand by virtue of separate Redis instances per deployment. Cross-brand cache hits are structurally impossible.</p>
+		</div></details>
+		<details class="followup"><summary>What if you consolidated brands onto one deployment?</summary><div class="fa-body">
+			<p>You'd need brand prefix in every cache key and every query. The current architecture is "one deployment per brand" specifically because it keeps isolation structural rather than logical. Consolidating is a downgrade from a brand-safety perspective.</p>
+		</div></details>
+	</div>
+</div></details>
+
+<h2 id="preempt">Things to preempt (volunteer before asked)</h2>
+<div class="preempt">"This is a demo, not production traffic." Say it first. Defuses the "but will it scale" question before it's asked.</div>
+<div class="preempt">"The outcomes loop isn't wired yet." Mentioning it yourself signals you know what's missing. Getting caught hiding it is worse.</div>
+<div class="preempt">"We haven't adversarially tested prompt injection." Vocab constraint is structurally sound. Not red-teamed. Say so.</div>
+<div class="preempt">"The persona taxonomy isn't validated on Aisles traffic." Academic basis, not empirical. Outcomes loop will fix it.</div>
+
+<h2 id="dont">Things NOT to say</h2>
+<div class="dont">"This replaces your merchandising team." (It doesn't. It's the default when merchandisers are absent.)</div>
+<div class="dont">"It costs nothing." (It costs less than they'd think. Don't say "nothing.")</div>
+<div class="dont">"The AI decides everything." (Schema + vocabulary + server-assembled data decide most things. The AI fills within rails.)</div>
+<div class="dont">"This is AI-first." (Say "AI-native" — more defensible claim. "AI-first" sounds like a slogan.)</div>
+<div class="dont">"We're building our own model." (If asked about fine-tuning, say: "We haven't needed to. Prompt + enrichment + config performs well enough that fine-tuning would optimize the wrong axis.")</div>
+<div class="dont">"Haiku is the best model." (Say "Haiku is the right model for this task at this price point." Leave room for it to change.)</div>
+
+<h2 id="recovery">Recovery lines (when a demo step breaks)</h2>
+<details class="qa"><summary>Page won't load / 500 error</summary><div class="qa-body">
+	<p><em>"Let me show you the Observe panel while that refreshes — here's where we catch these in real time."</em> Pivot to telemetry.</p>
+</div></details>
+<details class="qa"><summary>Observe shows no new signals after a search</summary><div class="qa-body">
+	<p><em>"The signal pipeline has ~1-second propagation. Let me narrate what you'd see."</em> Show the rule definitions in <code>src/lib/signals/inference.ts</code>.</p>
+</div></details>
+<details class="qa"><summary>Refinement chat times out</summary><div class="qa-body">
+	<p><em>"This is why the streaming endpoint matters — on a cold generation, constraints always miss cache."</em> Open <code>src/routes/api/refine/+server.ts</code> if someone wants to see the prompt.</p>
+</div></details>
+<details class="qa"><summary>Persona doesn't shift as expected</summary><div class="qa-body">
+	<p><em>"This is cookie state from the previous demo — let me reset the session."</em> Hit <code>/api/session/reset</code> in a new tab.</p>
+</div></details>
+<details class="qa"><summary>Everything's on fire</summary><div class="qa-body">
+	<p><em>"Let me play the demo reel instead."</em> Open <code>scripts/demo-reel/out/demo-reel.mp4</code> full-screen. The reel covers the entire talk track in 5:28.</p>
+</div></details>
+
+<h2 id="meta">How this demo reel was built (the joke you can close with)</h2>
+<p>If someone asks how you made the demo reel, or if you want to close the talk on a meta note: the demo reel itself was generated by AI. Every piece of it. Here's the actual pipeline — save it for the Q&amp;A laughs.</p>
+
+<details class="qa"><summary>The reel is an AI-driven artifact end to end</summary><div class="qa-body">
+	<p>Everything you watched was produced by a combination of: Claude driving a browser via Playwright MCP, OpenAI TTS voicing the narration, ImageMagick compositing captioned frames, and ffmpeg stitching it together. No human held a mouse during capture, no voice actor recorded audio, no video editor touched a timeline. The entire 5:28 reel is the output of one Node script reading one JSON file.</p>
+</div></details>
+
+<details class="qa"><summary>Step 1: Claude drives the browser</summary><div class="qa-body">
+	<p>A Claude agent session used <strong>Playwright MCP</strong> to run the demo script end to end: navigate to Haven, open Observe in a second tab, hit <code>/api/session/reset</code>, recapture a fresh gatherer layout, search for "dorm room desk," watch the persona shift in Observe, open the refinement chat, type the constraint message, capture the response, then repeat across Volt and Ember. 12 screenshots saved to <code>scripts/demo-reel/screenshots/</code> at 1440×900 each.</p>
+	<p>The screenshots are <strong>real live production output</strong> — not mockups, not staged. The "dorm room desk" search that triggers the persona shift actually ran against the live Vercel deployment, generating the hunter layout from a real Haiku 4.5 call.</p>
+</div></details>
+
+<details class="qa"><summary>Step 2: OpenAI TTS writes and voices the narration</summary><div class="qa-body">
+	<p>Narration is defined in <code>scripts/demo-reel/captions.json</code> — 13 scenes, each with a title, caption body, and the image to overlay it on. At render time, <code>scripts/demo-reel/generate.mjs</code> hits OpenAI's <code>gpt-4o-mini-tts</code> model with voice <code>ash</code> and an instruction prompt: <em>"senior product manager giving a live technical demo, steady medium pace, warm but precise, flow naturally."</em> Each scene becomes an MP3 in <code>scripts/demo-reel/audio/</code>.</p>
+	<p>The instructions parameter is why the narration sounds conversational rather than announcer-reading-a-script. That's a <code>gpt-4o-mini-tts</code>-specific feature; the older <code>tts-1-hd</code> model doesn't accept it.</p>
+</div></details>
+
+<details class="qa"><summary>Step 3: ImageMagick composites captioned frames</summary><div class="qa-body">
+	<p>Each frame is a screenshot with a translucent caption band overlaid — bold white title, lighter body, small scene counter, emerald accent line separating the band from the screenshot. All one <code>magick</code> command per frame, using the <code>caption:</code> operator for wrapped text and <code>rgba(10,10,10,0.88)</code> for the band fill. The refinement-chat scenes anchor the band to the top of the frame instead of the bottom so the chat UI stays visible.</p>
+</div></details>
+
+<details class="qa"><summary>Step 4: The "code slide" is a rendered HTML page</summary><div class="qa-body">
+	<p>The final scene showing the Ember brand config is not a screenshot of a code editor. It's a hand-built HTML file (<code>scripts/demo-reel/code-slide.html</code>) using highlight.js for syntax coloring, served locally with <code>python3 -m http.server</code>, then captured by Playwright at 1440×900. Title bar says "src/lib/brand/config.ts" — because that's the actual file, served as HTML with syntax highlighting, captured as an image. Meta on meta.</p>
+</div></details>
+
+<details class="qa"><summary>Step 5: ffmpeg builds per-scene clips and stitches them</summary><div class="qa-body">
+	<p>For each scene: one ffmpeg command takes the captioned PNG + the narration MP3 + a trailing silence pad, encodes to a per-scene H.264 clip. Then a final concat-demuxer pass stitches all 13 clips into <code>out/demo-reel.mp4</code> with <code>+faststart</code> flag so it plays without buffering.</p>
+	<p>Total render time on an M2 Mac: ~15 seconds for the frames + clips, ~30 seconds for the TTS round-trip. Most of the wall time is waiting for OpenAI's TTS API.</p>
+</div></details>
+
+<details class="qa"><summary>Step 6: The sibling hype reel uses procedurally synthesized sound effects</summary><div class="qa-body">
+	<p>There's a sibling <code>generate-hype.mjs</code> that produces a joke trailer version. Every sound effect in that reel — the whoosh, the bass drop, the laser zaps, the dubstep wub under "warm brand voice," the closing chord — is <strong>synthesized via ffmpeg's <code>aevalsrc</code></strong> filter using pure sine math. No licensed samples. The dubstep wub is literally a 55Hz sub-bass sine amplitude-modulated by a 5Hz sine. Zero audio assets in the repo.</p>
+	<p>Trailer narration uses the same <code>gpt-4o-mini-tts</code> endpoint with a different instructions prompt: <em>"2010s action movie trailer voice-over, gravelly, menacing, dramatic pauses."</em></p>
+</div></details>
+
+<details class="qa"><summary>The meta point</summary><div class="qa-body">
+	<p>A demo about AI-generated storefronts is itself AI-generated. The Haven and Volt and Ember screens in the reel are AI-written layouts. The narration on top of them is AI TTS. The "code slide" showing the Ember brand config is an HTML-rendered view of the file that configures the AI that generated those screens. The only human contribution is the <code>captions.json</code> file, and even that was drafted by Claude and reviewed.</p>
+	<p><strong>This isn't a flex. It's the point.</strong> If you can produce a 5-minute demo reel end to end from one JSON file without a designer, a voice actor, or a video editor, then you can produce a storefront end to end from one config file without a front-end team. The reel is the demo.</p>
+</div></details>
+
+<hr/>
+
+<p class="meta"><strong>Last thing:</strong> if a question catches you off guard and you don't have an answer, say <em>"I don't know — let me come back to you."</em> AI champions respect that answer a lot more than they respect bluffing.</p>
+
+</main>
+</body>
+</html>

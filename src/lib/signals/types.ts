@@ -90,13 +90,18 @@ export interface RuleMatch {
 export interface PersonaInference {
 	probabilities: PersonaProbabilities;
 	primary: Persona;
-	confidence: number;        // How far ahead the primary is from second place
+	/** Probability gap between primary and runner-up. Backward-compat confidence. */
+	confidence: number;
+	/** Posterior Shannon entropy in nats. Higher = less certain. Range [0, log(4) ≈ 1.386]. */
+	entropy: number;
+	/** 1 - entropy/log(4). Range [0, 1]. Higher = more certain. Principled confidence. */
+	certainty: number;
 	modifiers: PersonaModifiers;
 	shift: PersonaShift;
 	signalCount: number;
 	lastUpdated: number;
 	dominantSource: SignalSource;
-	ruleMatches: RuleMatch[];  // Which inference rules fired and why
+	ruleMatches: RuleMatch[];
 }
 
 // ─── Inference Rules ───────────────────────────────────────────────

@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getSessionStore, hasSession, persistSession } from '$lib/signals/session';
 import { infer } from '$lib/signals/inference';
+import { finalizeSession } from '$lib/server/outcomes';
 import type { SignalEventType, SignalSource } from '$lib/signals/types';
 
 const SESSION_COOKIE = 'aisles_session';
@@ -36,6 +37,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 		// Append events to the session store
 		const store = await getSessionStore(sessionId);
+		let hasConversionSignal = false;
 		for (const event of events) {
 			store.emit(
 				event.type as SignalEventType,
@@ -43,6 +45,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 				event.data || {},
 				event.context,
 			);
+			if (event.type === 'commerce.add_to_cart') hasConversionSignal = true;
 		}
 
 		// Re-run inference with accumulated signals
@@ -50,6 +53,14 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 		// Persist to Redis
 		await persistSession(store);
+
+		// On conversion, finalize the outcome for calibration/fitting.
+		// Fire-and-forget — doesn't block the response.
+		if (hasConversionSignal) {
+			finalizeSession(store, { converted: true }).catch((err) => {
+				console.warn('[signals] finalize on conversion failed:', err);
+			});
+		}
 
 		return json({
 			received: events.length,
