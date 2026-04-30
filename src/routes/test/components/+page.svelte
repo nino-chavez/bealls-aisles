@@ -102,7 +102,7 @@
 					headline: 'Free shipping on orders $99+',
 					ctaLabel: 'Shop Now',
 					ctaHref: '/c/women',
-					urgency: 'soft',
+					urgency: 'hard',
 				},
 			},
 			{

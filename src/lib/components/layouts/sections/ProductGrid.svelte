@@ -157,7 +157,7 @@
 								setTimeout(() => { btn.textContent = 'Add to Cart'; btn.disabled = false; }, 1500);
 							}
 						}}
-						class="mt-3 w-full rounded-sm bg-surface-fg py-2 text-xs font-medium text-surface-bg transition-opacity hover:opacity-85 disabled:opacity-50"
+						class="mt-3 w-full rounded-sm bg-primary py-2 text-xs font-semibold uppercase tracking-wider text-white transition-opacity hover:opacity-90 disabled:opacity-50"
 					>
 						Add to Cart
 					</button>

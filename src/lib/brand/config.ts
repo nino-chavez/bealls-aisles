@@ -484,12 +484,12 @@ const BRANDS: Record<string, BrandConfig> = {
 			surfaceMuted: '#f7f8f4',
 			surfaceMutedFg: '#5a5a5a',
 			surfaceBorder: '#e8eae5',
-			fontDisplay: "'Caveat', 'Brush Script MT', cursive",
+			fontDisplay: "'Lora', Georgia, serif",
 			fontBody: "'Source Sans 3', system-ui, sans-serif",
 			fontMono: "'JetBrains Mono', Menlo, monospace",
 		},
 
-		googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap',
+		googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,600&family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap',
 
 		homepage: {
 			heroHeadline: 'New Inspiration for Less',
