@@ -6,9 +6,9 @@
  * raw BC data becomes the product shape that layout generation consumes.
  */
 
-import { getCategories, getProductsByCategory, customFieldsToRecord, type BCProduct } from './bigcommerce';
+import { getCategories, getProductsByCategory, getProducts, customFieldsToRecord, type BCProduct } from './bigcommerce';
 import { getEnrichmentByEntityIds } from './enrichment/query';
-import { getBrand } from '$lib/brand/config';
+import { getBrand, getBrandMode } from '$lib/brand/config';
 import type { Product } from '$lib/types';
 
 /** Category map — driven by the active brand config */
@@ -62,6 +62,49 @@ export async function loadCategoryProducts(
 	}
 
 	return { products: enrichedProducts, categoryName: catConfig.displayName };
+}
+
+/**
+ * Load products for the homepage — a curated cross-category set sorted by
+ * persona-fit. Used by the AI layout for the "home" virtual category.
+ *
+ * Pulls top N from BC's global product query (default 30 — large enough that
+ * the AI has variety, small enough to stay in the prompt's MAX_LAYOUT_PRODUCTS=15
+ * window after persona-fit ranking).
+ */
+export async function loadHomeProducts(
+	persona?: string,
+	limit = 30,
+): Promise<{ products: EnrichedProduct[]; categoryName: string }> {
+	// Content-mode brands have no online catalog — AI generates from
+	// content-mode component subset with empty products.
+	if (getBrandMode(getBrand()) === 'content') {
+		return { products: [], categoryName: 'Home' };
+	}
+
+	const bcProducts = await getProducts(limit);
+	const products = bcProducts.map(transformProduct);
+
+	const enrichmentMap = await getEnrichmentByEntityIds(products.map((p) => p.entityId));
+
+	const enrichedProducts: EnrichedProduct[] = products.map((p) => {
+		const enrichment = enrichmentMap.get(p.entityId);
+		return {
+			...p,
+			personaFit: enrichment?.personaFit ?? null,
+			semanticTags: enrichment?.semanticTags ?? [],
+		};
+	});
+
+	if (persona) {
+		enrichedProducts.sort((a, b) => {
+			const fitA = a.personaFit?.[persona as keyof NonNullable<EnrichedProduct['personaFit']>] ?? 0.5;
+			const fitB = b.personaFit?.[persona as keyof NonNullable<EnrichedProduct['personaFit']>] ?? 0.5;
+			return fitB - fitA;
+		});
+	}
+
+	return { products: enrichedProducts, categoryName: 'Home' };
 }
 
 /** Transform a BC product into the shape our layout components expect */

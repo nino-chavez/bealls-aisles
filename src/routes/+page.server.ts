@@ -1,26 +1,29 @@
 import type { PageServerLoad } from './$types';
-import { getProducts, customFieldsToRecord, type BCProduct } from '$lib/server/bigcommerce';
 import { getBrand, getBrandMode } from '$lib/brand/config';
+import { infer } from '$lib/signals/inference';
+import { createStoreFromRequest } from '$lib/signals/request';
+import { loadHomeProducts } from '$lib/server/catalog';
 
-export const load: PageServerLoad = async ({ cookies }) => {
+export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	const brand = getBrand();
 	const mode = getBrandMode(brand);
 
-	// Content-mode brands have no online catalog — skip BC fetch entirely
-	const allProducts = mode === 'content' ? [] : await getProducts(30);
+	// Persona inference for AI homepage layout — same pipeline as category pages
+	const { store, visitCount } = await createStoreFromRequest({ url, request, cookies, category: 'home' });
+	const inferenceContext = store.toInferenceContext();
+	const inference = infer(inferenceContext);
+
+	// Load homepage products via the same loader the AI uses, sorted by persona-fit
+	const { products: homeProducts } = await loadHomeProducts(inference.primary, 30);
+
+	// Pick featured products (first 4 from different price ranges) — used as static fallback only
+	const featured = homeProducts.length >= 4
+		? [homeProducts[0], homeProducts[Math.floor(homeProducts.length / 3)], homeProducts[Math.floor(homeProducts.length * 2 / 3)], homeProducts[homeProducts.length - 1]]
+		: homeProducts.slice(0, 4);
 
 	// Check for returning visitor persona
 	const storedPersona = cookies.get('aisles_persona') || null;
 	const storedCategory = cookies.get('aisles_last_category') || null;
-
-	// Transform products
-	const products = allProducts.map(transformProduct);
-
-	// Pick featured products (first 4 from different price ranges)
-	const sorted = [...products].sort((a, b) => b.price - a.price);
-	const featured = sorted.length >= 4
-		? [sorted[0], sorted[Math.floor(sorted.length / 3)], sorted[Math.floor(sorted.length * 2 / 3)], sorted[sorted.length - 1]]
-		: sorted.slice(0, 4);
 
 	// Map categories for display — driven by brand config
 	const categoryList = Object.entries(brand.categories).map(([slug, config]) => ({
@@ -29,8 +32,12 @@ export const load: PageServerLoad = async ({ cookies }) => {
 		slug,
 	}));
 
+	cookies.set('aisles_persona', inference.primary, { path: '/', maxAge: 60 * 60 * 24 * 30 });
+	cookies.set('aisles_visits', String(visitCount), { path: '/', maxAge: 60 * 60 * 24 * 30 });
+
 	return {
 		featured,
+		homeProducts,
 		categories: categoryList,
 		storedPersona,
 		storedCategory,
@@ -38,20 +45,11 @@ export const load: PageServerLoad = async ({ cookies }) => {
 		brandTagline: brand.tagline,
 		brandDomain: brand.domain,
 		homepage: brand.homepage,
+		mode,
+		inference,
+		persona: inference.primary,
+		confidence: inference.confidence,
+		probabilities: inference.probabilities,
+		sessionId: cookies.get('aisles_session') || null,
 	};
 };
-
-function transformProduct(p: BCProduct) {
-	const specs = customFieldsToRecord(p);
-	return {
-		id: p.path.replace(/^\/|\/$/g, '') || String(p.entityId),
-		entityId: p.entityId,
-		name: p.name,
-		price: p.prices.price.value,
-		salePrice: p.prices.salePrice?.value || undefined,
-		image: p.defaultImage?.url || '',
-		imageAlt: p.defaultImage?.altText || p.name,
-		description: p.description.replace(/<[^>]*>/g, '').trim(),
-		specs,
-	};
-}

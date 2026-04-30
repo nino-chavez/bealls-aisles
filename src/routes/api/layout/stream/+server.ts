@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import { streamText, Output } from 'ai';
 import { LayoutSchema, type Layout } from '$lib/schema/layout';
 import { buildLayoutPrompt } from '$lib/server/layout-prompt';
-import { loadCategoryProducts } from '$lib/server/catalog';
+import { loadCategoryProducts, loadHomeProducts } from '$lib/server/catalog';
 import { getCachedLayout, cacheLayout, hashPicks } from '$lib/server/cache';
 import { logGeneration } from '$lib/server/generation-log';
 import { getActiveRules, rulesToPromptContext } from '$lib/server/rules';
@@ -49,7 +49,9 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		}
 
 		// ─── Cache miss — stream via AI Gateway ───────────────────
-		const result = await loadCategoryProducts(categorySlug, persona);
+		const result = categorySlug === 'home'
+			? await loadHomeProducts(persona)
+			: await loadCategoryProducts(categorySlug, persona);
 		if (!result) {
 			return json({ error: `Category "${categorySlug}" not found` }, { status: 404 });
 		}

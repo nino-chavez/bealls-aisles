@@ -218,6 +218,12 @@ export function buildLayoutPrompt(
 		? '' // content-mode brands have no products
 		: `\nAVAILABLE PRODUCTS (${filtered.length} items, top by ${persona} fit):\n${productSummaries}\n`;
 
+	const isHome = categoryName === 'Home';
+	const surfaceLabel = isHome ? 'homepage' : `${categoryName} ${modeLabel}`;
+	const homeGuidance = isHome
+		? `\nHOMEPAGE CONTEXT: This is the brand's landing page — the shopper's first impression. The products span all categories, pre-sorted to show the strongest persona-fit first. Use a richer mix of components than a category page: an editorial-hero or hero-product to anchor, a category-tile-grid to surface the brand's range, a product-carousel for featured picks, and persona-appropriate promo (price-rail for Hunter, coupon-strip for Gifter, bealls-bucks-callout for any known shopper). DO NOT use category-header on the homepage — that's for category pages only.\n`
+		: '';
+
 	return `${modeRole}
 
 VOICE: ${brand.prompt.voiceGuidance}
@@ -228,9 +234,9 @@ ${probabilities ? `
 PROBABILITY VECTOR: gatherer ${Math.round(probabilities.gatherer * 100)}% | hunter ${Math.round(probabilities.hunter * 100)}% | researcher ${Math.round(probabilities.researcher * 100)}% | gifter ${Math.round(probabilities.gifter * 100)}%
 The primary persona is ${persona}, but blend in elements from secondary personas if their score is above 25%. For example, if researcher is 30% alongside a hunter primary, show specs alongside the dense grid.` : ''}
 
-CATEGORY: ${categoryName}
+CATEGORY: ${categoryName}${homeGuidance}
 ${productsBlock}${picksContext || ''}${rulesContext || ''}
 ${getComponentGuide(mode)}
 
-Generate a layout for this ${persona} shopper browsing the ${categoryName} ${modeLabel}.`;
+Generate a layout for this ${persona} shopper landing on the ${surfaceLabel}.`;
 }
