@@ -1,377 +1,340 @@
+<script lang="ts">
+	import LayoutRenderer from '$lib/components/layouts/LayoutRenderer.svelte';
+	import type { Layout } from '$lib/schema/layout';
+	import type { Product } from '$lib/types';
+
+	let { data } = $props();
+	const brand = $derived(data.brand);
+
+	// Curated mini-fixtures for component samples.
+	const sampleProducts: Product[] = [
+		{
+			id: 'sg1',
+			entityId: 90001,
+			name: 'Sample Top',
+			brand: 'Joie De Vivre',
+			price: 20,
+			salePrice: 9.99,
+			image: 'https://picsum.photos/seed/sg1/600/600',
+			imageAlt: 'Top',
+			description: 'Soft modal blend, easy drape.',
+			specs: { material: 'Modal', sleeve: 'Short' },
+			tags: [],
+			category: 'tops',
+			rating: 4.5,
+			reviewCount: 128,
+			badges: ['New', 'Deal'],
+		},
+		{
+			id: 'sg2',
+			entityId: 90002,
+			name: 'Sample Shorts',
+			brand: 'Dash',
+			price: 28,
+			salePrice: 14.99,
+			image: 'https://picsum.photos/seed/sg2/600/600',
+			imageAlt: 'Shorts',
+			description: 'Stretch poplin, deep pockets.',
+			specs: { material: 'Cotton blend', inseam: '11"' },
+			tags: [],
+			category: 'bottoms',
+			rating: 4.8,
+			reviewCount: 412,
+			badges: ['Deal'],
+		},
+		{
+			id: 'sg3',
+			entityId: 90003,
+			name: 'Sample Dress',
+			brand: 'Love Scarlett',
+			price: 22,
+			salePrice: 10.99,
+			image: 'https://picsum.photos/seed/sg3/600/600',
+			imageAlt: 'Dress',
+			description: 'Wrap silhouette, vibrant print.',
+			specs: { material: 'Rayon', length: 'Midi' },
+			tags: [],
+			category: 'dresses',
+			rating: 4.2,
+			reviewCount: 67,
+			badges: ['New'],
+		},
+		{
+			id: 'sg4',
+			entityId: 90004,
+			name: 'Sample Bag',
+			brand: 'Coastal Hand',
+			price: 39,
+			salePrice: 19.99,
+			image: 'https://picsum.photos/seed/sg4/600/600',
+			imageAlt: 'Bag',
+			description: 'Hand-finished crochet.',
+			specs: { material: 'Cotton', strap: 'Adjustable' },
+			tags: [],
+			category: 'accessories',
+			rating: 4.6,
+			reviewCount: 203,
+			badges: ['Clearance'],
+		},
+	];
+
+	// Each layout-component sample is its own mini layout for visual isolation.
+	function makeSampleLayout(component: string): Layout {
+		const base = { persona: 'hunter' as const, reasoning: 'Style guide sample.', productOrder: ['sg1','sg2','sg3','sg4'] };
+		switch (component) {
+			case 'promo-strip':
+				return { ...base, sections: [{ component: 'promo-strip', props: { eyebrow: 'TODAY ONLY', headline: 'Free shipping on orders $99+', ctaLabel: 'Shop Now', ctaHref: '#', urgency: 'hard' } }] };
+			case 'editorial-hero':
+				return { ...base, sections: [{ component: 'editorial-hero', props: { image: 'https://picsum.photos/seed/sghero/1600/600', eyebrow: 'NEW SEASON', headline: brand.homepage.heroHeadline, body: brand.homepage.heroBody, ctaLabel: 'Shop the Edit', ctaHref: '#', textPosition: 'left' } }] };
+			case 'editorial-header':
+				return { ...base, sections: [{ component: 'editorial-header', props: { eyebrow: 'EDITORIAL', headline: brand.homepage.editorialHeadline, body: brand.homepage.editorialBody } }] };
+			case 'category-tile-grid':
+				return { ...base, sections: [{ component: 'category-tile-grid', props: { sectionLabel: 'Shop by Category', columns: 4, tiles: brand.categories.slice(0, 4).map((c, i) => ({ label: c.displayName, image: `https://picsum.photos/seed/sgcat${i}/600/450`, href: `/c/${c.slug}` })) } }] };
+			case 'price-rail':
+				return { ...base, sections: [{ component: 'price-rail', props: { columns: 2, tiers: [{ label: 'Under $25', image: 'https://picsum.photos/seed/sgt1/800/500', href: '#', savingsBadge: 'Up to 60% off' }, { label: 'Under $50', image: 'https://picsum.photos/seed/sgt2/800/500', href: '#', savingsBadge: 'Up to 70% off' }] } }] };
+			case 'category-header':
+				return { ...base, sections: [{ component: 'category-header', props: { title: 'Women / Tops', subtitle: '124 results', showSort: true, showFilter: true, subcategories: brand.categories.slice(0, 4).map(c => ({ label: c.displayName, href: `/c/${c.slug}` })) } }] };
+			case 'product-grid':
+				return { ...base, sections: [{ component: 'product-grid', props: { columns: 4, imageRatio: 'square', showDescription: false, showSpecs: false, showQuickAdd: true, showRating: true, showBadges: true, products: sampleProducts.map(p => ({ productId: p.id, role: 'standard' as const })) } }] };
+			case 'product-carousel':
+				return { ...base, sections: [{ component: 'product-carousel', props: { title: 'Best Sellers', products: sampleProducts.map(p => ({ productId: p.id, role: 'standard' as const })), showRating: true, showBadges: true, showQuickAdd: true } }] };
+			case 'coupon-strip':
+				return { ...base, sections: [{ component: 'coupon-strip', props: { eyebrow: 'OFFER FOR YOU', headline: 'Get $10 off when you spend $80+', body: 'Code applies in cart. One per customer.', code: 'SAVE10', ctaLabel: 'Get Code' } }] };
+			case 'lifestyle-price-hero':
+				return { ...base, sections: [{ component: 'lifestyle-price-hero', props: { image: 'https://picsum.photos/seed/sglh/1600/600', category: 'Handbags', priceLabel: 'starting at $19.99', ctaLabel: 'Shop Bags', ctaHref: '#' } }] };
+			case 'bealls-bucks-callout':
+				return { ...base, sections: [{ component: 'bealls-bucks-callout', props: { mode: 'earn', amount: 5, unit: brand.incentives?.loyalty?.unit || 'points', threshold: 100 } }] };
+			case 'hero-product':
+				return { ...base, sections: [{ component: 'hero-product', props: { product: { productId: 'sg4', role: 'hero' }, showSpecs: true } }] };
+			default:
+				return { ...base, sections: [] };
+		}
+	}
+
+	const storefrontComponents = ['promo-strip', 'editorial-hero', 'editorial-header', 'category-tile-grid', 'price-rail', 'category-header', 'product-grid', 'product-carousel', 'coupon-strip', 'lifestyle-price-hero', 'bealls-bucks-callout', 'hero-product'];
+	const contentComponents = ['promo-strip', 'editorial-hero', 'editorial-header', 'category-tile-grid', 'category-header', 'bealls-bucks-callout'];
+
+	const componentList = $derived(brand.mode === 'content' ? contentComponents : storefrontComponents);
+</script>
+
 <svelte:head>
-	<title>Style Guide — Haven Design System</title>
+	<title>{brand.name} — Style Guide</title>
 </svelte:head>
 
 <div class="mx-auto max-w-7xl px-6 py-12">
-	<header class="mb-16">
-		<p class="text-xs font-medium uppercase tracking-widest text-surface-muted-fg">Design System</p>
-		<h1 class="mt-3 text-4xl">Haven Style Guide</h1>
-		<p class="mt-4 max-w-lg text-surface-muted-fg leading-relaxed">
-			Brand tokens generated by the design token pipeline from <code class="rounded bg-surface-muted px-1.5 py-0.5 font-mono text-sm">brand.json</code>.
-			All values are WCAG AA compliant.
-		</p>
+	<!-- HEADER -->
+	<header class="mb-12 border-b border-surface-border pb-8">
+		<p class="text-xs font-semibold uppercase tracking-[0.18em] text-surface-muted-fg">Brand Style Guide · {brand.mode} mode</p>
+		<h1 class="mt-3 font-display text-5xl tracking-tight">{brand.name}</h1>
+		<p class="mt-3 text-lg italic text-surface-muted-fg">{brand.tagline}</p>
+		<p class="mt-3 max-w-2xl text-sm leading-relaxed text-surface-muted-fg">{brand.domain}</p>
 	</header>
 
-	<!-- COLOR PALETTE -->
+	<!-- COLORS -->
 	<section class="mb-16">
-		<h2 class="text-2xl">Color Palette</h2>
+		<h2 class="font-display text-3xl tracking-tight">Color System</h2>
+		<p class="mt-2 text-sm text-surface-muted-fg">Brand and surface tokens injected into <code class="rounded bg-surface-muted px-1 py-0.5 font-mono text-xs">:root</code> as CSS custom properties. Components use semantic Tailwind classes that resolve to these values.</p>
 
-		<h3 class="mt-8 text-xs font-semibold uppercase tracking-widest text-surface-muted-fg">Brand Colors</h3>
-		<div class="mt-4 grid gap-3 sm:grid-cols-3">
+		<h3 class="mt-8 text-xs font-semibold uppercase tracking-[0.18em] text-surface-muted-fg">Brand</h3>
+		<div class="mt-3 grid gap-3 sm:grid-cols-3">
 			<div class="overflow-hidden rounded-sm border border-surface-border">
-				<div class="h-20 bg-primary"></div>
+				<div class="h-24 bg-primary"></div>
 				<div class="p-3">
-					<p class="text-sm font-medium">Terracotta</p>
-					<p class="font-mono text-xs text-surface-muted-fg">#a3522d · primary</p>
+					<p class="text-sm font-semibold">Primary</p>
+					<p class="font-mono text-xs text-surface-muted-fg">{brand.theme.primary}</p>
 				</div>
 			</div>
 			<div class="overflow-hidden rounded-sm border border-surface-border">
-				<div class="h-20 bg-secondary"></div>
+				<div class="h-24 bg-secondary"></div>
 				<div class="p-3">
-					<p class="text-sm font-medium">Terracotta Deep</p>
-					<p class="font-mono text-xs text-surface-muted-fg">#8a4425 · secondary</p>
+					<p class="text-sm font-semibold">Secondary</p>
+					<p class="font-mono text-xs text-surface-muted-fg">{brand.theme.secondary}</p>
 				</div>
 			</div>
 			<div class="overflow-hidden rounded-sm border border-surface-border">
-				<div class="h-20 bg-accent"></div>
+				<div class="h-24 bg-accent"></div>
 				<div class="p-3">
-					<p class="text-sm font-medium">Eucalyptus</p>
-					<p class="font-mono text-xs text-surface-muted-fg">#2c6e63 · accent</p>
+					<p class="text-sm font-semibold">Accent</p>
+					<p class="font-mono text-xs text-surface-muted-fg">{brand.theme.accent}</p>
 				</div>
 			</div>
 		</div>
 
-		<h3 class="mt-10 text-xs font-semibold uppercase tracking-widest text-surface-muted-fg">Semantic Colors</h3>
-		<div class="mt-4 grid gap-3 sm:grid-cols-4">
+		<h3 class="mt-8 text-xs font-semibold uppercase tracking-[0.18em] text-surface-muted-fg">Surfaces</h3>
+		<div class="mt-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
 			<div class="overflow-hidden rounded-sm border border-surface-border">
-				<div class="h-14 bg-success"></div>
-				<div class="p-3">
-					<p class="text-sm font-medium">In Stock</p>
-					<p class="font-mono text-xs text-surface-muted-fg">#2c6e63</p>
-				</div>
+				<div class="h-16" style="background: {brand.theme.surfaceBg};"></div>
+				<div class="p-3"><p class="text-sm font-semibold">Background</p><p class="font-mono text-xs text-surface-muted-fg">{brand.theme.surfaceBg}</p></div>
 			</div>
 			<div class="overflow-hidden rounded-sm border border-surface-border">
-				<div class="h-14 bg-warning"></div>
-				<div class="p-3">
-					<p class="text-sm font-medium">Low Stock</p>
-					<p class="font-mono text-xs text-surface-muted-fg">#996d1a</p>
-				</div>
+				<div class="h-16" style="background: {brand.theme.surfaceCard};"></div>
+				<div class="p-3"><p class="text-sm font-semibold">Card</p><p class="font-mono text-xs text-surface-muted-fg">{brand.theme.surfaceCard}</p></div>
 			</div>
 			<div class="overflow-hidden rounded-sm border border-surface-border">
-				<div class="h-14 bg-error"></div>
-				<div class="p-3">
-					<p class="text-sm font-medium">Unavailable</p>
-					<p class="font-mono text-xs text-surface-muted-fg">#b5403a</p>
-				</div>
+				<div class="h-16" style="background: {brand.theme.surfaceMuted};"></div>
+				<div class="p-3"><p class="text-sm font-semibold">Muted</p><p class="font-mono text-xs text-surface-muted-fg">{brand.theme.surfaceMuted}</p></div>
 			</div>
 			<div class="overflow-hidden rounded-sm border border-surface-border">
-				<div class="h-14 bg-info"></div>
-				<div class="p-3">
-					<p class="text-sm font-medium">Info</p>
-					<p class="font-mono text-xs text-surface-muted-fg">#4a7fa5</p>
-				</div>
+				<div class="h-16" style="background: {brand.theme.surfaceBorder};"></div>
+				<div class="p-3"><p class="text-sm font-semibold">Border</p><p class="font-mono text-xs text-surface-muted-fg">{brand.theme.surfaceBorder}</p></div>
 			</div>
 		</div>
 
-		<h3 class="mt-10 text-xs font-semibold uppercase tracking-widest text-surface-muted-fg">Neutral Scale</h3>
-		<div class="mt-4 flex overflow-hidden rounded-sm border border-surface-border">
-			{#each neutrals as n}
-				<div class="flex-1" style="background-color: {n.hex}; min-height: 64px;" title="{n.label}: {n.hex}"></div>
-			{/each}
-		</div>
-		<div class="mt-2 flex">
-			{#each neutrals as n}
-				<div class="flex-1 text-center">
-					<p class="font-mono text-[0.625rem] text-surface-muted-fg">{n.label}</p>
-				</div>
-			{/each}
-		</div>
-
-		<h3 class="mt-10 text-xs font-semibold uppercase tracking-widest text-surface-muted-fg">Surfaces</h3>
-		<div class="mt-4 grid gap-3 sm:grid-cols-3">
-			<div class="rounded-sm border border-surface-border bg-surface-bg p-6">
-				<p class="text-sm font-medium">Background</p>
-				<p class="font-mono text-xs text-surface-muted-fg">#faf9f7</p>
+		<h3 class="mt-8 text-xs font-semibold uppercase tracking-[0.18em] text-surface-muted-fg">Foreground</h3>
+		<div class="mt-3 grid gap-3 sm:grid-cols-3">
+			<div class="rounded-sm border border-surface-border p-4">
+				<p class="text-base" style="color: {brand.theme.surfaceFg};">Surface foreground</p>
+				<p class="mt-1 font-mono text-xs text-surface-muted-fg">{brand.theme.surfaceFg}</p>
 			</div>
-			<div class="rounded-sm border border-surface-border bg-surface-card p-6">
-				<p class="text-sm font-medium text-surface-card-fg">Card</p>
-				<p class="font-mono text-xs text-surface-muted-fg">#ffffff</p>
+			<div class="rounded-sm border border-surface-border p-4">
+				<p class="text-base" style="color: {brand.theme.surfaceCardFg};">Card foreground</p>
+				<p class="mt-1 font-mono text-xs text-surface-muted-fg">{brand.theme.surfaceCardFg}</p>
 			</div>
-			<div class="rounded-sm bg-surface-muted p-6">
-				<p class="text-sm font-medium">Muted</p>
-				<p class="font-mono text-xs text-surface-muted-fg">#f5f3f0</p>
+			<div class="rounded-sm border border-surface-border p-4">
+				<p class="text-base" style="color: {brand.theme.surfaceMutedFg};">Muted foreground</p>
+				<p class="mt-1 font-mono text-xs text-surface-muted-fg">{brand.theme.surfaceMutedFg}</p>
 			</div>
 		</div>
 	</section>
 
 	<!-- TYPOGRAPHY -->
 	<section class="mb-16">
-		<h2 class="text-2xl">Typography</h2>
+		<h2 class="font-display text-3xl tracking-tight">Typography</h2>
+		<p class="mt-2 text-sm text-surface-muted-fg">Loaded via <code class="rounded bg-surface-muted px-1 py-0.5 font-mono text-xs">{brand.googleFontsUrl}</code></p>
 
-		<div class="mt-8 grid gap-8 lg:grid-cols-2">
-			<!-- Display font -->
+		<div class="mt-8 grid gap-6 lg:grid-cols-2">
 			<div class="rounded-sm border border-surface-border p-6">
-				<p class="text-xs font-medium uppercase tracking-widest text-surface-muted-fg">Display — DM Serif Display</p>
-				<p class="mt-4 font-display text-4xl">The quick brown fox</p>
-				<p class="mt-2 font-display text-2xl">jumps over the lazy dog</p>
-				<p class="mt-4 text-xs text-surface-muted-fg">Used for: h1, h2, h3, product names in editorial layouts, category headers</p>
+				<p class="text-xs font-semibold uppercase tracking-[0.18em] text-surface-muted-fg">Display</p>
+				<p class="mt-2 font-mono text-xs text-surface-muted-fg">{brand.theme.fontDisplay}</p>
+				<p class="mt-6 font-display text-5xl leading-tight">{brand.homepage.heroHeadline}</p>
+				<p class="mt-3 font-display text-3xl">{brand.homepage.editorialHeadline}</p>
+				<p class="mt-3 font-display text-xl">Section heading</p>
+				<p class="mt-4 text-xs text-surface-muted-fg">Used for: hero headlines, section titles, editorial framing</p>
 			</div>
 
-			<!-- Body font -->
 			<div class="rounded-sm border border-surface-border p-6">
-				<p class="text-xs font-medium uppercase tracking-widest text-surface-muted-fg">Body — DM Sans</p>
-				<p class="mt-4 text-lg">The quick brown fox jumps over the lazy dog</p>
-				<p class="mt-2 text-sm">ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789</p>
-				<p class="mt-4 text-xs text-surface-muted-fg">Used for: body text, navigation, buttons, labels, descriptions</p>
+				<p class="text-xs font-semibold uppercase tracking-[0.18em] text-surface-muted-fg">Body</p>
+				<p class="mt-2 font-mono text-xs text-surface-muted-fg">{brand.theme.fontBody}</p>
+				<p class="mt-6 text-lg leading-relaxed">The quick brown fox jumps over the lazy dog</p>
+				<p class="mt-2 text-base leading-relaxed">{brand.homepage.heroBody}</p>
+				<p class="mt-3 text-sm text-surface-muted-fg">ABCDEFGHIJKLMNOPQRSTUVWXYZ · abcdefghijklmnopqrstuvwxyz · 0123456789</p>
+				<p class="mt-4 text-xs text-surface-muted-fg">Used for: body text, navigation, labels, CTAs</p>
 			</div>
 		</div>
+	</section>
 
-		<h3 class="mt-10 text-xs font-semibold uppercase tracking-widest text-surface-muted-fg">Type Scale</h3>
-		<div class="mt-6 space-y-6 border-t border-surface-border pt-6">
-			<div class="flex items-baseline gap-6">
-				<span class="w-24 shrink-0 font-mono text-xs text-surface-muted-fg">hero / 3.5rem</span>
-				<span class="font-display text-[3.5rem] leading-[1.05]">Haven</span>
-			</div>
-			<div class="flex items-baseline gap-6">
-				<span class="w-24 shrink-0 font-mono text-xs text-surface-muted-fg">h2 / 2.25rem</span>
-				<span class="font-display text-[2.25rem] leading-[1.15]">Shop by Room</span>
-			</div>
-			<div class="flex items-baseline gap-6">
-				<span class="w-24 shrink-0 font-mono text-xs text-surface-muted-fg">h3 / 1.5rem</span>
-				<span class="font-display text-[1.5rem] leading-[1.25]">Modern Leather Sectional</span>
-			</div>
-			<div class="flex items-baseline gap-6">
-				<span class="w-24 shrink-0 font-mono text-xs text-surface-muted-fg">h4 / 1.125rem</span>
-				<span class="text-[1.125rem] font-semibold leading-[1.35]">Free shipping over $500</span>
-			</div>
-			<div class="flex items-baseline gap-6">
-				<span class="w-24 shrink-0 font-mono text-xs text-surface-muted-fg">body-lg</span>
-				<span class="text-[1.125rem] leading-[1.65]">Pieces that hold up to real life. Pet-friendly fabrics, washable covers.</span>
-			</div>
-			<div class="flex items-baseline gap-6">
-				<span class="w-24 shrink-0 font-mono text-xs text-surface-muted-fg">body</span>
-				<span class="text-base leading-[1.6]">Solid walnut with a waterfall edge and matte lacquer finish.</span>
-			</div>
-			<div class="flex items-baseline gap-6">
-				<span class="w-24 shrink-0 font-mono text-xs text-surface-muted-fg">body-sm</span>
-				<span class="text-sm leading-[1.5]">Top-grain leather · Seats 5 · 112" x 85"</span>
-			</div>
-			<div class="flex items-baseline gap-6">
-				<span class="w-24 shrink-0 font-mono text-xs text-surface-muted-fg">label</span>
-				<span class="text-xs font-medium uppercase tracking-widest">Featured · In Stock · Sale</span>
-			</div>
-			<div class="flex items-baseline gap-6">
-				<span class="w-24 shrink-0 font-mono text-xs text-surface-muted-fg">code</span>
-				<span class="font-mono text-[0.8125rem]">brand-forge export css --kit brand.json</span>
-			</div>
+	<!-- BUTTONS -->
+	<section class="mb-16">
+		<h2 class="font-display text-3xl tracking-tight">Buttons & CTAs</h2>
+		<div class="mt-6 flex flex-wrap items-center gap-4 rounded-sm border border-surface-border p-6">
+			<button class="rounded-sm bg-primary px-6 py-3 text-xs font-semibold uppercase tracking-wider text-white transition-opacity hover:opacity-90">Primary CTA</button>
+			<button class="rounded-sm bg-accent px-6 py-3 text-xs font-semibold uppercase tracking-wider text-white transition-opacity hover:opacity-90">Accent CTA</button>
+			<button class="rounded-sm border-2 border-primary px-6 py-3 text-xs font-semibold uppercase tracking-wider text-primary transition-colors hover:bg-primary hover:text-white">Outline</button>
+			<button class="rounded-sm border border-surface-border px-6 py-3 text-xs font-medium text-surface-muted-fg transition-colors hover:border-surface-fg hover:text-surface-fg">Tertiary</button>
+		</div>
+	</section>
+
+	<!-- BADGES -->
+	<section class="mb-16">
+		<h2 class="font-display text-3xl tracking-tight">Badges</h2>
+		<div class="mt-6 flex flex-wrap items-center gap-3 rounded-sm border border-surface-border p-6">
+			<span class="rounded-sm bg-accent px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">New</span>
+			<span class="rounded-sm bg-primary px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">Deal</span>
+			<span class="rounded-sm bg-error px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">Clearance</span>
+			<span class="rounded-sm bg-warning/20 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider" style="color: {brand.theme.surfaceFg};">Low Stock</span>
+			<span class="rounded-sm bg-surface-muted px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-surface-muted-fg">Sample tag</span>
 		</div>
 	</section>
 
 	<!-- COMPONENTS -->
 	<section class="mb-16">
-		<h2 class="text-2xl">Components</h2>
+		<h2 class="font-display text-3xl tracking-tight">Layout Components</h2>
+		<p class="mt-2 text-sm text-surface-muted-fg">
+			{brand.mode === 'content'
+				? `${componentList.length} components available in content mode (no transactional vocabulary)`
+				: `All ${componentList.length} components in the storefront vocabulary`}
+		</p>
 
-		<!-- Buttons -->
-		<h3 class="mt-8 text-xs font-semibold uppercase tracking-widest text-surface-muted-fg">Buttons</h3>
-		<div class="mt-4 flex flex-wrap items-center gap-4">
-			<button class="rounded-sm bg-surface-fg px-6 py-3 text-sm font-medium text-surface-bg transition-opacity hover:opacity-85">
-				Primary CTA
-			</button>
-			<button class="rounded-sm border border-surface-fg px-6 py-3 text-sm font-medium text-surface-fg transition-colors hover:bg-surface-fg hover:text-surface-bg">
-				Secondary
-			</button>
-			<button class="rounded-sm bg-primary px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-secondary">
-				Accent
-			</button>
-			<button class="rounded-sm border border-surface-border px-6 py-3 text-sm font-medium text-surface-muted-fg transition-colors hover:border-neutral-400 hover:text-surface-fg">
-				Tertiary
-			</button>
-		</div>
-		<p class="mt-3 text-xs text-surface-muted-fg">Primary CTA uses fg/bg inversion (dark on light). Accent (terracotta) used for emphasis. Tertiary for filters and secondary actions.</p>
-
-		<!-- Badges -->
-		<h3 class="mt-10 text-xs font-semibold uppercase tracking-widest text-surface-muted-fg">Badges</h3>
-		<div class="mt-4 flex flex-wrap items-center gap-3">
-			<span class="rounded-sm bg-success/10 px-2.5 py-1 text-xs font-medium text-success">In Stock</span>
-			<span class="rounded-sm bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning">Low Stock</span>
-			<span class="rounded-sm bg-error/10 px-2.5 py-1 text-xs font-medium text-error">Out of Stock</span>
-			<span class="rounded-sm bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">Sale</span>
-			<span class="rounded-sm bg-info/10 px-2.5 py-1 text-xs font-medium text-info">Trending</span>
-			<span class="rounded-sm bg-surface-muted px-2.5 py-1 text-xs font-medium text-surface-muted-fg">leather</span>
-			<span class="rounded-sm bg-surface-muted px-2.5 py-1 text-xs font-medium text-surface-muted-fg">modern</span>
-		</div>
-
-		<!-- Cards -->
-		<h3 class="mt-10 text-xs font-semibold uppercase tracking-widest text-surface-muted-fg">Product Cards</h3>
-		<div class="mt-4 grid gap-6 sm:grid-cols-3">
-			<!-- Editorial card (Gatherer) -->
-			<div class="overflow-hidden rounded-sm border border-surface-border">
-				<div class="aspect-[4/3] bg-surface-muted"></div>
-				<div class="p-4">
-					<h4 class="font-display text-lg">Modern Leather Sectional</h4>
-					<p class="mt-1 text-sm text-surface-muted-fg">Top-grain leather with reversible chaise</p>
-					<p class="mt-3 font-medium">$2,499</p>
-				</div>
-			</div>
-
-			<!-- Compact card (Hunter) -->
-			<div class="overflow-hidden rounded-sm border border-surface-border">
-				<div class="aspect-square bg-surface-muted"></div>
-				<div class="p-3">
-					<h4 class="text-sm font-medium">Compact Student Desk</h4>
-					<p class="mt-0.5 text-xs text-surface-muted-fg">48" x 24" · Engineered wood</p>
-					<p class="mt-2 text-base font-semibold">$129</p>
-					<button class="mt-2 w-full rounded-sm bg-surface-fg py-2 text-xs font-medium text-surface-bg">Add to Cart</button>
-				</div>
-			</div>
-
-			<!-- Sale card -->
-			<div class="overflow-hidden rounded-sm border border-surface-border">
-				<div class="relative aspect-[4/3] bg-surface-muted">
-					<span class="absolute left-3 top-3 rounded-sm bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">Sale</span>
-				</div>
-				<div class="p-4">
-					<h4 class="font-display text-lg">Velvet Lounge Sofa</h4>
-					<p class="mt-1 text-sm text-surface-muted-fg">Performance velvet, 3-seat</p>
-					<div class="mt-3 flex items-baseline gap-2">
-						<span class="font-medium text-primary">$1,599</span>
-						<span class="text-sm text-surface-muted-fg line-through">$1,899</span>
+		<div class="mt-8 space-y-12">
+			{#each componentList as component}
+				<div>
+					<div class="mb-3 flex items-baseline justify-between border-b border-surface-border pb-2">
+						<h3 class="font-mono text-sm font-semibold text-surface-fg">{component}</h3>
+						<span class="text-xs text-surface-muted-fg">component</span>
 					</div>
-				</div>
-			</div>
-		</div>
-		<p class="mt-3 text-xs text-surface-muted-fg">Left: Gatherer editorial card (4:3 ratio, serif heading, description). Center: Hunter compact card (square, quick-add). Right: Sale treatment.</p>
-
-		<!-- Form elements -->
-		<h3 class="mt-10 text-xs font-semibold uppercase tracking-widest text-surface-muted-fg">Form Elements</h3>
-		<div class="mt-4 flex flex-wrap items-end gap-4">
-			<div>
-				<label class="text-xs font-medium text-surface-muted-fg">Text Input</label>
-				<input type="text" placeholder="Search..." class="mt-1 block rounded-sm border border-surface-border bg-surface-card px-3 py-2 text-sm placeholder:text-surface-muted-fg focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
-			</div>
-			<div>
-				<label class="text-xs font-medium text-surface-muted-fg">Select</label>
-				<select class="mt-1 block rounded-sm border border-surface-border bg-surface-card px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
-					<option>Price: Low to High</option>
-					<option>Price: High to Low</option>
-				</select>
-			</div>
-		</div>
-	</section>
-
-	<!-- SPACING & RADIUS -->
-	<section class="mb-16">
-		<h2 class="text-2xl">Spacing & Radius</h2>
-
-		<h3 class="mt-8 text-xs font-semibold uppercase tracking-widest text-surface-muted-fg">Border Radius</h3>
-		<div class="mt-4 flex flex-wrap items-end gap-4">
-			{#each radii as r}
-				<div class="text-center">
-					<div class="h-16 w-16 border border-surface-border bg-surface-muted" style="border-radius: {r.value};"></div>
-					<p class="mt-2 font-mono text-[0.625rem] text-surface-muted-fg">{r.label}</p>
+					<LayoutRenderer layout={makeSampleLayout(component)} products={sampleProducts} />
 				</div>
 			{/each}
 		</div>
-		<p class="mt-3 text-xs text-surface-muted-fg">Haven uses minimal radius (0-6px). Rounded-sm (2px) for most elements. No pill shapes except full-round badges.</p>
 	</section>
 
 	<!-- VOICE -->
 	<section class="mb-16">
-		<h2 class="text-2xl">Voice & Tone</h2>
+		<h2 class="font-display text-3xl tracking-tight">Voice & Persona</h2>
+		<p class="mt-2 text-sm text-surface-muted-fg">Drives the AI's word choice, tone, and persona-specific layout decisions.</p>
 
-		<div class="mt-8 grid gap-6 sm:grid-cols-2">
-			<div class="rounded-sm border border-surface-border p-6">
-				<h3 class="text-xs font-semibold uppercase tracking-widest text-accent">Do</h3>
-				<p class="mt-4 leading-relaxed">
-					Solid walnut with a waterfall edge and matte lacquer finish. Sized for smaller living rooms — 48 inches won't overwhelm the space.
-				</p>
-			</div>
-			<div class="rounded-sm border border-surface-border p-6">
-				<h3 class="text-xs font-semibold uppercase tracking-widest text-error">Don't</h3>
-				<p class="mt-4 leading-relaxed">
-					This stunning, best-in-class coffee table features a thoughtfully designed silhouette crafted from premium materials to elevate any living space.
-				</p>
-			</div>
+		<div class="mt-6 rounded-sm border-l-4 border-primary bg-surface-muted p-6">
+			<p class="text-xs font-semibold uppercase tracking-[0.18em] text-surface-muted-fg">Voice guidance</p>
+			<p class="mt-3 leading-relaxed">{brand.prompt.voiceGuidance}</p>
 		</div>
 
-		<div class="mt-6 grid gap-6 sm:grid-cols-2">
-			<div class="rounded-sm border border-surface-border p-6">
-				<h3 class="text-xs font-semibold uppercase tracking-widest text-accent">Do</h3>
-				<p class="mt-4 leading-relaxed">
-					Sofas built to hold up to real life. Pet-friendly fabrics, washable covers, frames that don't creak at year five.
-				</p>
-			</div>
-			<div class="rounded-sm border border-surface-border p-6">
-				<h3 class="text-xs font-semibold uppercase tracking-widest text-error">Don't</h3>
-				<p class="mt-4 leading-relaxed">
-					Discover our curated collection of world-class sofas, each thoughtfully designed to transform your living room into a sanctuary of style.
-				</p>
-			</div>
-		</div>
-
-		<h3 class="mt-10 text-xs font-semibold uppercase tracking-widest text-surface-muted-fg">Voice Attributes</h3>
-		<div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-			{#each voiceAttributes as attr}
-				<div class="rounded-sm border border-surface-border p-4">
-					<p class="font-medium">{attr.trait}</p>
-					<p class="mt-2 text-sm text-surface-muted-fg">{attr.description}</p>
+		<h3 class="mt-8 text-xs font-semibold uppercase tracking-[0.18em] text-surface-muted-fg">Personas (4)</h3>
+		<div class="mt-3 grid gap-4 sm:grid-cols-2">
+			{#each Object.entries(brand.prompt.personaDefinitions) as [name, definition]}
+				<div class="rounded-sm border border-surface-border p-5">
+					<p class="font-display text-lg font-semibold capitalize text-primary">{name}</p>
+					<p class="mt-2 text-sm leading-relaxed text-surface-muted-fg">{definition}</p>
 				</div>
 			{/each}
 		</div>
 	</section>
 
-	<!-- DEV MODE -->
-	<section class="mb-16">
-		<h2 class="text-2xl">Dev Mode Overlay</h2>
-		<p class="mt-4 text-surface-muted-fg">Add <code class="rounded bg-surface-muted px-1.5 py-0.5 font-mono text-sm">?dev=true</code> to any URL to see the persona detection overlay.</p>
+	<!-- INCENTIVES -->
+	{#if brand.incentives?.loyalty}
+		<section class="mb-16">
+			<h2 class="font-display text-3xl tracking-tight">Loyalty & Incentives</h2>
+			<div class="mt-6 grid gap-6 sm:grid-cols-2">
+				<div class="rounded-sm border border-surface-border p-6">
+					<p class="text-xs font-semibold uppercase tracking-[0.18em] text-surface-muted-fg">{brand.incentives.loyalty.programName}</p>
+					<p class="mt-2 font-display text-2xl">Earn {brand.incentives.loyalty.unit}</p>
+					{#if brand.incentives.loyalty.tiers}
+						<div class="mt-4 space-y-2">
+							{#each brand.incentives.loyalty.tiers as tier}
+								<div class="flex items-center justify-between text-sm">
+									<span class="font-medium">{tier.name}</span>
+									<span class="font-mono text-xs text-surface-muted-fg">{tier.unitsRequired.toLocaleString()} {brand.incentives.loyalty.unit}</span>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
 
-		<div class="mt-6 rounded-sm border border-accent/30 bg-accent/5 p-4">
-			<div class="flex items-center justify-between">
-				<div>
-					<p class="text-xs font-medium uppercase tracking-wider text-accent">Dev Mode</p>
-					<p class="mt-1 text-sm text-surface-muted-fg">
-						Detected: <span class="font-semibold text-surface-fg">gatherer</span> (80% confidence)
-					</p>
-				</div>
-				<div class="flex gap-2">
-					<button class="rounded-sm bg-primary px-3 py-1.5 text-xs font-medium text-white">Gatherer</button>
-					<button class="rounded-sm border border-surface-border px-3 py-1.5 text-xs font-medium text-surface-muted-fg">Hunter</button>
-				</div>
+				{#if brand.incentives.freeShippingThresholdMinor != null}
+					<div class="rounded-sm border border-surface-border p-6">
+						<p class="text-xs font-semibold uppercase tracking-[0.18em] text-surface-muted-fg">Free shipping</p>
+						<p class="mt-2 font-display text-2xl">
+							{brand.incentives.freeShippingThresholdMinor === 0
+								? 'Always free'
+								: `Over $${(brand.incentives.freeShippingThresholdMinor / 100).toLocaleString()}`}
+						</p>
+						<p class="mt-2 text-sm text-surface-muted-fg">Cart-level threshold drives the persistent shipping promo.</p>
+					</div>
+				{/if}
 			</div>
+		</section>
+	{/if}
+
+	<!-- CATEGORIES -->
+	<section class="mb-16">
+		<h2 class="font-display text-3xl tracking-tight">Category Map</h2>
+		<p class="mt-2 text-sm text-surface-muted-fg">{brand.categories.length} categories defined.</p>
+		<div class="mt-4 flex flex-wrap gap-2">
+			{#each brand.categories as cat}
+				<span class="rounded-sm border border-surface-border bg-surface-card px-3 py-1.5 text-xs font-medium">
+					{cat.displayName}
+					<span class="ml-2 font-mono text-[10px] text-surface-muted-fg">/{cat.slug}</span>
+				</span>
+			{/each}
 		</div>
-		<p class="mt-3 text-xs text-surface-muted-fg">Uses accent (eucalyptus) for dev mode chrome to visually separate from commerce UI.</p>
 	</section>
 </div>
-
-<script lang="ts">
-	const neutrals = [
-		{ label: '50', hex: '#faf9f7' },
-		{ label: '100', hex: '#f5f3f0' },
-		{ label: '200', hex: '#ebe8e3' },
-		{ label: '300', hex: '#d9d4cc' },
-		{ label: '400', hex: '#b5ada2' },
-		{ label: '500', hex: '#8c8479' },
-		{ label: '600', hex: '#6b6459' },
-		{ label: '700', hex: '#4d473e' },
-		{ label: '800', hex: '#353129' },
-		{ label: '900', hex: '#231f1a' },
-		{ label: '950', hex: '#141210' },
-	];
-
-	const radii = [
-		{ label: 'none', value: '0' },
-		{ label: 'sm', value: '2px' },
-		{ label: 'md', value: '4px' },
-		{ label: 'lg', value: '6px' },
-		{ label: 'xl', value: '8px' },
-		{ label: '2xl', value: '12px' },
-		{ label: 'full', value: '9999px' },
-	];
-
-	const voiceAttributes = [
-		{ trait: 'Warm', description: 'Conversational, like a knowledgeable friend — not a salesperson, not a robot.' },
-		{ trait: 'Confident', description: 'Declarative, specific, backed by product knowledge. No hedging.' },
-		{ trait: 'Editorial', description: 'Reads like a shelter magazine, not a product catalog. Story over specs.' },
-		{ trait: 'Unhurried', description: 'No pressure. Furniture is a considered purchase. Give space to decide.' },
-	];
-</script>
