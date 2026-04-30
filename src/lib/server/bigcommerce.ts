@@ -37,11 +37,16 @@ interface GraphQLResponse<T> {
 
 async function query<T>(gql: string, variables?: Record<string, unknown>): Promise<T> {
 	const { url, token } = getGraphQLConfig();
+	// BC's Storefront GraphQL enforces an Origin check matching the token's
+	// allowed_cors_origins. Server-to-server fetches sometimes have an Origin
+	// implicitly added by the runtime; explicitly setting it to localhost
+	// (which is in every token's allowed list) is the most reliable bridge.
 	const res = await fetch(url, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`,
+			Origin: 'http://localhost:5173',
 		},
 		body: JSON.stringify({ query: gql, variables }),
 	});
