@@ -298,7 +298,7 @@ const BRANDS: Record<string, BrandConfig> = {
 		footerNote: 'bealls is a demo storefront powered by Aisles',
 
 		bc: {
-			channelId: 1, // bealls — repurposed from Haven's "Demo" channel
+			channelId: 1846324, // bealls — repurposed from Ember headless channel (was Demo→ch1, moved 2026-04-30)
 			categoryPrefix: 'Bealls',
 		},
 

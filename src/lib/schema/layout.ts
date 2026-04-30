@@ -81,7 +81,7 @@ const CategoryTileGridSection = z.object({
 	props: z.object({
 		sectionLabel: z.string().optional().describe('Optional section heading above the tiles'),
 		columns: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5)]).describe('Number of tiles per row'),
-		tiles: z.array(CategoryTile).min(2).max(5).describe('Category tiles in display order'),
+		tiles: z.array(CategoryTile).min(2).describe('Category tiles in display order (2-5 ideal)'),
 	}),
 });
 
@@ -96,7 +96,7 @@ const PriceRailSection = z.object({
 	component: z.literal('price-rail'),
 	props: z.object({
 		columns: z.union([z.literal(2), z.literal(3), z.literal(4)]).describe('Number of price tiers'),
-		tiers: z.array(PriceTier).min(2).max(4).describe('Price tiers in display order'),
+		tiers: z.array(PriceTier).min(2).describe('Price tiers in display order (2-4 ideal)'),
 	}),
 });
 
@@ -207,12 +207,12 @@ const layoutBase = {
 
 export const StorefrontLayoutSchema = z.object({
 	...layoutBase,
-	sections: z.array(StorefrontSectionSchema).min(1).max(8).describe('Ordered UI sections'),
+	sections: z.array(StorefrontSectionSchema).min(1).describe('Ordered UI sections (max 8 — enforced via prompt)'),
 });
 
 export const ContentLayoutSchema = z.object({
 	...layoutBase,
-	sections: z.array(ContentSectionSchema).min(1).max(8).describe('Ordered UI sections'),
+	sections: z.array(ContentSectionSchema).min(1).describe('Ordered UI sections (max 8 — enforced via prompt)'),
 });
 
 /** Universal layout schema — kept as the storefront variant for backwards compatibility. */

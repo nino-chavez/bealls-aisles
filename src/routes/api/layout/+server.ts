@@ -1,12 +1,13 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { generateText, Output, gateway } from 'ai';
+import { generateText, Output } from 'ai';
 import { LayoutSchema } from '$lib/schema/layout';
 import { buildLayoutPrompt } from '$lib/server/layout-prompt';
 import { loadCategoryProducts } from '$lib/server/catalog';
 import { getCachedLayout, cacheLayout, hashPicks } from '$lib/server/cache';
 import { logGeneration } from '$lib/server/generation-log';
 import { getActiveRules, rulesToPromptContext } from '$lib/server/rules';
+import { layoutModel, gatewayProviderOptions } from '$lib/server/ai-model';
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	const startTime = Date.now();
@@ -60,17 +61,12 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 		const prompt = buildLayoutPrompt(persona, categoryName, products, picksContext, rulesContext, probabilities);
 
-		// Haiku primary, Sonnet fallback — handled by AI Gateway
+		// Haiku primary; Sonnet fallback only via gateway path (skipped for direct).
 		const aiResult = await generateText({
-			model: gateway('anthropic/claude-haiku-4.5'),
+			model: layoutModel(),
 			output: Output.object({ schema: LayoutSchema }),
 			prompt,
-			providerOptions: {
-				gateway: {
-					models: ['anthropic/claude-sonnet-4.6'],
-					tags: ['feature:layout', `persona:${persona}`, `category:${categorySlug}`],
-				},
-			},
+			providerOptions: gatewayProviderOptions(persona, categorySlug),
 		});
 		const layout = aiResult.output;
 		const usage = aiResult.usage;
