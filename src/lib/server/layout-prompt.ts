@@ -61,7 +61,7 @@ Layout principles:
 - Order products by giftability score (universal appeal, presentation, value)`,
 };
 
-const COMPONENT_GUIDE = `You have exactly 4 components to work with:
+const STOREFRONT_COMPONENT_GUIDE = `You have exactly 4 components to work with:
 
 1. "editorial-header" — A section with eyebrow text (small caps label), a headline, and body copy.
    Use for: Gatherer layouts to set the editorial tone. Gifter layouts to frame the occasion. Not for Hunter or Researcher.
@@ -93,6 +93,28 @@ RULES:
 - Maximum 8 sections total
 - The "reasoning" field should explain your layout choices in 1-2 sentences`;
 
+const CONTENT_COMPONENT_GUIDE = `You have a non-transactional content vocabulary to work with. This brand operates as a content/locator site — there are NO products, NO prices, NO carts. Your job is to arrange editorial content and category framing to drive in-store visits, newsletter signups, and brand engagement.
+
+Available components:
+
+1. "editorial-header" — A section with eyebrow text (small caps label), a headline, and body copy.
+   Use for: All personas. Lead the page with editorial framing that matches the persona — inspirational for Gatherer, practical for Hunter, story-driven for Researcher, gift-occasion for Gifter.
+
+2. "category-header" — A title bar for a category surface.
+   Use for: Naming the section the user is browsing. Hero image and sub-category strip are valuable here.
+
+CONTENT-MODE RULES:
+- This brand has NO online catalog. Do not reference products, prices, sale events, or shipping.
+- Every CTA in the layout should drive to in-store visits, store locator, or brand engagement (newsletter, RSVP).
+- Persona still matters — the layout should feel different for a Gatherer (inspirational, lifestyle imagery) than for a Hunter (locator-first, "find a store near you").
+- The "productOrder" field can be an empty array for content-mode brands.
+- Maximum 8 sections total.
+- The "reasoning" field should explain your layout choices in 1-2 sentences.`;
+
+function getComponentGuide(mode: 'storefront' | 'content'): string {
+	return mode === 'content' ? CONTENT_COMPONENT_GUIDE : STOREFRONT_COMPONENT_GUIDE;
+}
+
 interface PromptProduct {
 	id: string;
 	name: string;
@@ -102,7 +124,7 @@ interface PromptProduct {
 	personaFit?: { gatherer: number; hunter: number; researcher: number; gifter: number } | null;
 }
 
-import { getBrand } from '$lib/brand/config';
+import { getBrand, getBrandMode } from '$lib/brand/config';
 
 export function buildLayoutPrompt(
 	persona: string,
@@ -113,6 +135,7 @@ export function buildLayoutPrompt(
 	probabilities?: { gatherer: number; hunter: number; researcher: number; gifter: number },
 ): string {
 	const brand = getBrand();
+	const mode = getBrandMode(brand);
 	const personaDef = PERSONA_DEFINITIONS[persona] || PERSONA_DEFINITIONS.gatherer;
 
 	// Pre-filter to top 15 by persona-fit for layout efficiency.
@@ -142,7 +165,16 @@ export function buildLayoutPrompt(
 		return `- ID: "${p.id}" | ${p.name} | ${price} | ${specs}${fit}`;
 	}).join('\n');
 
-	return `You are a merchandising AI for ${brand.prompt.storeDescription} called ${brand.prompt.storeName}. Your job is to arrange a category page layout that serves the shopper's intent.
+	const modeLabel = mode === 'content' ? 'content surface' : 'category page';
+	const modeRole = mode === 'content'
+		? `You are an editorial AI for ${brand.prompt.storeDescription} called ${brand.prompt.storeName}. This brand operates as a content/locator site (no online sales). Your job is to arrange a content surface that serves the shopper's intent and drives in-store engagement.`
+		: `You are a merchandising AI for ${brand.prompt.storeDescription} called ${brand.prompt.storeName}. Your job is to arrange a category page layout that serves the shopper's intent.`;
+
+	const productsBlock = mode === 'content'
+		? '' // content-mode brands have no products
+		: `\nAVAILABLE PRODUCTS (${filtered.length} items, top by ${persona} fit):\n${productSummaries}\n`;
+
+	return `${modeRole}
 
 VOICE: ${brand.prompt.voiceGuidance}
 
@@ -153,11 +185,8 @@ PROBABILITY VECTOR: gatherer ${Math.round(probabilities.gatherer * 100)}% | hunt
 The primary persona is ${persona}, but blend in elements from secondary personas if their score is above 25%. For example, if researcher is 30% alongside a hunter primary, show specs alongside the dense grid.` : ''}
 
 CATEGORY: ${categoryName}
+${productsBlock}${picksContext || ''}${rulesContext || ''}
+${getComponentGuide(mode)}
 
-AVAILABLE PRODUCTS (${filtered.length} items, top by ${persona} fit):
-${productSummaries}
-${picksContext || ''}${rulesContext || ''}
-${COMPONENT_GUIDE}
-
-Generate a layout for this ${persona} shopper browsing the ${categoryName} category.`;
+Generate a layout for this ${persona} shopper browsing the ${categoryName} ${modeLabel}.`;
 }

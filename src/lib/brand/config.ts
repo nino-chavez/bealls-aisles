@@ -13,7 +13,16 @@ export interface BrandConfig {
 	domain: string;
 	footerNote: string;
 
-	/** BigCommerce channel config */
+	/**
+	 * Operating mode — selects between transactional storefront and content-only
+	 * brand/locator site. Drives schema vocabulary, prompt vocabulary, and CTA
+	 * routing. See docs/decisions/005-storefront-vs-content-modes.md.
+	 *
+	 * Defaults to 'storefront' if omitted (backwards compatible with existing brands).
+	 */
+	mode?: 'storefront' | 'content';
+
+	/** BigCommerce channel config. Only required for storefront-mode brands. */
 	bc: {
 		channelId: number;
 		categoryPrefix: string;
@@ -276,3 +285,8 @@ export function getBrandById(id: string): BrandConfig | undefined {
 
 /** All available brand IDs */
 export const BRAND_IDS = Object.keys(BRANDS);
+
+/** Resolved operating mode for a brand — defaults to 'storefront' for backwards compat. */
+export function getBrandMode(brand: BrandConfig): 'storefront' | 'content' {
+	return brand.mode ?? 'storefront';
+}

@@ -58,20 +58,60 @@ const CategoryHeaderSection = z.object({
 	}),
 });
 
-export const SectionSchema = z.discriminatedUnion('component', [
+/**
+ * Storefront-mode section vocabulary — the full transactional set.
+ * Includes everything: editorial, products, grids, headers.
+ */
+export const StorefrontSectionSchema = z.discriminatedUnion('component', [
 	EditorialHeaderSection,
 	HeroProductSection,
 	ProductGridSection,
 	CategoryHeaderSection,
 ]);
 
-export type Section = z.infer<typeof SectionSchema>;
+/**
+ * Content-mode section vocabulary — non-transactional subset.
+ * Excludes hero-product and product-grid (no products in content mode).
+ * Content-mode-specific components (locator-strip, interest-form) will be
+ * added in Phase 2 component work.
+ */
+export const ContentSectionSchema = z.discriminatedUnion('component', [
+	EditorialHeaderSection,
+	CategoryHeaderSection,
+]);
 
-export const LayoutSchema = z.object({
+/** Universal section schema — used for parsing without mode constraint. */
+export const SectionSchema = StorefrontSectionSchema;
+
+export type Section = z.infer<typeof StorefrontSectionSchema>;
+export type ContentSection = z.infer<typeof ContentSectionSchema>;
+
+const layoutBase = {
 	persona: z.enum(['gatherer', 'hunter', 'researcher', 'gifter']).describe('Detected persona'),
 	reasoning: z.string().describe('Why this layout was chosen (1-2 sentences)'),
-	sections: z.array(SectionSchema).min(1).max(8).describe('Ordered UI sections'),
-	productOrder: z.array(z.string()).describe('Product IDs in display order'),
+	productOrder: z.array(z.string()).describe('Product IDs in display order (empty array for content-mode brands)'),
+};
+
+export const StorefrontLayoutSchema = z.object({
+	...layoutBase,
+	sections: z.array(StorefrontSectionSchema).min(1).max(8).describe('Ordered UI sections'),
 });
 
-export type Layout = z.infer<typeof LayoutSchema>;
+export const ContentLayoutSchema = z.object({
+	...layoutBase,
+	sections: z.array(ContentSectionSchema).min(1).max(8).describe('Ordered UI sections'),
+});
+
+/** Universal layout schema — kept as the storefront variant for backwards compatibility. */
+export const LayoutSchema = StorefrontLayoutSchema;
+
+export type Layout = z.infer<typeof StorefrontLayoutSchema>;
+export type ContentLayout = z.infer<typeof ContentLayoutSchema>;
+
+/**
+ * Returns the appropriate layout schema for a brand's operating mode.
+ * See docs/decisions/005-storefront-vs-content-modes.md.
+ */
+export function getLayoutSchema(mode: 'storefront' | 'content') {
+	return mode === 'content' ? ContentLayoutSchema : StorefrontLayoutSchema;
+}
