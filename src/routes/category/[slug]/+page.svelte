@@ -4,6 +4,7 @@
 	import type { PersonaInference } from '$lib/signals/types';
 	import { PERSONAS } from '$lib/signals/types';
 	import LayoutRenderer from '$lib/components/layouts/LayoutRenderer.svelte';
+	import LayoutBuildingState from '$lib/components/LayoutBuildingState.svelte';
 	import GathererLayout from '$lib/components/layouts/GathererLayout.svelte';
 	import HunterLayout from '$lib/components/layouts/HunterLayout.svelte';
 	import ResearcherLayout from '$lib/components/layouts/ResearcherLayout.svelte';
@@ -381,11 +382,11 @@
 	{#if aiLayout}
 		<LayoutRenderer layout={aiLayout} products={data.products ?? []} />
 	{:else if isUpgrading}
-		<!-- Skeleton: editorial header + product grid placeholder -->
-		<div class="animate-pulse">
-			<div class="mb-2 h-4 w-32 rounded bg-surface-muted"></div>
-			<div class="mb-3 h-10 w-3/4 rounded bg-surface-muted"></div>
-			<div class="mb-8 h-16 w-2/3 rounded bg-surface-muted"></div>
+		<div class="-mx-6">
+			<LayoutBuildingState persona={currentPersona} surface="category" categoryName={data.category.name} />
+		</div>
+		<!-- Subtle skeleton beneath the banner -->
+		<div class="mt-12 animate-pulse">
 			<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
 				{#each Array(6) as _}
 					<div>

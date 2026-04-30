@@ -2,6 +2,7 @@
 	import type { PageData } from './$types';
 	import type { Layout } from '$lib/schema/layout';
 	import LayoutRenderer from '$lib/components/layouts/LayoutRenderer.svelte';
+	import LayoutBuildingState from '$lib/components/LayoutBuildingState.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -92,10 +93,11 @@
 	{#if aiLayout}
 		<LayoutRenderer layout={aiLayout} products={data.homeProducts} />
 	{:else if isLoadingAI}
-		<!-- Skeleton: editorial title + grid placeholder -->
-		<div class="animate-pulse">
-			<div class="mb-3 h-4 w-32 rounded bg-surface-muted"></div>
-			<div class="mb-8 h-10 w-3/4 rounded bg-surface-muted"></div>
+		<div class="-mx-6">
+			<LayoutBuildingState persona={data.persona} surface="homepage" />
+		</div>
+		<!-- Subtle skeleton beneath the banner -->
+		<div class="mt-12 animate-pulse">
 			<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
 				{#each Array(4) as _}
 					<div>
