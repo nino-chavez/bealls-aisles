@@ -1,10 +1,13 @@
 import type { PageServerLoad } from './$types';
 import { getProducts, customFieldsToRecord, type BCProduct } from '$lib/server/bigcommerce';
-import { getBrand } from '$lib/brand/config';
+import { getBrand, getBrandMode } from '$lib/brand/config';
 
 export const load: PageServerLoad = async ({ cookies }) => {
-	// Fetch featured products from BC
-	const allProducts = await getProducts(30);
+	const brand = getBrand();
+	const mode = getBrandMode(brand);
+
+	// Content-mode brands have no online catalog — skip BC fetch entirely
+	const allProducts = mode === 'content' ? [] : await getProducts(30);
 
 	// Check for returning visitor persona
 	const storedPersona = cookies.get('aisles_persona') || null;
@@ -20,7 +23,6 @@ export const load: PageServerLoad = async ({ cookies }) => {
 		: sorted.slice(0, 4);
 
 	// Map categories for display — driven by brand config
-	const brand = getBrand();
 	const categoryList = Object.entries(brand.categories).map(([slug, config]) => ({
 		name: config.displayName,
 		path: `/${slug}/`,
