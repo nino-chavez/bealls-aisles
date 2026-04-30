@@ -8,6 +8,7 @@ import { getCachedLayout, cacheLayout, hashPicks } from '$lib/server/cache';
 import { logGeneration } from '$lib/server/generation-log';
 import { getActiveRules, rulesToPromptContext } from '$lib/server/rules';
 import { layoutModel, gatewayProviderOptions } from '$lib/server/ai-model';
+import { getBrand } from '$lib/brand/config';
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	const startTime = Date.now();
@@ -21,9 +22,11 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 			return json({ error: 'Missing required fields: persona, categorySlug' }, { status: 400 });
 		}
 
+		const brandId = getBrand().id;
+
 		// ─── Cache check ───────────────────────────────────────────
 		const ph = hashPicks(picksContext);
-		const cached = await getCachedLayout(persona, categorySlug, ph);
+		const cached = await getCachedLayout(brandId, persona, categorySlug, ph);
 		if (cached) {
 			const elapsed = Date.now() - startTime;
 
@@ -75,7 +78,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		const model = 'anthropic/claude-haiku-4.5';
 
 		if (layout) {
-			cacheLayout(persona, categorySlug, layout, ph).catch(() => {});
+			cacheLayout(brandId, persona, categorySlug, layout, ph).catch(() => {});
 		}
 
 		const elapsed = Date.now() - startTime;

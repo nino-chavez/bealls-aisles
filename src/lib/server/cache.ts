@@ -32,8 +32,8 @@ async function getRedis(): Promise<import('@upstash/redis').Redis | null> {
 	}
 }
 
-function layoutKey(persona: string, categorySlug: string, picksHash?: string): string {
-	const base = `aisles:layout:${persona}:${categorySlug}`;
+function layoutKey(brandId: string, persona: string, categorySlug: string, picksHash?: string): string {
+	const base = `aisles:layout:${brandId}:${persona}:${categorySlug}`;
 	return picksHash ? `${base}:picks:${picksHash}` : base;
 }
 
@@ -55,12 +55,12 @@ export function hashPicks(picksContext?: string): string | undefined {
  * Get a cached layout for a persona + category + picks combination.
  * Returns null on cache miss or any error.
  */
-export async function getCachedLayout(persona: string, categorySlug: string, picksHash?: string): Promise<Layout | null> {
+export async function getCachedLayout(brandId: string, persona: string, categorySlug: string, picksHash?: string): Promise<Layout | null> {
 	const r = await getRedis();
 	if (!r) return null;
 
 	try {
-		return await r.get<Layout>(layoutKey(persona, categorySlug, picksHash));
+		return await r.get<Layout>(layoutKey(brandId, persona, categorySlug, picksHash));
 	} catch {
 		return null;
 	}
@@ -69,14 +69,14 @@ export async function getCachedLayout(persona: string, categorySlug: string, pic
 /**
  * Store a generated layout in the cache.
  */
-export async function cacheLayout(persona: string, categorySlug: string, layout: Layout, picksHash?: string): Promise<void> {
+export async function cacheLayout(brandId: string, persona: string, categorySlug: string, layout: Layout, picksHash?: string): Promise<void> {
 	const r = await getRedis();
 	if (!r) return;
 
 	try {
 		// Picks-specific layouts get shorter TTL (picks change more often)
 		const ttl = picksHash ? Math.floor(LAYOUT_TTL_S / 4) : LAYOUT_TTL_S;
-		await r.set(layoutKey(persona, categorySlug, picksHash), layout, { ex: ttl });
+		await r.set(layoutKey(brandId, persona, categorySlug, picksHash), layout, { ex: ttl });
 	} catch {
 		// Cache write failure is non-fatal
 	}
@@ -86,20 +86,21 @@ export async function cacheLayout(persona: string, categorySlug: string, layout:
  * Invalidate cached layouts. Called after enrichment runs or manual flush.
  * If no args, invalidates all layout caches.
  */
-export async function invalidateLayoutCache(persona?: string, categorySlug?: string): Promise<number> {
+export async function invalidateLayoutCache(brandId?: string, persona?: string, categorySlug?: string): Promise<number> {
 	const r = await getRedis();
 	if (!r) return 0;
 
 	try {
-		if (persona && categorySlug) {
-			return await r.del(layoutKey(persona, categorySlug));
+		if (brandId && persona && categorySlug) {
+			return await r.del(layoutKey(brandId, persona, categorySlug));
 		}
 
-		// Scan and delete all layout keys
+		// Scan and delete layout keys (scoped to brand if provided)
+		const match = brandId ? `aisles:layout:${brandId}:*` : 'aisles:layout:*';
 		const keys: string[] = [];
 		let cursor = 0;
 		do {
-			const [newCursor, found] = await r.scan(cursor, { match: 'aisles:layout:*', count: 100 });
+			const [newCursor, found] = await r.scan(cursor, { match, count: 100 });
 			cursor = Number(newCursor);
 			keys.push(...found);
 		} while (cursor !== 0);

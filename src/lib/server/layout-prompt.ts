@@ -164,6 +164,7 @@ interface PromptProduct {
 	name: string;
 	price: number;
 	salePrice?: number;
+	image?: string;
 	specs: Record<string, string>;
 	personaFit?: { gatherer: number; hunter: number; researcher: number; gifter: number } | null;
 }
@@ -206,8 +207,27 @@ export function buildLayoutPrompt(
 		const fit = p.personaFit
 			? ` | ${persona}-fit: ${(p.personaFit[persona as keyof typeof p.personaFit] * 100).toFixed(0)}%`
 			: '';
-		return `- ID: "${p.id}" | ${p.name} | ${price} | ${specs}${fit}`;
+		const imageRef = p.image ? ` | image: "${p.image}"` : '';
+		return `- ID: "${p.id}" | ${p.name} | ${price} | ${specs}${fit}${imageRef}`;
 	}).join('\n');
+
+	const validCategorySlugs = Object.keys(brand.categories);
+	const productHrefRule = mode === 'content'
+		? '- "/store-locator" — store locator (preferred CTA destination in content mode)\n- "/account/rewards" — rewards page'
+		: '- "/product/{id}" where {id} is exactly one of the product IDs listed above\n- "/store-locator" — store locator page\n- "/account/rewards" — rewards page';
+	const brandHeroImage = brand.homepage?.heroImage;
+	const imageRule = mode === 'content'
+		? `For editorial-hero, category-tile-grid, lifestyle-price-hero: the ONLY allowed image URL is the brand hero "${brandHeroImage ?? ''}". Reuse it across sections if needed, or omit the image field entirely. Never invent other URLs (no images.bealls.com, no other unsplash photos).`
+		: 'For category-tile-grid, editorial-hero, lifestyle-price-hero, price-rail tiles: use the exact "image" URL of one of the AVAILABLE PRODUCTS above. Never invent image hosts (no images.bealls.com, no unsplash, no stock.adobe). If no suitable product image exists, OMIT the image field.';
+	const validHrefBlock = `\nVALID URL PATHS (only emit these — never invent paths):
+- "/" — homepage
+- "/category/{slug}" where slug ∈ {${validCategorySlugs.map((s) => `"${s}"`).join(', ')}}
+${productHrefRule}
+
+NEVER use query strings (e.g. "?price=0-10"), invented sub-paths (e.g. "/c/women/tops"), or external domains.
+
+VALID IMAGES:
+- ${imageRule}\n`;
 
 	const modeLabel = mode === 'content' ? 'content surface' : 'category page';
 	const modeRole = mode === 'content'
@@ -235,7 +255,7 @@ PROBABILITY VECTOR: gatherer ${Math.round(probabilities.gatherer * 100)}% | hunt
 The primary persona is ${persona}, but blend in elements from secondary personas if their score is above 25%. For example, if researcher is 30% alongside a hunter primary, show specs alongside the dense grid.` : ''}
 
 CATEGORY: ${categoryName}${homeGuidance}
-${productsBlock}${picksContext || ''}${rulesContext || ''}
+${productsBlock}${picksContext || ''}${rulesContext || ''}${validHrefBlock}
 ${getComponentGuide(mode)}
 
 Generate a layout for this ${persona} shopper landing on the ${surfaceLabel}.`;

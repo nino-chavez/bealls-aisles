@@ -8,6 +8,7 @@ import { getCachedLayout, cacheLayout, hashPicks } from '$lib/server/cache';
 import { logGeneration } from '$lib/server/generation-log';
 import { getActiveRules, rulesToPromptContext } from '$lib/server/rules';
 import { layoutModel, gatewayProviderOptions } from '$lib/server/ai-model';
+import { getBrand } from '$lib/brand/config';
 
 /**
  * POST /api/layout/stream
@@ -27,9 +28,11 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 			return json({ error: 'Missing required fields: persona, categorySlug' }, { status: 400 });
 		}
 
+		const brandId = getBrand().id;
+
 		// ─── Cache check — return instantly ────────────────────────
 		const ph = hashPicks(picksContext);
-		const cached = await getCachedLayout(persona, categorySlug, ph);
+		const cached = await getCachedLayout(brandId, persona, categorySlug, ph);
 		if (cached) {
 			const elapsed = Date.now() - startTime;
 
@@ -88,7 +91,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 					const elapsed = Date.now() - startTime;
 
 					if (layout) {
-						cacheLayout(persona, categorySlug, layout, ph).catch(() => {});
+						cacheLayout(brandId, persona, categorySlug, layout, ph).catch(() => {});
 					}
 
 					logGeneration({
