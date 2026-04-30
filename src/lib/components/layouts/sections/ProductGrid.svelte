@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Product } from '$lib/types';
 	import { addPick, isPicked, removePick } from '$lib/stores/picks.svelte';
+	import { formatPrice } from '$lib/brand/pricing';
 
 	let {
 		columns = 2,
@@ -43,6 +44,7 @@
 
 <div class={gridClass}>
 	{#each products as product}
+		{@const fp = formatPrice(product.price, product.salePrice)}
 		<a
 			href="/product/{product.id}"
 			class="group {isCompact ? 'flex flex-col bg-surface-card' : ''}"
@@ -119,13 +121,22 @@
 				{/if}
 
 				<div class="{isCompact ? 'mt-auto pt-3' : 'mt-3'}">
-					{#if product.salePrice}
-						<div class="flex items-baseline gap-2">
-							<span class="{isCompact ? 'text-base font-semibold' : 'font-medium'} text-primary">${product.salePrice.toLocaleString()}</span>
-							<span class="text-{isCompact ? 'xs' : 'sm'} text-surface-muted-fg line-through">${product.price.toLocaleString()}</span>
-						</div>
-					{:else}
-						<span class="{isCompact ? 'text-base font-semibold' : 'font-medium'}">${product.price.toLocaleString()}</span>
+					<div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+						<span class="{isCompact ? 'text-base font-semibold' : 'font-medium'} text-primary">{fp.displayPrice}</span>
+						{#if fp.comparablePrice}
+							<span class="text-{isCompact ? 'xs' : 'sm'} text-surface-muted-fg">
+								{#if fp.comparableLabel}
+									{fp.comparableLabel} <span class="line-through">{fp.comparablePrice}</span>
+								{:else}
+									<span class="line-through">{fp.comparablePrice}</span>
+								{/if}
+							</span>
+						{/if}
+					</div>
+					{#if fp.savingsLabel}
+						<p class="mt-0.5 text-[11px] font-semibold uppercase tracking-wider text-primary">
+							{fp.savingsLabel}
+						</p>
 					{/if}
 				</div>
 

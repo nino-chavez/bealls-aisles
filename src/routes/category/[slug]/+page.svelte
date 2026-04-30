@@ -8,11 +8,13 @@
 	import HunterLayout from '$lib/components/layouts/HunterLayout.svelte';
 	import ResearcherLayout from '$lib/components/layouts/ResearcherLayout.svelte';
 	import GifterLayout from '$lib/components/layouts/GifterLayout.svelte';
+	import ContentCategorySurface from '$lib/components/layouts/ContentCategorySurface.svelte';
 	import RefinementChat from '$lib/components/RefinementChat.svelte';
 	import { picksContextForPrompt } from '$lib/stores/picks.svelte';
 	import { getEmitter } from '$lib/signals/emitter';
 
 	let { data }: { data: PageData } = $props();
+	const isContentMode = $derived(data.contentMode === true);
 
 	let aiLayout = $state<Layout | null>(null);
 	let aiMeta = $state<{ generationTimeMs: number; persona: string; cacheHit?: boolean } | null>(null);
@@ -20,13 +22,14 @@
 	let isUpgrading = $state(true);
 	let overridePersona = $state<string | null>(null);
 	let sessionCost = $state<{ totalCost: number; generations: number; tokens: number; cacheHitRate: number } | null>(null);
-	let currentPersona = $derived(overridePersona ?? data.persona);
+	let currentPersona = $derived(overridePersona ?? data.persona ?? 'gatherer');
 
 	// Fetch AI-generated layout on mount / persona change
 	// Track category to reset layout on navigation
 	let lastCategory = $state(data.category.slug);
 
 	$effect(() => {
+		if (isContentMode) return;
 		const persona = currentPersona;
 		const slug = data.category.slug;
 
@@ -134,7 +137,7 @@
 
 	// Fetch session cost data in dev mode
 	$effect(() => {
-		if (!data.devMode) return;
+		if (isContentMode || !data.devMode) return;
 
 		async function fetchCost() {
 			try {
@@ -199,13 +202,24 @@
 </script>
 
 <svelte:head>
-	<title>{data.category.name} — {data.persona} view</title>
-	<meta name="description" content="Browse {data.category.name} — personalized for {data.persona} shoppers. {data.products.length} products available." />
+	<title>{data.category.name}{isContentMode ? '' : ` — ${data.persona} view`}</title>
+	<meta name="description" content={isContentMode ? `${data.category.name} at your nearest store.` : `Browse ${data.category.name} — personalized for ${data.persona} shoppers. ${data.products?.length ?? 0} products available.`} />
 </svelte:head>
 
+{#if isContentMode}
+	<ContentCategorySurface
+		category={data.category}
+		brandPillars={data.brandPillars ?? []}
+		heroImage={data.heroImage ?? ''}
+		heroBody={data.heroBody ?? ''}
+		heroEyebrow={data.heroEyebrow ?? ''}
+		locatorCta={data.locatorCta ?? 'Find a Store'}
+		locatorBody={data.locatorBody ?? ''}
+	/>
+{:else}
 <div class="mx-auto max-w-7xl px-6 py-8">
 	<!-- Dev mode panel -->
-	{#if data.devMode}
+	{#if data.devMode && data.inference}
 		{@const inf = data.inference}
 		<div class="mb-6 rounded-sm border border-accent/30 bg-accent/5 p-4">
 			<div class="flex items-center justify-between">
@@ -365,7 +379,7 @@
 
 	<!-- Content area: show static fallback instantly, upgrade to AI layout when ready -->
 	{#if aiLayout}
-		<LayoutRenderer layout={aiLayout} products={data.products} />
+		<LayoutRenderer layout={aiLayout} products={data.products ?? []} />
 	{:else if isUpgrading}
 		<!-- Skeleton: editorial header + product grid placeholder -->
 		<div class="animate-pulse">
@@ -383,15 +397,15 @@
 			</div>
 		</div>
 	{:else if currentPersona === 'gatherer'}
-		<GathererLayout category={data.category} products={data.products} />
+		<GathererLayout category={data.category} products={data.products ?? []} />
 	{:else if currentPersona === 'hunter'}
-		<HunterLayout category={data.category} products={data.products} />
+		<HunterLayout category={data.category} products={data.products ?? []} />
 	{:else if currentPersona === 'researcher'}
-		<ResearcherLayout category={data.category} products={data.products} />
+		<ResearcherLayout category={data.category} products={data.products ?? []} />
 	{:else if currentPersona === 'gifter'}
-		<GifterLayout category={data.category} products={data.products} />
+		<GifterLayout category={data.category} products={data.products ?? []} />
 	{:else}
-		<GathererLayout category={data.category} products={data.products} />
+		<GathererLayout category={data.category} products={data.products ?? []} />
 	{/if}
 
 	<!-- Personalizing indicator — subtle pill at bottom-left -->
@@ -404,11 +418,12 @@
 </div>
 
 <!-- Refinement chat — floats over the page -->
-{#if !isUpgrading}
+{#if !isUpgrading && !isContentMode}
 	<RefinementChat
 		persona={currentPersona}
 		categorySlug={data.category.slug}
 		currentLayout={aiLayout}
 		onLayoutUpdate={(newLayout) => { aiLayout = newLayout; }}
 	/>
+{/if}
 {/if}

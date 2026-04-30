@@ -3,6 +3,7 @@
 	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/stores';
 	import Nav from '$lib/components/Nav.svelte';
+	import BrandStripNav from '$lib/components/BrandStripNav.svelte';
 	import Footer from '$lib/components/Footer.svelte';
 	import CartDrawer from '$lib/components/CartDrawer.svelte';
 	import PicksTray from '$lib/components/PicksTray.svelte';
@@ -124,7 +125,15 @@
 		{@render children()}
 	{:else}
 		<div class="flex min-h-screen flex-col">
-			<Nav {cartCount} {picksCount} onCartClick={openCart} onPicksClick={() => picksOpen = true} {brandName} />
+			<BrandStripNav activeBrandId={data.brand?.id ?? 'haven'} />
+			<Nav
+				{cartCount}
+				{picksCount}
+				onCartClick={openCart}
+				onPicksClick={() => picksOpen = true}
+				{brandName}
+				brandMode={data.brand?.mode ?? 'storefront'}
+			/>
 			<main class="flex-1">
 				{@render children()}
 			</main>

@@ -72,6 +72,13 @@ export interface BrandConfig {
 	/** Incentives config — drives bealls-bucks-callout, coupon-strip, free-shipping promos. Optional; brands without loyalty omit it. */
 	incentives?: BrandIncentivesConfig;
 
+	/**
+	 * Pricing language style.
+	 * - 'standard' (default): regular price → sale price strikethrough
+	 * - 'off-price': "Comparable value $X" label + "You save X%" badge (Bealls family pattern)
+	 */
+	pricingStyle?: 'standard' | 'off-price';
+
 }
 
 export interface BrandIncentivesConfig {
@@ -363,6 +370,8 @@ const BRANDS: Record<string, BrandConfig> = {
 			},
 		},
 
+		pricingStyle: 'off-price',
+
 	},
 
 	beallsflorida: {
@@ -444,6 +453,8 @@ const BRANDS: Record<string, BrandConfig> = {
 				],
 			},
 		},
+
+		pricingStyle: 'off-price',
 
 	},
 

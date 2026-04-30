@@ -3,6 +3,7 @@ import { error } from '@sveltejs/kit';
 import { infer } from '$lib/signals/inference';
 import { createStoreFromRequest } from '$lib/signals/request';
 import { loadCategoryProducts, CATEGORY_MAP } from '$lib/server/catalog';
+import { getBrand, getBrandMode } from '$lib/brand/config';
 
 export const load: PageServerLoad = async ({ params, url, cookies, request, parent }) => {
 	const slug = params.slug;
@@ -10,6 +11,36 @@ export const load: PageServerLoad = async ({ params, url, cookies, request, pare
 
 	if (!CATEGORY_MAP[slug]) {
 		throw error(404, `Category "${slug}" not found`);
+	}
+
+	// ─── Content-mode short-circuit ────────────────────────────────
+	// Content brands (e.g., HomeCentric) have no online catalog. Render a
+	// content surface directly — locator CTA + brand-pillar tiles — without
+	// touching BC, the AI layout API, or persona inference.
+	const brand = getBrand();
+	const mode = getBrandMode(brand);
+	if (mode === 'content') {
+		const categoryDisplayName = brand.categories[slug]?.displayName ?? slug;
+		const otherCategories = Object.entries(brand.categories)
+			.filter(([s]) => s !== slug)
+			.slice(0, 4)
+			.map(([s, c]) => ({
+				label: c.displayName,
+				image: `https://picsum.photos/seed/${brand.id}-${s}/600/450`,
+				href: `/category/${s}`,
+			}));
+
+		return {
+			contentMode: true as const,
+			category: { slug, name: categoryDisplayName, description: '' },
+			brandPillars: otherCategories,
+			heroImage: `https://picsum.photos/seed/${brand.id}-${slug}-hero/1600/700`,
+			heroBody: brand.homepage.editorialBody,
+			heroEyebrow: 'IN STORE',
+			locatorCta: 'Find a Store Near You',
+			locatorBody: `${categoryDisplayName} arrivals refresh weekly. Visit your nearest ${brand.name} store to see what's new.`,
+			devMode,
+		};
 	}
 
 	// ─── Signal Store: emit request-time signals, then infer ───────
@@ -29,6 +60,7 @@ export const load: PageServerLoad = async ({ params, url, cookies, request, pare
 	cookies.set('aisles_visits', String(visitCount), { path: '/', maxAge: 60 * 60 * 24 * 30 });
 
 	return {
+		contentMode: false as const,
 		category: {
 			slug,
 			name: result.categoryName,

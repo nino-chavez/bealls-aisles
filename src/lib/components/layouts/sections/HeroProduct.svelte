@@ -1,7 +1,9 @@
 <script lang="ts">
 	import type { Product } from '$lib/types';
+	import { formatPrice } from '$lib/brand/pricing';
 
 	let { product, showSpecs = true }: { product: Product; showSpecs?: boolean } = $props();
+	const fp = $derived(formatPrice(product.price, product.salePrice));
 </script>
 
 <a href="/product/{product.id}" class="group mb-12 block border-b border-surface-border pb-12">
@@ -37,11 +39,22 @@
 			{/if}
 
 			<div class="mt-6">
-				{#if product.salePrice}
-					<span class="text-xl font-medium text-primary">${product.salePrice.toLocaleString()}</span>
-					<span class="ml-2 text-surface-muted-fg line-through">${product.price.toLocaleString()}</span>
-				{:else}
-					<span class="text-xl font-medium">${product.price.toLocaleString()}</span>
+				<div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+					<span class="text-xl font-medium text-primary">{fp.displayPrice}</span>
+					{#if fp.comparablePrice}
+						<span class="text-sm text-surface-muted-fg">
+							{#if fp.comparableLabel}
+								{fp.comparableLabel} <span class="line-through">{fp.comparablePrice}</span>
+							{:else}
+								<span class="line-through">{fp.comparablePrice}</span>
+							{/if}
+						</span>
+					{/if}
+				</div>
+				{#if fp.savingsLabel}
+					<p class="mt-1 text-xs font-semibold uppercase tracking-wider text-primary">
+						{fp.savingsLabel}
+					</p>
 				{/if}
 			</div>
 

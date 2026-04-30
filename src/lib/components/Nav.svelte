@@ -4,13 +4,16 @@
 
 	import { getBrand } from '$lib/brand/config';
 
-	let { cartCount = 0, picksCount = 0, onCartClick, onPicksClick, brandName = 'Haven' }: {
+	let { cartCount = 0, picksCount = 0, onCartClick, onPicksClick, brandName = 'Haven', brandMode = 'storefront' }: {
 		cartCount?: number;
 		picksCount?: number;
 		onCartClick?: () => void;
 		onPicksClick?: () => void;
 		brandName?: string;
+		brandMode?: 'storefront' | 'content';
 	} = $props();
+
+	const isContent = $derived(brandMode === 'content');
 
 	const brand = getBrand();
 	const navItems = Object.entries(brand.categories).map(([slug, config]) => ({
@@ -55,6 +58,23 @@
 
 		<!-- Right side -->
 		<div class="flex items-center gap-3">
+			{#if isContent}
+				<!-- Content-mode: locator + menu only, no search/account/cart -->
+				<a
+					href="#locator"
+					class="flex h-9 items-center gap-2 rounded-sm border border-surface-border px-3 text-[0.8125rem] font-medium text-surface-muted-fg transition-colors hover:border-primary hover:text-primary"
+					aria-label="Find a Store"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+					<span>Find a Store</span>
+				</a>
+				<button
+					class="flex h-9 w-9 items-center justify-center text-surface-muted-fg transition-colors hover:text-surface-fg"
+					aria-label="Menu"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+				</button>
+			{:else}
 			<!-- Search -->
 			{#if searchOpen}
 				<form onsubmit={handleSearch} class="flex items-center">
@@ -120,6 +140,7 @@
 					</span>
 				{/if}
 			</button>
+			{/if}
 		</div>
 	</div>
 </header>

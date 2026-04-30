@@ -1,5 +1,5 @@
 import type { LayoutServerLoad } from './$types';
-import { getBrand } from '$lib/brand/config';
+import { getBrand, getBrandMode } from '$lib/brand/config';
 
 export const load: LayoutServerLoad = async ({ url, cookies }) => {
 	const brand = getBrand();
@@ -21,6 +21,7 @@ export const load: LayoutServerLoad = async ({ url, cookies }) => {
 			footerNote: brand.footerNote,
 			googleFontsUrl: brand.googleFontsUrl,
 			theme: brand.theme,
+			mode: getBrandMode(brand),
 		},
 		devMode,
 	};
