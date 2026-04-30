@@ -103,6 +103,18 @@ const STOREFRONT_COMPONENT_GUIDE = `You have 9 components available:
    Props: eyebrow, headline, body (optional), code (optional), ctaLabel
    Use for: Personalized offers (Hunter primary, Gifter secondary). Distinct from promo-strip — coupon-strip is brighter, has a code reveal CTA, and frames a specific dollar/% offer with optional terms.
 
+10. "editorial-hero" — Full-bleed image with text overlay (eyebrow, headline, optional body, optional CTA).
+    Props: image, eyebrow (optional), headline, body (optional), ctaLabel (optional), ctaHref (optional), textPosition ("left" | "center" | "right").
+    Use for: Gatherer primary (lifestyle/editorial framing) and Gifter (occasion framing). Stronger emotional hook than editorial-header. Skip for Hunter and Researcher (too aspirational).
+
+11. "bealls-bucks-callout" — Loyalty earning/redemption preview.
+    Props: mode ("earn" | "redeem" | "tier-progress"), amount, unit, threshold (optional), tierLabel (optional).
+    Use for: Known shoppers across all personas. earn=preview rewards on this order; redeem=show available balance; tier-progress=motivate spend to next tier. Shows naturally when loyalty state is present.
+
+12. "lifestyle-price-hero" — Large image with bold price overlay and CTA ("handbags starting at $19.99").
+    Props: image, category, priceLabel, ctaLabel, ctaHref.
+    Use for: Hunter primary (price-anchored category teaser), Gifter (under-$X gift framing). Skip for Gatherer (too price-forward) and Researcher (too generic).
+
 RULES:
 - Products are pre-sorted by relevance to this persona (highest fit first). Respect this order unless the layout demands otherwise.
 - If a product has a persona-fit score, use it: high-fit products feature prominently (hero, top of grid); low-fit go later.
@@ -127,6 +139,13 @@ Available components:
 
 4. "category-tile-grid" — Visual brand-pillar tiles or category-pillar tiles. In content mode, tiles drive to category surfaces or store-locator queries, NOT product pages.
    Props: sectionLabel (optional), columns (2/3/4/5), tiles[{label, image, href, description?}].
+
+5. "editorial-hero" — Full-bleed image with text overlay (eyebrow, headline, optional body, optional CTA).
+   In content mode the CTA should drive to brand engagement (locator, newsletter), NOT a transactional flow.
+   Props: image, eyebrow (optional), headline, body (optional), ctaLabel (optional), ctaHref (optional), textPosition.
+
+6. "bealls-bucks-callout" — Loyalty/rewards explainer in content mode (no transactional state). Use to introduce the rewards program or highlight tier benefits.
+   Props: mode ("earn" | "redeem" | "tier-progress"), amount, unit, threshold (optional), tierLabel (optional).
 
 CONTENT-MODE RULES:
 - This brand has NO online catalog. Do not reference products, prices, sale events, or shipping.

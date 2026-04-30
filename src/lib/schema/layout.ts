@@ -122,6 +122,41 @@ const CouponStripSection = z.object({
 	}),
 });
 
+const EditorialHeroSection = z.object({
+	component: z.literal('editorial-hero'),
+	props: z.object({
+		image: z.string().describe('Hero background image URL'),
+		eyebrow: z.string().optional().describe('Optional small label, e.g. "NEW SEASON"'),
+		headline: z.string().describe('Main editorial headline, can include line breaks'),
+		body: z.string().optional().describe('Optional 1-2 sentence body copy'),
+		ctaLabel: z.string().optional().describe('CTA label, e.g. "Shop Women"'),
+		ctaHref: z.string().optional().describe('CTA destination'),
+		textPosition: z.enum(['left', 'center', 'right']).describe('Where the text overlay sits on the image'),
+	}),
+});
+
+const BeallsBucksCalloutSection = z.object({
+	component: z.literal('bealls-bucks-callout'),
+	props: z.object({
+		mode: z.enum(['earn', 'redeem', 'tier-progress']).describe('earn=preview earnings, redeem=spend balance, tier-progress=progress to next tier'),
+		amount: z.number().describe('Dollar/point amount relevant to the mode'),
+		unit: z.string().describe('Unit label, e.g. "Bealls Bucks", "points"'),
+		threshold: z.number().optional().describe('Optional spend threshold or tier requirement'),
+		tierLabel: z.string().optional().describe('Optional tier name for tier-progress mode'),
+	}),
+});
+
+const LifestylePriceHeroSection = z.object({
+	component: z.literal('lifestyle-price-hero'),
+	props: z.object({
+		image: z.string().describe('Lifestyle image URL'),
+		category: z.string().describe('Category label, e.g. "Handbags"'),
+		priceLabel: z.string().describe('Price callout, e.g. "starting at $19.99"'),
+		ctaLabel: z.string().describe('CTA label, e.g. "Shop Now"'),
+		ctaHref: z.string().describe('CTA destination'),
+	}),
+});
+
 /**
  * Storefront-mode section vocabulary — the full transactional set.
  * Includes editorial, products, grids, headers, and Bealls-family
@@ -137,6 +172,9 @@ export const StorefrontSectionSchema = z.discriminatedUnion('component', [
 	PriceRailSection,
 	ProductCarouselSection,
 	CouponStripSection,
+	EditorialHeroSection,
+	BeallsBucksCalloutSection,
+	LifestylePriceHeroSection,
 ]);
 
 /**
@@ -151,6 +189,8 @@ export const ContentSectionSchema = z.discriminatedUnion('component', [
 	CategoryHeaderSection,
 	PromoStripSection,
 	CategoryTileGridSection,
+	EditorialHeroSection,
+	BeallsBucksCalloutSection,
 ]);
 
 /** Universal section schema — used for parsing without mode constraint. */

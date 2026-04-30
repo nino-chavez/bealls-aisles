@@ -10,6 +10,9 @@
 	import PriceRail from './sections/PriceRail.svelte';
 	import ProductCarousel from './sections/ProductCarousel.svelte';
 	import CouponStrip from './sections/CouponStrip.svelte';
+	import EditorialHero from './sections/EditorialHero.svelte';
+	import BeallsBucksCallout from './sections/BeallsBucksCallout.svelte';
+	import LifestylePriceHero from './sections/LifestylePriceHero.svelte';
 
 	let { layout, products }: { layout: Layout; products: Product[] } = $props();
 
@@ -94,6 +97,32 @@
 			body={section.props.body}
 			code={section.props.code}
 			ctaLabel={section.props.ctaLabel}
+		/>
+	{:else if section.component === 'editorial-hero' && section.props?.headline}
+		<EditorialHero
+			image={section.props.image}
+			eyebrow={section.props.eyebrow}
+			headline={section.props.headline}
+			body={section.props.body}
+			ctaLabel={section.props.ctaLabel}
+			ctaHref={section.props.ctaHref}
+			textPosition={section.props.textPosition}
+		/>
+	{:else if section.component === 'bealls-bucks-callout' && section.props?.unit}
+		<BeallsBucksCallout
+			mode={section.props.mode}
+			amount={section.props.amount}
+			unit={section.props.unit}
+			threshold={section.props.threshold}
+			tierLabel={section.props.tierLabel}
+		/>
+	{:else if section.component === 'lifestyle-price-hero' && section.props?.priceLabel}
+		<LifestylePriceHero
+			image={section.props.image}
+			category={section.props.category}
+			priceLabel={section.props.priceLabel}
+			ctaLabel={section.props.ctaLabel}
+			ctaHref={section.props.ctaHref}
 		/>
 	{/if}
 {/each}
