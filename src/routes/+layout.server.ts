@@ -13,6 +13,11 @@ export const load: LayoutServerLoad = async ({ url, cookies }) => {
 	}
 	const devMode = devParam === 'true' || (devParam !== 'false' && cookies.get('aisles_dev') === '1');
 
+	const freeShippingThreshold = brand.incentives?.freeShippingThresholdMinor;
+	const shippingPromo = freeShippingThreshold && freeShippingThreshold > 0
+		? `FREE SHIPPING when you spend $${(freeShippingThreshold / 100).toFixed(0)}+`
+		: null;
+
 	return {
 		brand: {
 			id: brand.id,
@@ -22,6 +27,7 @@ export const load: LayoutServerLoad = async ({ url, cookies }) => {
 			googleFontsUrl: brand.googleFontsUrl,
 			theme: brand.theme,
 			mode: getBrandMode(brand),
+			shippingPromo,
 		},
 		devMode,
 	};

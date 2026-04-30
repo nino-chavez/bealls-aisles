@@ -126,6 +126,13 @@
 	{:else}
 		<div class="flex min-h-screen flex-col">
 			<BrandStripNav activeBrandId={data.brand?.id ?? 'haven'} />
+			{#if data.brand?.shippingPromo}
+				<div class="bg-primary text-white">
+					<div class="mx-auto max-w-7xl px-6 py-2 text-center text-xs font-semibold uppercase tracking-wider">
+						{data.brand.shippingPromo} <span class="ml-2 font-normal opacity-80">— Click for details.</span>
+					</div>
+				</div>
+			{/if}
 			<Nav
 				{cartCount}
 				{picksCount}

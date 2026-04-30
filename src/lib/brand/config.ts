@@ -55,6 +55,7 @@ export interface BrandConfig {
 	homepage: {
 		heroHeadline: string;
 		heroBody: string;
+		heroImage?: string;
 		editorialHeadline: string;
 		editorialBody: string;
 		valueProps: Array<{ title: string; body: string }>;
@@ -334,6 +335,7 @@ const BRANDS: Record<string, BrandConfig> = {
 		homepage: {
 			heroHeadline: 'Find your favorites for less',
 			heroBody: 'Clothing, shoes, home, and gifts at comparable values up to 70% off. New arrivals every week — for everyone in the family.',
+			heroImage: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1920&q=80&auto=format&fit=crop',
 			editorialHeadline: 'Real names. Real value. Real every day.',
 			editorialBody: 'Off-price means top brands at off-price prices. Browse the comparable values, shop the savings, take it home today.',
 			valueProps: [
@@ -418,6 +420,7 @@ const BRANDS: Record<string, BrandConfig> = {
 		homepage: {
 			heroHeadline: 'Florida is a feeling',
 			heroBody: 'Sunshine state living never looked so good. Resort wear, beach essentials, and easy weekends — for everyone in the family.',
+			heroImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&q=80&auto=format&fit=crop',
 			editorialHeadline: 'Fashion. Fitness. Family. Fun.',
 			editorialBody: 'Coastal style at off-price values. Designed for the way Floridians actually live — at the beach, on the boat, around the pool, on the porch.',
 			valueProps: [
@@ -505,6 +508,7 @@ const BRANDS: Record<string, BrandConfig> = {
 		homepage: {
 			heroHeadline: 'New Inspiration for Less',
 			heroBody: 'The latest trends and unique decor at unbelievable prices — discovered in store, refreshed often.',
+			heroImage: 'https://images.unsplash.com/photo-1505691938895-1758d7feb511?w=1920&q=80&auto=format&fit=crop',
 			editorialHeadline: 'Get Inspired',
 			editorialBody: 'Furniture, decor, rugs, lighting, bedroom, and bath. Everything that makes a house feel like home — visit your nearest store to see what arrived this week.',
 			valueProps: [

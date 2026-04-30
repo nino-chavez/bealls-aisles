@@ -19,23 +19,34 @@
 {/if}
 
 <!-- Hero -->
-<section class="border-b border-surface-border">
-	<div class="mx-auto max-w-7xl px-6 py-20 sm:py-28 lg:py-36">
-		<div class="max-w-xl">
-			<h1 class="text-4xl leading-tight sm:text-5xl lg:text-6xl">
+<section class="relative border-b border-surface-border overflow-hidden">
+	{#if data.homepage.heroImage}
+		<img
+			src={data.homepage.heroImage}
+			alt=""
+			class="absolute inset-0 h-full w-full object-cover"
+			loading="eager"
+		/>
+		<div class="absolute inset-0 bg-gradient-to-r from-black/55 via-black/30 to-transparent"></div>
+	{/if}
+	<div class="relative mx-auto max-w-7xl px-6 py-24 sm:py-32 lg:py-40">
+		<div class="max-w-xl {data.homepage.heroImage ? 'text-white' : ''}">
+			<h1 class="font-display text-4xl leading-tight tracking-tight sm:text-5xl lg:text-6xl {data.homepage.heroImage ? 'drop-shadow-lg' : ''}">
 				{data.homepage.heroHeadline}
 			</h1>
-			<p class="mt-6 text-lg leading-relaxed text-surface-muted-fg">
+			<p class="mt-6 max-w-md text-lg leading-relaxed {data.homepage.heroImage ? 'text-white/95 drop-shadow-md' : 'text-surface-muted-fg'}">
 				{data.homepage.heroBody}
 			</p>
 			<div class="mt-10 flex flex-wrap gap-3">
-				{#each data.categories.map((c, i) => ({ label: c.name, href: `/category/${c.slug}`, primary: i === 0 })) as cta}
+				{#each data.categories.slice(0, 4).map((c, i) => ({ label: c.name, href: `/category/${c.slug}`, primary: i === 0 })) as cta}
 					<a
 						href={cta.href}
-						class="inline-flex items-center rounded-sm px-5 py-2.5 text-sm font-medium transition-colors
+						class="inline-flex items-center rounded-sm px-5 py-2.5 text-sm font-semibold uppercase tracking-wider transition-colors
 							{cta.primary
-								? 'bg-surface-fg text-surface-bg hover:opacity-85'
-								: 'border border-surface-border text-surface-fg hover:bg-surface-fg hover:text-surface-bg'}"
+								? 'bg-primary text-white hover:opacity-90'
+								: data.homepage.heroImage
+									? 'border-2 border-white text-white hover:bg-white hover:text-surface-fg'
+									: 'border border-surface-border text-surface-fg hover:bg-surface-fg hover:text-surface-bg'}"
 					>
 						{cta.label}
 					</a>
