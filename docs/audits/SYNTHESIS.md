@@ -103,20 +103,39 @@ The delta is small enough that it does not threaten the engagement timeline; the
 
 ---
 
-## HomeCentric demo strategy: locked decision
+## HomeCentric demo strategy: locked decision (revised 2026-04-30)
 
-**Adopt Option B from `docs/audits/homecentric.md`**: synthesize an e-commerce HomeCentric using a curated subset of `bealls.com`'s home category as the catalog source. Apply HomeCentric brand identity (green, "Inspired Living for Less", sparser editorial voice).
+**Strategy revised from "synthesize an online HomeCentric" to "content-mode platform capability."** The earlier synthesis approach is preserved for context in `docs/audits/homecentric.md` but is no longer the chosen path.
 
-**Why this is the strongest pitch**:
-- The other two banners showcase Aisles *replacing* an existing storefront. HomeCentric showcases Aisles *standing up a storefront that doesn't exist.*
-- Time-to-online is the headline number. "Bealls's HomeCentric brand has zero e-commerce. Aisles ships them an agentic storefront in N days."
-- Zero net-new components — HomeCentric reuses bealls.com's component vocabulary with HomeCentric brand tokens.
-- Catalog scrape effort is bounded — we use the home subset of `bealls.com` rather than running a separate scrape.
+**Adopt the content-mode platform approach**: extend Aisles to support two operating modes from a single engine:
 
-**Phase 4 catalog plan for HomeCentric**:
-- Categories: Bedding, Bath, Rugs, Kitchen/Dining, Lighting, Decor, (Furniture if available)
-- Target: ~60–80 SKUs across 6 categories
-- Effort: covered within Phase 4's existing per-banner allocation; no schedule extension
+| Mode | Banners | Drives | CTAs |
+|---|---|---|---|
+| **Storefront** | bealls.com, beallsflorida.com | Product selection, pricing, cross-sell | Cart, PDP, checkout |
+| **Content / locator** | homecentric.com | Editorial framing, hero choice, category emphasis | Store locator, newsletter, in-store interest |
+
+**Why this is sharper than synthesize-online**:
+- Matches HomeCentric's real operational posture (likely intentional — off-price treasure-hunt models avoid central online catalogs by design). No implied fulfillment the merchant may not have.
+- Demonstrates platform breadth — the same Aisles engine handles transactional and brand sites without forking the codebase.
+- Unlocks a cross-banner persona-continuity demo: gatherer on `homecentric.com` → brand-strip switch to `bealls.com` → same persona, products surface. Stronger demo moment than three independent storefronts.
+- Mode flag is a **permanent platform capability**, reusable for future engagements where a merchant has both site types.
+
+**Net effort delta**: ~net-neutral vs synthesize-online (+0.4 d human / +0.1 d agent). HomeCentric catalog scrape (~1 day saved) is replaced by platform mode work (~1.4 d added):
+
+| Work | Cost (human / agent) |
+|---|---|
+| `BrandConfig.mode: 'storefront' \| 'content'` flag | 0.1 d / 0.05 d |
+| Mode-gated component vocabulary (Zod + prompt) | 0.4 d / 0.15 d |
+| Content-mode CTA routing (locator, newsletter, RSVP intents) | 0.4 d / 0.15 d |
+| Curated content items model — replaces catalog for content-mode brands | 0.5 d / 0.2 d |
+| **Subtotal** | **~1.4 d / ~0.55 d** |
+
+**Phase 4 plan for HomeCentric (revised)**:
+- No catalog scrape required.
+- Curate ~12–20 hand-authored content items per banner (store locations, brand pillars, categories, lifestyle scenes). These play the role catalog plays in storefront mode.
+- Effort: covered within the platform mode-work allocation above.
+
+**Captured in ADR**: `docs/decisions/005-storefront-vs-content-modes.md` (created with this revision).
 
 ---
 

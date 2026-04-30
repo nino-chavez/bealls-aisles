@@ -111,6 +111,27 @@ Phase 1 was completed agent-assisted. Three banner audits and a synthesis are at
    - **Schema extensions** (cheap, no new components): `category-header` adds `heroImage` + `subcategories[]`; `product-grid`/`product-carousel` add `showRating` + multi-badge; `category-tile-grid` adds `description` + column variants 2–5
 3. **Net effect on Phase 2**: revised effort is **5.6 d human / 1.8 d agent-assisted** vs frozen **5.0 d / 1.5 d**. Delta is **+0.6 d / +0.3 d**. Per discipline, the frozen number does not move — this delta is tracked for the retro under "What we added that wasn't in the plan."
 
+**Stakeholder decisions logged 2026-04-30 (Q&A from synthesis open questions)**:
+
+1. **Legal sign-off** — not required. Proceed with scraping all three banners' content for the demo. Demo URL still gated (`noindex` / password-gated) as engineering hygiene.
+2. **HomeCentric strategy** — *revised from "synthesize online" to "content-mode platform capability"* — see below.
+3. **Per-card star ratings** — locked into the demo. Schema extends `product-grid` and `product-carousel` with `showRating: boolean`; product summary gains `rating: number | null` and `reviewCount: number`. Synthetic ratings seeded during Phase 5 enrichment (range 4.0–4.8, review counts 5–500, weighted by persona-fit so high-fit products skew higher).
+
+**HomeCentric strategy: content-mode platform capability** (supersedes the synthesize-online approach in the original audit synthesis):
+
+Rather than synthesizing an e-commerce HomeCentric (which required hedging "this is a capability demo, not a prescription"), the engagement demonstrates that **Aisles supports two operating modes from a single platform**:
+
+| Mode | Banners | Personalization drives | CTA destinations |
+|---|---|---|---|
+| **Storefront** | bealls.com, beallsflorida.com | Product selection, pricing, cross-sell | Cart, PDP, checkout |
+| **Content / locator** | homecentric.com | Editorial framing, hero choice, category emphasis, lifestyle imagery | Store locator, newsletter, in-store-pickup interest |
+
+Same persona inference engine, same layout AI, same brand-config router — different downstream actions. **The demo pitch becomes**: "One platform, two operating models, zero compromise on personalization in either."
+
+This dissolves the operational-restrictions caveat entirely (no implied fulfillment HomeCentric may not have) and matches HomeCentric's real posture. It also unlocks a cross-banner persona-continuity demo: a *gatherer* on `homecentric.com` browses bedroom inspiration → switches to `bealls.com` via brand strip → sees bedding products on sale, same persona maintained. The engine is identical.
+
+**Net effort delta vs the synthesize-online approach**: roughly net-neutral (~+0.4 d human / +0.1 d agent). The HomeCentric catalog scrape (~1 day saved) is replaced by platform mode capability (~1.4 d added: mode flag, mode-aware schema, content-mode CTA routing, curated content items model). **The mode flag is a permanent platform capability**, reusable beyond this engagement. ADR: `docs/decisions/005-storefront-vs-content-modes.md`.
+
 **Phase 1 actuals** (preliminary, agent-assisted):
 
 | | Frozen | Actual |

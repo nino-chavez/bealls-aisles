@@ -80,14 +80,56 @@ Reduce scope to two banners. **Loses a major sales angle**: HomeCentric is the m
 
 Reframe HomeCentric not as e-commerce but as in-store *product discovery* (kiosk / mobile companion app). Aisles powers the personalization layer. **Higher narrative risk** (no clear "buy" loop) and substantially more work to design the in-store UX. **Not recommended for v1.**
 
-## Recommended decision: Option B
+## Locked decision (revised 2026-04-30): Option D — content-mode platform capability
 
-This adds *zero net-new component work* (HomeCentric reuses the bealls.com vocabulary), and the catalog scrape effort is bounded — we use the home subset of `bealls.com`'s catalog rather than a separate scrape.
+**Options A, B, C above are preserved for context.** The locked decision is a fourth option that emerged after stakeholder discussion: rather than synthesizing an online HomeCentric (Option B) or building an in-store companion (Option C), **extend Aisles itself to natively support two operating modes**, with HomeCentric as the content-mode anchor banner.
 
-**Catalog scoping for HomeCentric**:
-- Categories to pull from bealls.com: Home > Bedding, Bath, Rugs, Kitchen / Dining, Lighting, Decor, Furniture
-- Target: ~60–80 products across 6 categories (lighter than the lead banner since this is a synthesis, not a mirror)
-- Estimated effort: ~0.5 day extra in Phase 4 (Phase 4 budget already covers per-banner scrape)
+### Option D — Content-mode platform capability
+
+| Mode | Banners | Personalization drives | CTAs |
+|---|---|---|---|
+| Storefront | bealls.com, beallsflorida.com | Product selection, pricing, cross-sell | Cart, PDP, checkout |
+| **Content / locator** | **homecentric.com** | **Editorial framing, hero choice, category emphasis, lifestyle imagery** | **Store locator, newsletter, in-store-pickup interest** |
+
+Same persona inference engine, same layout AI, same brand-config router — different downstream actions.
+
+### Why this is the strongest path
+
+- **Matches HomeCentric's real posture.** No implied fulfillment that the off-price treasure-hunt model can't deliver. No "is this a recommendation?" hedge needed.
+- **Demonstrates platform breadth.** The same Aisles engine powers transactional and brand sites — a sharper pitch than three independent storefront clones.
+- **Unlocks cross-banner persona continuity.** A gatherer on `homecentric.com` browses bedroom inspiration, switches to `bealls.com` via the brand strip, and sees bedding products on sale — same persona maintained, same engine. New showstopper demo moment.
+- **Reusable platform capability.** The mode flag isn't bealls-engagement-specific; it applies to any future merchant that has both transactional and brand sites under one roof.
+
+### What this changes in scope
+
+**Removed**:
+- HomeCentric catalog scrape (the bealls.com home-subset pull, ~1 day Phase 4 work)
+- Operational-caveat language and supervision overhead
+- Risk of accidentally implying fulfillment HomeCentric doesn't have
+
+**Added** (platform extension, reusable):
+
+| Work | Cost (human / agent) |
+|---|---|
+| `BrandConfig.mode: 'storefront' \| 'content'` flag | 0.1 d / 0.05 d |
+| Mode-gated component vocabulary (Zod schema + prompt) — content mode excludes `product-carousel`, `hero-product`, `lifestyle-price-hero`, transactional `product-grid` props | 0.4 d / 0.15 d |
+| Content-mode CTA routing (store locator, newsletter, RSVP intents) | 0.4 d / 0.15 d |
+| Curated content items model — replaces catalog for content-mode brands (~12–20 hand-authored items per banner: store locations, brand pillars, categories, lifestyle scenes) | 0.5 d / 0.2 d |
+| **Subtotal** | **~1.4 d / ~0.55 d** |
+
+### Net effort vs Option B (synthesize-online)
+
+| | Option B | **Option D (locked)** |
+|---|---|---|
+| HomeCentric catalog scrape | +1 d | 0 d |
+| Platform mode capability | 0 d | +1.4 d |
+| **Net delta vs Option B** | baseline | +0.4 d human / +0.1 d agent |
+
+Roughly net-neutral on cost. **Substantially better demo value** and **respects HomeCentric's actual operational posture** without needing a hedging caveat.
+
+### ADR
+
+Captured as a permanent architectural decision: `docs/decisions/005-storefront-vs-content-modes.md`.
 
 ## Schema additions confirmed by this audit
 
