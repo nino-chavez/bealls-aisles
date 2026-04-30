@@ -298,7 +298,7 @@ const BRANDS: Record<string, BrandConfig> = {
 		footerNote: 'bealls is a demo storefront powered by Aisles',
 
 		bc: {
-			channelId: 0, // placeholder — provisioned in Phase 4
+			channelId: 1, // bealls — repurposed from Haven's "Demo" channel
 			categoryPrefix: 'Bealls',
 		},
 
@@ -382,7 +382,7 @@ const BRANDS: Record<string, BrandConfig> = {
 		footerNote: 'Bealls Florida is a demo storefront powered by Aisles',
 
 		bc: {
-			channelId: 0, // placeholder — provisioned in Phase 4
+			channelId: 1846321, // Bealls Florida — repurposed from Volt
 			categoryPrefix: 'BeallsFlorida',
 		},
 
@@ -393,7 +393,7 @@ const BRANDS: Record<string, BrandConfig> = {
 			'shoes': { bcName: 'BeallsFlorida Shoes', displayName: 'Shoes' },
 			'home': { bcName: 'BeallsFlorida Home', displayName: 'Home' },
 			'vacation': { bcName: 'BeallsFlorida Vacation', displayName: 'Vacation' },
-			'swim': { bcName: 'BeallsFlorida Swim', displayName: 'Swim & Beach' },
+			'swim': { bcName: 'BeallsFlorida Swim & Beach', displayName: 'Swim & Beach' },
 			'accessories': { bcName: 'BeallsFlorida Accessories', displayName: 'Accessories' },
 		},
 
