@@ -91,6 +91,35 @@ Three reference brands ship in the repo (`haven`, `volt`, `ember`) demonstrating
 
 **Why this comes first**: every estimate downstream depends on what we find here. If `beallsflorida.com` does something we didn't anticipate (e.g., interactive size availability dots), the component scope shifts.
 
+### Phase 1 audit findings (added 2026-04-30 — does not modify frozen estimates)
+
+Phase 1 was completed agent-assisted. Three banner audits and a synthesis are at:
+
+- `docs/audits/bealls.md`
+- `docs/audits/beallsflorida.md`
+- `docs/audits/homecentric.md`
+- `docs/audits/SYNTHESIS.md`
+
+**Key findings that affect Phase 2 onward**:
+
+1. **HomeCentric is brick-and-mortar only** — no live e-commerce. Demo strategy locks to **synthesize an online HomeCentric using a curated home-category subset of `bealls.com`'s catalog**, branded with HomeCentric identity. This is the engagement's strongest sales pitch: *"Your offline brand can be online in days."*
+2. **Component scope adjustment** (deltas captured here; frozen Phase 2 estimate does not move):
+   - **Add `product-carousel`** to Tier 1 (Best Sellers + Customers Also Purchased patterns appear on 2 of 3 banners)
+   - **Add `coupon-strip`** to Tier 1 (personalized yellow coupon banner on beallsflorida PDP — distinct from persistent `promo-strip`)
+   - **Add `lifestyle-price-hero`** to Tier 2 (bealls.com only — large image with bold price overlay)
+   - **Rename `editorial-lookbook` → `editorial-hero`** and simplify to text-overlay only (saves ~1 day vs the planned hotspot-interactive version)
+   - **Schema extensions** (cheap, no new components): `category-header` adds `heroImage` + `subcategories[]`; `product-grid`/`product-carousel` add `showRating` + multi-badge; `category-tile-grid` adds `description` + column variants 2–5
+3. **Net effect on Phase 2**: revised effort is **5.6 d human / 1.8 d agent-assisted** vs frozen **5.0 d / 1.5 d**. Delta is **+0.6 d / +0.3 d**. Per discipline, the frozen number does not move — this delta is tracked for the retro under "What we added that wasn't in the plan."
+
+**Phase 1 actuals** (preliminary, agent-assisted):
+
+| | Frozen | Actual |
+|---|---|---|
+| Human baseline estimate | 0.5 d | (would have been ~0.5 d) |
+| Agent-assisted target | 0.25 d (~2 hr) | **~1 hr elapsed** (Playwright captures + 4 markdown docs) |
+
+Actual came in faster than agent target — to be confirmed once retro tabulates final time including review.
+
 ### Phase 2 — Component vocabulary expansion (~5 days)
 
 **Goal**: expand the AI's compositional vocabulary from 4 components (DTC editorial) to ~9 components (department-store + promo-driven).
