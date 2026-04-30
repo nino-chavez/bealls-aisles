@@ -58,26 +58,99 @@ const CategoryHeaderSection = z.object({
 	}),
 });
 
+const PromoStripSection = z.object({
+	component: z.literal('promo-strip'),
+	props: z.object({
+		eyebrow: z.string().optional().describe('Optional small label, e.g. "TRENDING NOW"'),
+		headline: z.string().describe('Main promo message, e.g. "Free shipping on orders $99+"'),
+		ctaLabel: z.string().optional().describe('CTA button label, e.g. "Shop Now"'),
+		ctaHref: z.string().optional().describe('CTA destination'),
+		urgency: z.enum(['none', 'soft', 'hard']).describe('Visual emphasis. none=subtle, soft=accent, hard=primary'),
+	}),
+});
+
+const CategoryTile = z.object({
+	label: z.string().describe('Tile label, e.g. "Vacation Outfits"'),
+	image: z.string().describe('Tile image URL'),
+	href: z.string().describe('Tile destination'),
+	description: z.string().optional().describe('Optional descriptive copy below the tile'),
+});
+
+const CategoryTileGridSection = z.object({
+	component: z.literal('category-tile-grid'),
+	props: z.object({
+		sectionLabel: z.string().optional().describe('Optional section heading above the tiles'),
+		columns: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5)]).describe('Number of tiles per row'),
+		tiles: z.array(CategoryTile).min(2).max(5).describe('Category tiles in display order'),
+	}),
+});
+
+const PriceTier = z.object({
+	label: z.string().describe('Tier label, e.g. "Under $25"'),
+	image: z.string().describe('Tier hero image URL'),
+	href: z.string().describe('Tier destination'),
+	savingsBadge: z.string().optional().describe('Optional badge, e.g. "Up to 60% off"'),
+});
+
+const PriceRailSection = z.object({
+	component: z.literal('price-rail'),
+	props: z.object({
+		columns: z.union([z.literal(2), z.literal(3), z.literal(4)]).describe('Number of price tiers'),
+		tiers: z.array(PriceTier).min(2).max(4).describe('Price tiers in display order'),
+	}),
+});
+
+const ProductCarouselSection = z.object({
+	component: z.literal('product-carousel'),
+	props: z.object({
+		title: z.string().describe('Section title, e.g. "Best Sellers"'),
+		products: z.array(ProductRef).min(3).describe('Products in carousel order'),
+		showRating: z.boolean().optional().describe('Show star rating + review count on cards'),
+		showBadges: z.boolean().optional().describe('Show per-product badges'),
+		showQuickAdd: z.boolean().optional().describe('Show Quick view / Add to Cart button on cards'),
+	}),
+});
+
+const CouponStripSection = z.object({
+	component: z.literal('coupon-strip'),
+	props: z.object({
+		eyebrow: z.string().describe('Eyebrow label, e.g. "OFFER FOR YOU"'),
+		headline: z.string().describe('Main offer, e.g. "Get $10 off when you spend $80+"'),
+		body: z.string().optional().describe('Optional fine print or terms summary'),
+		code: z.string().optional().describe('Coupon code to reveal/copy on click'),
+		ctaLabel: z.string().describe('CTA button label, e.g. "Get Code"'),
+	}),
+});
+
 /**
  * Storefront-mode section vocabulary — the full transactional set.
- * Includes everything: editorial, products, grids, headers.
+ * Includes editorial, products, grids, headers, and Bealls-family
+ * promotional/merchandising components.
  */
 export const StorefrontSectionSchema = z.discriminatedUnion('component', [
 	EditorialHeaderSection,
 	HeroProductSection,
 	ProductGridSection,
 	CategoryHeaderSection,
+	PromoStripSection,
+	CategoryTileGridSection,
+	PriceRailSection,
+	ProductCarouselSection,
+	CouponStripSection,
 ]);
 
 /**
  * Content-mode section vocabulary — non-transactional subset.
- * Excludes hero-product and product-grid (no products in content mode).
- * Content-mode-specific components (locator-strip, interest-form) will be
- * added in Phase 2 component work.
+ * Excludes hero-product, product-grid, product-carousel, price-rail, coupon-strip
+ * (no products / no transactional offers in content mode).
+ * Includes promo-strip (used for newsletter / event callouts) and
+ * category-tile-grid (used for brand-pillar tiles).
  */
 export const ContentSectionSchema = z.discriminatedUnion('component', [
 	EditorialHeaderSection,
 	CategoryHeaderSection,
+	PromoStripSection,
+	CategoryTileGridSection,
 ]);
 
 /** Universal section schema — used for parsing without mode constraint. */

@@ -5,6 +5,11 @@
 	import HeroProduct from './sections/HeroProduct.svelte';
 	import ProductGrid from './sections/ProductGrid.svelte';
 	import CategoryHeader from './sections/CategoryHeader.svelte';
+	import PromoStrip from './sections/PromoStrip.svelte';
+	import CategoryTileGrid from './sections/CategoryTileGrid.svelte';
+	import PriceRail from './sections/PriceRail.svelte';
+	import ProductCarousel from './sections/ProductCarousel.svelte';
+	import CouponStrip from './sections/CouponStrip.svelte';
 
 	let { layout, products }: { layout: Layout; products: Product[] } = $props();
 
@@ -53,6 +58,42 @@
 			showFilter={section.props.showFilter}
 			heroImage={section.props.heroImage}
 			subcategories={section.props.subcategories}
+		/>
+	{:else if section.component === 'promo-strip' && section.props?.headline}
+		<PromoStrip
+			eyebrow={section.props.eyebrow}
+			headline={section.props.headline}
+			ctaLabel={section.props.ctaLabel}
+			ctaHref={section.props.ctaHref}
+			urgency={section.props.urgency}
+		/>
+	{:else if section.component === 'category-tile-grid' && section.props?.tiles?.length}
+		<CategoryTileGrid
+			sectionLabel={section.props.sectionLabel}
+			columns={section.props.columns}
+			tiles={section.props.tiles}
+		/>
+	{:else if section.component === 'price-rail' && section.props?.tiers?.length}
+		<PriceRail
+			columns={section.props.columns}
+			tiers={section.props.tiers}
+		/>
+	{:else if section.component === 'product-carousel' && section.props?.products?.length}
+		{@const carouselProducts = resolveProducts(section.props.products)}
+		<ProductCarousel
+			title={section.props.title}
+			products={carouselProducts}
+			showRating={section.props.showRating}
+			showBadges={section.props.showBadges}
+			showQuickAdd={section.props.showQuickAdd}
+		/>
+	{:else if section.component === 'coupon-strip' && section.props?.headline}
+		<CouponStrip
+			eyebrow={section.props.eyebrow}
+			headline={section.props.headline}
+			body={section.props.body}
+			code={section.props.code}
+			ctaLabel={section.props.ctaLabel}
 		/>
 	{/if}
 {/each}

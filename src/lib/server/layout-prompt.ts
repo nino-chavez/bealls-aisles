@@ -61,10 +61,10 @@ Layout principles:
 - Order products by giftability score (universal appeal, presentation, value)`,
 };
 
-const STOREFRONT_COMPONENT_GUIDE = `You have exactly 4 components to work with:
+const STOREFRONT_COMPONENT_GUIDE = `You have 9 components available:
 
-1. "editorial-header" — A section with eyebrow text (small caps label), a headline, and body copy.
-   Use for: Gatherer layouts to set the editorial tone. Gifter layouts to frame the occasion. Not for Hunter or Researcher.
+1. "editorial-header" — Eyebrow label, headline, body copy.
+   Use for: Gatherer (set tone), Gifter (frame occasion). Not for Hunter or Researcher.
 
 2. "hero-product" — A large featured product with image, name, description, specs, and price.
    Use for: Gatherer and Gifter layouts to highlight one standout product. Not for Hunter or Researcher.
@@ -78,14 +78,34 @@ const STOREFRONT_COMPONENT_GUIDE = `You have exactly 4 components to work with:
    - showRating: true to show star rating + review count (recommended for Hunter and Researcher)
    - showBadges: true to surface per-product labels like "New", "Deal", "Clearance"
 
-4. "category-header" — A compact title bar with optional product count, sort, and filter controls.
-   Use for: Hunter and Researcher layouts as the leading section. Can be used for any persona as a subtle header.
+4. "category-header" — Compact title bar with sort/filter, optional hero banner.
+   Use for: Hunter and Researcher leading sections; any persona as a subtle header.
    - heroImage (optional): banner image URL above the title — use for editorial PLPs (e.g., Gatherer landing on a category)
-   - subcategories (optional): array of {label, href} for an above-grid sub-category navigation strip — useful when the grid is dense and shoppers benefit from quick category drilling
+   - subcategories (optional): array of {label, href} for an above-grid sub-category navigation strip
+
+5. "promo-strip" — A thin promotional banner with eyebrow, headline, and optional CTA.
+   Props: eyebrow (optional), headline, ctaLabel (optional), ctaHref (optional), urgency ("none" | "soft" | "hard").
+   Use for: Free shipping callouts, themed shop announcements ("the trend shop"), event promos. Hunter benefits most; Gatherer for theme; skip for Researcher (too marketing).
+
+6. "category-tile-grid" — Visual category nav with photographic tiles.
+   Props: sectionLabel (optional), columns (2/3/4/5), tiles[{label, image, href, description?}]
+   Use for: Gatherer (visual exploration), Gifter (giftable category framing), Hunter (fast category drilling). 4-5 tiles ideal; 2-3 for editorial pairs.
+
+7. "price-rail" — Price-tier merchandising tiles ("Under $25", "Under $50").
+   Props: columns (2/3/4), tiers[{label, image, href, savingsBadge?}]
+   Use for: Hunter primary (deal-finding), Gifter for "under $X" framing. Skip for Gatherer (too price-forward) and Researcher (too generic).
+
+8. "product-carousel" — Horizontal scrolling product list with arrows.
+   Props: title, products[], showRating, showBadges, showQuickAdd
+   Use for: Best Sellers, Customers Also Purchased, Recommended For You. Works across personas; the title carries the persona framing.
+
+9. "coupon-strip" — Personalized offer banner with code reveal.
+   Props: eyebrow, headline, body (optional), code (optional), ctaLabel
+   Use for: Personalized offers (Hunter primary, Gifter secondary). Distinct from promo-strip — coupon-strip is brighter, has a code reveal CTA, and frames a specific dollar/% offer with optional terms.
 
 RULES:
 - Products are pre-sorted by relevance to this persona (highest fit first). Respect this order unless the layout demands otherwise.
-- If a product has a persona-fit score, use it: high-fit products should be featured prominently (hero, top of grid); low-fit products go later.
+- If a product has a persona-fit score, use it: high-fit products feature prominently (hero, top of grid); low-fit go later.
 - Every product must appear in at least one section
 - Every product must be purchasable (price always visible)
 - Use the product IDs exactly as provided — do not invent IDs
@@ -93,21 +113,26 @@ RULES:
 - Maximum 8 sections total
 - The "reasoning" field should explain your layout choices in 1-2 sentences`;
 
-const CONTENT_COMPONENT_GUIDE = `You have a non-transactional content vocabulary to work with. This brand operates as a content/locator site — there are NO products, NO prices, NO carts. Your job is to arrange editorial content and category framing to drive in-store visits, newsletter signups, and brand engagement.
+const CONTENT_COMPONENT_GUIDE = `You have a non-transactional content vocabulary. This brand operates as a content/locator site — there are NO products, NO prices, NO carts. Your job is to arrange editorial content and category framing to drive in-store visits, newsletter signups, and brand engagement.
 
 Available components:
 
-1. "editorial-header" — A section with eyebrow text (small caps label), a headline, and body copy.
+1. "editorial-header" — Eyebrow label, headline, body copy.
    Use for: All personas. Lead the page with editorial framing that matches the persona — inspirational for Gatherer, practical for Hunter, story-driven for Researcher, gift-occasion for Gifter.
 
-2. "category-header" — A title bar for a category surface.
-   Use for: Naming the section the user is browsing. Hero image and sub-category strip are valuable here.
+2. "category-header" — Title bar for a category surface, with optional hero banner image and sub-category strip.
+
+3. "promo-strip" — Thin promotional banner. In content mode, use for newsletter callouts, in-store events, brand engagement ("Find a store near you", "Subscribe for new-store openings").
+   Props: eyebrow (optional), headline, ctaLabel, ctaHref (optional, omit for soft engagement), urgency ("none" | "soft" | "hard").
+
+4. "category-tile-grid" — Visual brand-pillar tiles or category-pillar tiles. In content mode, tiles drive to category surfaces or store-locator queries, NOT product pages.
+   Props: sectionLabel (optional), columns (2/3/4/5), tiles[{label, image, href, description?}].
 
 CONTENT-MODE RULES:
 - This brand has NO online catalog. Do not reference products, prices, sale events, or shipping.
-- Every CTA in the layout should drive to in-store visits, store locator, or brand engagement (newsletter, RSVP).
-- Persona still matters — the layout should feel different for a Gatherer (inspirational, lifestyle imagery) than for a Hunter (locator-first, "find a store near you").
-- The "productOrder" field can be an empty array for content-mode brands.
+- Every CTA should drive to in-store visits, store locator, or brand engagement (newsletter, RSVP).
+- Persona still matters — Gatherer = inspirational lifestyle scenes; Hunter = locator-first ("find your store"); Researcher = brand-story depth; Gifter = gift-occasion framing tied to in-store experience.
+- The "productOrder" field should be an empty array for content-mode brands.
 - Maximum 8 sections total.
 - The "reasoning" field should explain your layout choices in 1-2 sentences.`;
 
