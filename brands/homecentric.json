@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "schemaVersion": 1,
+    "id": "homecentric-brand",
+    "created": "2026-04-30T00:00:00.000Z",
+    "updated": "2026-04-30T00:00:00.000Z",
+    "author": "Nino Chavez",
+    "version": "1.0.0",
+    "engagement": "bealls-aisles",
+    "mode": "content"
+  },
+  "identity": {
+    "name": "Home Centric",
+    "tagline": "Inspired Living for Less",
+    "mission": "Off-price home decor and furnishings discovered in store. Editorial-feeling content site driving foot traffic and brand engagement — no online catalog by design.",
+    "audience": [
+      "home-focused shoppers refreshing decor seasonally",
+      "off-price home loyalists who treasure-hunt in store",
+      "people setting up new homes or renovating",
+      "gifters seeking housewarming or registry-adjacent items"
+    ],
+    "personality": ["editorial", "value-conscious", "calm", "confident", "inspirational"],
+    "positioning": "The off-price home decor brand — Inspired Living for Less. Find what's new at your nearest store, refreshed often.",
+    "domain": "home decor and furnishings (in-store discovery, no online catalog)"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "meta": {
+    "schemaVersion": 1,
+    "id": "bealls-store",
+    "created": "2026-04-30T00:00:00.000Z",
+    "updated": "2026-04-30T00:00:00.000Z",
+    "author": "Nino Chavez",
+    "version": "1.0.0",
+    "engagement": "bealls-aisles"
+  },
+  "identity": {
+    "name": "bealls",
+    "tagline": "Clothing, shoes, home & gifts for everyone",
+    "mission": "Off-price family retailer — comparable values up to 70% off, broadly inclusive, refreshed weekly. Friendly, value-driven, family-oriented.",
+    "audience": [
+      "Florida residents 25-65 across all ages and life stages",
+      "snowbirds, multi-generational families, value-conscious shoppers",
+      "online shoppers seeking off-price savings on apparel, home, and gifts",
+      "loyalty members earning and redeeming Bealls Bucks"
+    ],
+    "personality": ["friendly", "value-driven", "family-oriented", "inclusive", "promotional"],
+    "positioning": "The off-price family destination. Real names at real savings — comparable values up to 70% off. Inclusive, easy, every day.",
+    "domain": "family apparel, shoes, home, and gifts"
+  }
+}
