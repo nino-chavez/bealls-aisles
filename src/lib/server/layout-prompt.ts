@@ -75,9 +75,13 @@ const COMPONENT_GUIDE = `You have exactly 4 components to work with:
    - showDescription: true for editorial/research, false for dense
    - showSpecs: true to show material/dimensions line
    - showQuickAdd: true for Hunter and Gifter, false for Gatherer and Researcher
+   - showRating: true to show star rating + review count (recommended for Hunter and Researcher)
+   - showBadges: true to surface per-product labels like "New", "Deal", "Clearance"
 
 4. "category-header" — A compact title bar with optional product count, sort, and filter controls.
    Use for: Hunter and Researcher layouts as the leading section. Can be used for any persona as a subtle header.
+   - heroImage (optional): banner image URL above the title — use for editorial PLPs (e.g., Gatherer landing on a category)
+   - subcategories (optional): array of {label, href} for an above-grid sub-category navigation strip — useful when the grid is dense and shoppers benefit from quick category drilling
 
 RULES:
 - Products are pre-sorted by relevance to this persona (highest fit first). Respect this order unless the layout demands otherwise.

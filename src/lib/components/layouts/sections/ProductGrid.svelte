@@ -9,6 +9,8 @@
 		showDescription = true,
 		showSpecs = false,
 		showQuickAdd = false,
+		showRating = false,
+		showBadges = false,
 	}: {
 		columns: 2 | 3 | 4;
 		products: Product[];
@@ -16,6 +18,8 @@
 		showDescription?: boolean;
 		showSpecs?: boolean;
 		showQuickAdd?: boolean;
+		showRating?: boolean;
+		showBadges?: boolean;
 	} = $props();
 
 	const gridClass = $derived(
@@ -27,6 +31,14 @@
 	);
 
 	const isCompact = $derived(columns >= 3);
+
+	function badgeClass(label: string): string {
+		const l = label.toLowerCase();
+		if (l === 'new') return 'bg-accent text-white';
+		if (l === 'deal' || l === 'sale') return 'bg-primary text-white';
+		if (l === 'clearance') return 'bg-error text-white';
+		return 'bg-surface-fg text-surface-bg';
+	}
 </script>
 
 <div class={gridClass}>
@@ -48,7 +60,19 @@
 						loading="lazy"
 					/>
 				{/if}
-				<!-- Pick toggle -->
+
+				<!-- Badges (top-left, stack vertically) -->
+				{#if showBadges && product.badges && product.badges.length > 0}
+					<div class="absolute top-2 left-2 flex flex-col gap-1">
+						{#each product.badges as badge}
+							<span class="rounded-sm px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider {badgeClass(badge)}">
+								{badge}
+							</span>
+						{/each}
+					</div>
+				{/if}
+
+				<!-- Pick toggle (top-right) -->
 				<button
 					onclick={(e) => { e.preventDefault(); e.stopPropagation(); isPicked(product.id) ? removePick(product.id) : addPick(product); }}
 					class="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full transition-all
@@ -63,9 +87,26 @@
 
 			<!-- Info -->
 			<div class="{isCompact ? 'flex flex-1 flex-col p-4' : 'mt-4'}">
-				<h3 class="{isCompact ? 'text-sm font-medium leading-snug' : 'font-display text-lg'} group-hover:text-primary transition-colors">
+				{#if product.brand}
+					<p class="text-xs font-semibold uppercase tracking-wider text-surface-muted-fg">{product.brand}</p>
+				{/if}
+
+				<h3 class="{isCompact ? 'text-sm font-medium leading-snug' : 'font-display text-lg'} group-hover:text-primary transition-colors {product.brand ? 'mt-0.5' : ''}">
 					{product.name}
 				</h3>
+
+				{#if showRating && typeof product.rating === 'number'}
+					<div class="mt-1 flex items-center gap-1 text-xs text-surface-muted-fg">
+						<span aria-label="Rating: {product.rating} of 5">
+							{#each Array(5) as _, i}
+								<span class={i < Math.round(product.rating ?? 0) ? 'text-warning' : 'text-surface-border'}>★</span>
+							{/each}
+						</span>
+						{#if product.reviewCount}
+							<span>({product.reviewCount})</span>
+						{/if}
+					</div>
+				{/if}
 
 				{#if showDescription && !isCompact}
 					<p class="mt-1.5 line-clamp-2 text-sm leading-relaxed text-surface-muted-fg">{product.description}</p>

@@ -36,7 +36,14 @@ const ProductGridSection = z.object({
 		showDescription: z.boolean().describe('Show product description'),
 		showSpecs: z.boolean().describe('Show specs line'),
 		showQuickAdd: z.boolean().describe('Show Add to Cart button'),
+		showRating: z.boolean().optional().describe('Show star rating + review count'),
+		showBadges: z.boolean().optional().describe('Show per-product badges (e.g. New, Deal)'),
 	}),
+});
+
+const SubcategoryLink = z.object({
+	label: z.string().describe('Subcategory label, e.g. "Tops"'),
+	href: z.string().describe('Subcategory URL slug, e.g. "/c/women/tops"'),
 });
 
 const CategoryHeaderSection = z.object({
@@ -46,6 +53,8 @@ const CategoryHeaderSection = z.object({
 		subtitle: z.string().optional().describe('Subtitle or count'),
 		showSort: z.boolean().describe('Show sort dropdown'),
 		showFilter: z.boolean().describe('Show filter button'),
+		heroImage: z.string().optional().describe('Optional banner image URL above title'),
+		subcategories: z.array(SubcategoryLink).optional().describe('Optional sub-category text-link strip'),
 	}),
 });
 

@@ -42,6 +42,8 @@
 			showDescription={section.props.showDescription}
 			showSpecs={section.props.showSpecs}
 			showQuickAdd={section.props.showQuickAdd}
+			showRating={section.props.showRating}
+			showBadges={section.props.showBadges}
 		/>
 	{:else if section.component === 'category-header' && section.props?.title}
 		<CategoryHeader
@@ -49,6 +51,8 @@
 			subtitle={section.props.subtitle}
 			showSort={section.props.showSort}
 			showFilter={section.props.showFilter}
+			heroImage={section.props.heroImage}
+			subcategories={section.props.subcategories}
 		/>
 	{/if}
 {/each}
