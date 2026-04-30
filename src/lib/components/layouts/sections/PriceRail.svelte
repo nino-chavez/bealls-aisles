@@ -33,18 +33,21 @@
 				{/if}
 			</div>
 
+			<!-- Right-side gradient for text contrast on any image -->
+			<div class="absolute inset-0 bg-gradient-to-l from-black/40 via-black/15 to-transparent" aria-hidden="true"></div>
+
 			<!-- Bold price overlay (Bealls pattern) -->
 			<div class="absolute inset-0 flex items-center justify-end p-6 sm:p-8">
-				<div class="text-right">
-					<p class="font-display text-3xl font-bold text-surface-fg drop-shadow-md sm:text-4xl">
+				<div class="text-right text-white">
+					<p class="font-display text-3xl font-bold drop-shadow-lg sm:text-4xl">
 						{tier.label}
 					</p>
 					{#if tier.savingsBadge}
-						<p class="mt-1 text-xs font-semibold uppercase tracking-wider text-primary drop-shadow-sm">
+						<p class="mt-1 text-xs font-semibold uppercase tracking-wider drop-shadow-md">
 							{tier.savingsBadge}
 						</p>
 					{/if}
-					<span class="mt-2 inline-block text-xs font-medium uppercase tracking-wider text-surface-fg underline-offset-4 group-hover:underline">
+					<span class="mt-2 inline-block text-xs font-medium uppercase tracking-wider underline-offset-4 drop-shadow-md group-hover:underline">
 						Shop Now
 					</span>
 				</div>
