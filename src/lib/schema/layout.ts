@@ -32,6 +32,30 @@ import { getEmptyLayoutSchema } from './layouts/empty';
 export const Surface = z.enum(['home', 'plp', 'pdp', 'cart', 'checkout', 'empty']);
 export type Surface = z.infer<typeof Surface>;
 
+/**
+ * EmptyReason — the discriminator for empty/rescue surfaces.
+ * Selects which rescue framing the AI uses when surface='empty'.
+ *
+ * - 'not-found' — 404. Shopper landed on a missing route. Rescue with
+ *   popular categories + best-sellers + go-home affordance.
+ * - 'empty-cart' — Cart drawer/page with no items. Rescue with popular
+ *   products + free-shipping nudge + bealls-bucks reminder if known.
+ * - 'empty-search' — Search returned zero results. Rescue with popular
+ *   searches, related categories, semantic suggestions.
+ * - 'empty-wishlist' — Picks/wishlist empty. Rescue with curated picks
+ *   + "save what you love" framing.
+ *
+ * Per ADR-006, EmptyLayoutSchema is wide-latitude — the AI selects
+ * whichever blocks fit the rescue framing.
+ */
+export const EmptyReason = z.enum([
+	'not-found',
+	'empty-cart',
+	'empty-search',
+	'empty-wishlist',
+]);
+export type EmptyReason = z.infer<typeof EmptyReason>;
+
 // ─── Re-exports — block schemas ────────────────────────────────────
 
 export {

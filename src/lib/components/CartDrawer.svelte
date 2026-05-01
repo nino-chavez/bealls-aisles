@@ -1,10 +1,16 @@
 <script lang="ts">
+	import EmptyRescue from '$lib/components/EmptyRescue.svelte';
+
 	let {
 		open = false,
 		onclose,
+		persona = 'gatherer',
+		categories = [],
 	}: {
 		open: boolean;
 		onclose: () => void;
+		persona?: string;
+		categories?: Array<{ slug: string; name: string }>;
 	} = $props();
 
 	interface CartItem {
@@ -77,11 +83,19 @@
 						{/each}
 					</div>
 				{:else if items.length === 0}
-					<div class="flex h-48 flex-col items-center justify-center text-center">
+					<div class="flex flex-col items-center text-center pt-6">
 						<p class="text-surface-muted-fg">Your cart is empty</p>
-						<button onclick={onclose} class="mt-4 text-sm font-medium text-primary hover:text-secondary">
+						<button onclick={onclose} class="mt-3 text-sm font-medium text-primary hover:text-secondary">
 							Continue shopping
 						</button>
+					</div>
+					<!-- PRD-FND-012: AI rescue band beneath the standard empty copy. -->
+					<div class="mt-8 border-t border-surface-border pt-6">
+						<EmptyRescue
+							reason="empty-cart"
+							{persona}
+							{categories}
+						/>
 					</div>
 				{:else}
 					<ul class="divide-y divide-surface-border">

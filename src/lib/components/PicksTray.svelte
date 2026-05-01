@@ -1,12 +1,17 @@
 <script lang="ts">
 	import { getPickItems, removePick, clearPicks, totalPrice, pickCount } from '$lib/stores/picks.svelte';
+	import EmptyRescue from '$lib/components/EmptyRescue.svelte';
 
 	let {
 		open = false,
 		onclose,
+		persona = 'gatherer',
+		categories = [],
 	}: {
 		open: boolean;
 		onclose: () => void;
+		persona?: string;
+		categories?: Array<{ slug: string; name: string }>;
 	} = $props();
 
 	let items = $derived(getPickItems());
@@ -85,12 +90,20 @@
 			<!-- Items -->
 			<div class="flex-1 overflow-y-auto px-6 py-4">
 				{#if count === 0}
-					<div class="flex h-48 flex-col items-center justify-center text-center">
+					<div class="flex flex-col items-center text-center pt-6">
 						<p class="text-surface-muted-fg">No picks yet</p>
 						<p class="mt-2 text-xs text-surface-muted-fg">Add products to compare or build a set.</p>
-						<button onclick={onclose} class="mt-4 text-sm font-medium text-primary hover:text-secondary">
+						<button onclick={onclose} class="mt-3 text-sm font-medium text-primary hover:text-secondary">
 							Continue browsing
 						</button>
+					</div>
+					<!-- PRD-FND-012: AI rescue band beneath the standard empty copy. -->
+					<div class="mt-8 border-t border-surface-border pt-6">
+						<EmptyRescue
+							reason="empty-wishlist"
+							{persona}
+							{categories}
+						/>
 					</div>
 				{:else}
 					<ul class="divide-y divide-surface-border">

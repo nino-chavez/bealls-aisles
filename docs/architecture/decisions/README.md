@@ -12,10 +12,11 @@ Append-only log of load-bearing runtime architecture decisions. See `../../metho
 | [004](004-vocabulary-constraint-invariant.md) | Vocabulary-constraint invariant | Accepted | _see file_ | engine |
 | [005](005-storefront-vs-content-modes.md) | Storefront vs. content modes | Accepted | _see file_ | engine + foundation |
 | [006](006-surface-typed-schemas.md) | Surface-typed schemas (split LayoutSchema → 6) | Accepted | 2026-04-30 | engine |
+| [007](007-section-authoring-model.md) | Section authoring model (named insertion zones with typed contract) | Accepted | 2026-04-30 | foundation + admin + cross-layer |
 
 ## Pending (drafts)
 
-- ADR-007 — Three-layer architecture commitment — _drafts alongside future NORTH-STAR refinement_
+- ADR-008 — Three-layer architecture commitment — _drafts alongside future NORTH-STAR refinement_
 
 ## Conventions
 

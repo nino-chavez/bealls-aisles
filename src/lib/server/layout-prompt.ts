@@ -170,6 +170,34 @@ interface PromptProduct {
 }
 
 import { getBrand, getBrandMode } from '$lib/brand/config';
+import type { Surface, EmptyReason } from '$lib/schema/layout';
+
+/**
+ * Rescue framing for empty/404 surfaces (PRD-FND-012).
+ *
+ * The AI is told: this shopper hit a dead end. The rescue layout's job
+ * is to surface alternative paths (popular categories, best-sellers,
+ * known-good search terms, locator for content-mode brands) without
+ * pretending the dead end didn't happen.
+ *
+ * Each reason gets reason-specific framing — the AI knows whether
+ * the shopper just hit a 404 vs. emptied their cart vs. searched for
+ * something we don't carry. The rescue should feel different in each
+ * case.
+ */
+const EMPTY_REASON_FRAMING: Record<EmptyReason, string> = {
+	'not-found': `RESCUE CONTEXT: The shopper landed on a missing page (404). Acknowledge the dead end gently in the lead block, then pivot to alternative paths: popular categories, a best-seller carousel, an editorial entry point. Lead copy should be brand-voice, not generic ("Looks like that page wandered off — here's what's selling this week" beats "404 Not Found"). One CTA back to home/categories must be obvious. Skip price-rail and coupon-strip — this is rescue, not a deal moment.`,
+	'empty-cart': `RESCUE CONTEXT: The shopper opened their cart and it's empty. Don't restate "your cart is empty" — the foundation already shows that copy. The rescue's job is to tee up the next add-to-cart: popular products, items frequently bought, a free-shipping nudge if the brand has a threshold, a bealls-bucks-callout if loyalty applies. Keep it short — 3–4 sections max. Lead with a product-carousel or hero-product, not editorial copy.`,
+	'empty-search': `RESCUE CONTEXT: The shopper searched and got zero results. Acknowledge the miss in 1 sentence, then surface alternative paths: popular categories from the brand's catalog, a "shoppers also looked at" carousel of best-sellers, related semantic categories. Lead block should suggest specific search refinements ("Try 'sectional' instead of 'big couch'") rather than generic "browse our catalog." Skip price-rail and editorial-hero — this needs to feel like a helpful pivot, not a marketing moment.`,
+	'empty-wishlist': `RESCUE CONTEXT: The shopper opened their picks/wishlist and there's nothing saved. Frame the rescue as "things worth saving" — a curated carousel of high-fit products, a category-tile-grid for browsing, an editorial-header that explains the picks affordance ("Tap the heart on anything to save it here"). One section should explicitly teach the picks/save mechanic. Skip coupon-strip and price-rail — picks is a curation moment, not a deal moment.`,
+};
+
+const EMPTY_REASON_FRAMING_CONTENT: Record<EmptyReason, string> = {
+	'not-found': `RESCUE CONTEXT (content mode): The shopper landed on a missing page. This brand is content/locator-only — no products, no cart. Pivot to in-store affordances: a category-tile-grid of brand pillars (each tile drives to a content surface or store-locator), an editorial-hero with a "find your store" CTA, a promo-strip for newsletter signup. Acknowledge the dead end gently, then drive in-store engagement.`,
+	'empty-cart': `RESCUE CONTEXT (content mode): This shouldn't happen — content-mode brands have no cart. If you receive this reason, render an editorial-header explaining "this brand is in-store only" + a category-tile-grid + a store-locator promo-strip.`,
+	'empty-search': `RESCUE CONTEXT (content mode): The shopper searched but this brand has no online catalog. Lead with an editorial-header pivoting to in-store discovery, then category-tile-grid of brand pillars, then a promo-strip with "find your nearest store" CTA. Make clear this is a locator brand without sounding apologetic.`,
+	'empty-wishlist': `RESCUE CONTEXT (content mode): No wishlist in content mode. Render an editorial-header explaining the brand is in-store only + a category-tile-grid + a store-locator promo-strip.`,
+};
 
 export function buildLayoutPrompt(
 	persona: string,
@@ -178,6 +206,7 @@ export function buildLayoutPrompt(
 	picksContext?: string,
 	rulesContext?: string,
 	probabilities?: { gatherer: number; hunter: number; researcher: number; gifter: number },
+	options?: { surface?: Surface; reason?: EmptyReason },
 ): string {
 	const brand = getBrand();
 	const mode = getBrandMode(brand);
@@ -239,10 +268,21 @@ VALID IMAGES:
 		: `\nAVAILABLE PRODUCTS (${filtered.length} items, top by ${persona} fit):\n${productSummaries}\n`;
 
 	const isHome = categoryName === 'Home';
-	const surfaceLabel = isHome ? 'homepage' : `${categoryName} ${modeLabel}`;
-	const homeGuidance = isHome
-		? `\nHOMEPAGE CONTEXT: This is the brand's landing page — the shopper's first impression. The products span all categories, pre-sorted to show the strongest persona-fit first. Use a richer mix of components than a category page: an editorial-hero or hero-product to anchor, a category-tile-grid to surface the brand's range, a product-carousel for featured picks, and persona-appropriate promo (price-rail for Hunter, coupon-strip for Gifter, bealls-bucks-callout for any known shopper). DO NOT use category-header on the homepage — that's for category pages only.\n`
+	const isEmpty = options?.surface === 'empty';
+	const reason = options?.reason;
+	const surfaceLabel = isEmpty
+		? `${reason ?? 'rescue'} rescue page`
+		: isHome
+			? 'homepage'
+			: `${categoryName} ${modeLabel}`;
+	const emptyFraming = isEmpty && reason
+		? `\n${(mode === 'content' ? EMPTY_REASON_FRAMING_CONTENT : EMPTY_REASON_FRAMING)[reason]}\n`
 		: '';
+	const homeGuidance = isEmpty
+		? emptyFraming
+		: isHome
+			? `\nHOMEPAGE CONTEXT: This is the brand's landing page — the shopper's first impression. The products span all categories, pre-sorted to show the strongest persona-fit first. Use a richer mix of components than a category page: an editorial-hero or hero-product to anchor, a category-tile-grid to surface the brand's range, a product-carousel for featured picks, and persona-appropriate promo (price-rail for Hunter, coupon-strip for Gifter, bealls-bucks-callout for any known shopper). DO NOT use category-header on the homepage — that's for category pages only.\n`
+			: '';
 
 	return `${modeRole}
 

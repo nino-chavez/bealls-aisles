@@ -1,7 +1,14 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { generateText, Output } from 'ai';
-import { getLayoutSchemaForSurface, inferSurfaceFromCategorySlug, type Layout, type Surface } from '$lib/schema/layout';
+import {
+	getLayoutSchemaForSurface,
+	inferSurfaceFromCategorySlug,
+	EmptyReason,
+	type Layout,
+	type Surface,
+	type EmptyReason as EmptyReasonType,
+} from '$lib/schema/layout';
 import { buildLayoutPrompt } from '$lib/server/layout-prompt';
 import { loadCategoryProducts, loadHomeProducts } from '$lib/server/catalog';
 import { getCachedLayout, cacheLayout, hashPicks } from '$lib/server/cache';
@@ -16,7 +23,14 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	const sessionId = cookies.get('aisles_session') || undefined;
 
 	try {
-		const { persona, categorySlug, picksContext, probabilities, surface: explicitSurface } = await request.json();
+		const {
+			persona,
+			categorySlug,
+			picksContext,
+			probabilities,
+			surface: explicitSurface,
+			reason: explicitReason,
+		} = await request.json();
 
 		if (!persona || !categorySlug) {
 			return json({ error: 'Missing required fields: persona, categorySlug' }, { status: 400 });
@@ -29,27 +43,49 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		const surface: Surface = explicitSurface ?? inferSurfaceFromCategorySlug(categorySlug);
 		const layoutSchema = getLayoutSchemaForSurface(surface, mode);
 
+		// PRD-FND-012: empty/rescue surfaces require a reason discriminator so
+		// the AI knows whether to compose a 404, empty-cart, empty-search, or
+		// empty-wishlist rescue. The cache key includes the reason so each
+		// rescue variant caches independently.
+		const reasonResult = surface === 'empty' ? EmptyReason.safeParse(explicitReason) : null;
+		const reason: EmptyReasonType | undefined = reasonResult?.success ? reasonResult.data : undefined;
+		if (surface === 'empty' && !reason) {
+			return json({ error: "Missing/invalid 'reason' for empty surface (must be one of: not-found, empty-cart, empty-search, empty-wishlist)" }, { status: 400 });
+		}
+		const cacheSlug = surface === 'empty' ? `empty:${reason}` : categorySlug;
+
 		// ─── Cache check ───────────────────────────────────────────
 		const ph = hashPicks(picksContext);
-		const cached = await getCachedLayout(brandId, persona, categorySlug, ph);
+		const cached = await getCachedLayout(brandId, persona, cacheSlug, ph);
 		if (cached) {
 			const elapsed = Date.now() - startTime;
 
 			logGeneration({
 				type: 'layout',
 				persona,
-				categorySlug,
+				categorySlug: cacheSlug,
 				cacheHit: true,
 				generationTimeMs: elapsed,
 				sessionId,
 			}).catch(() => {});
 
+			// Empty/rescue surfaces need products inline so the client-only
+			// rescue component (no +page.server.ts) can render product blocks
+			// without a second roundtrip. Re-load popular products on cache
+			// hit — same set the cached layout was generated against.
+			let cachedProducts: Awaited<ReturnType<typeof loadHomeProducts>>['products'] = [];
+			if (surface === 'empty' && mode === 'storefront') {
+				const popular = await loadHomeProducts(persona);
+				cachedProducts = popular.products;
+			}
+
 			return json({
 				layout: cached,
+				products: cachedProducts,
 				meta: {
 					persona,
-					categoryName: categorySlug,
-					productCount: 0,
+					categoryName: cacheSlug,
+					productCount: cachedProducts.length,
 					generationTimeMs: elapsed,
 					cacheHit: true,
 				},
@@ -57,7 +93,9 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		}
 
 		// ─── Cache miss — generate via AI Gateway ──────────────────
-		const result = categorySlug === 'home'
+		// Empty/rescue surfaces source from popular products (loadHomeProducts);
+		// content-mode rescues run with no products at all.
+		const result = surface === 'empty' || categorySlug === 'home'
 			? await loadHomeProducts(persona)
 			: await loadCategoryProducts(categorySlug, persona);
 		if (!result) {
@@ -69,7 +107,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		const rules = await getActiveRules(persona, categorySlug);
 		const rulesContext = rulesToPromptContext(rules);
 
-		const prompt = buildLayoutPrompt(persona, categoryName, products, picksContext, rulesContext, probabilities);
+		const prompt = buildLayoutPrompt(persona, categoryName, products, picksContext, rulesContext, probabilities, { surface, reason });
 
 		// Haiku primary; Sonnet fallback only via gateway path (skipped for direct).
 		const aiResult = await generateText({
@@ -88,7 +126,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		const model = 'anthropic/claude-haiku-4.5';
 
 		if (layout) {
-			cacheLayout(brandId, persona, categorySlug, layout, ph).catch(() => {});
+			cacheLayout(brandId, persona, cacheSlug, layout, ph).catch(() => {});
 		}
 
 		const elapsed = Date.now() - startTime;
@@ -96,7 +134,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		logGeneration({
 			type: 'layout',
 			persona,
-			categorySlug,
+			categorySlug: cacheSlug,
 			cacheHit: false,
 			generationTimeMs: elapsed,
 			productCount: products.length,
@@ -108,6 +146,10 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 		return json({
 			layout,
+			// Inline products only for empty/rescue surfaces — see cache-hit
+			// branch above for rationale. Other surfaces resolve products via
+			// their own +page.server.ts.
+			products: surface === 'empty' ? products : undefined,
 			meta: {
 				persona,
 				categoryName,

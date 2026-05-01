@@ -9,12 +9,17 @@
 	import PicksTray from '$lib/components/PicksTray.svelte';
 	import { pickCount } from '$lib/stores/picks.svelte';
 	import { initEmitter, destroyEmitter, getEmitter } from '$lib/signals/emitter';
+	import { getBrand } from '$lib/brand/config';
 	import type { LayoutData } from './$types';
 
 	let { children, data }: { children: any; data: LayoutData } = $props();
 	let brandName = $derived(data.brand?.name ?? 'Haven');
 	let brandTagline = $derived(data.brand?.tagline ?? '');
 	let brandFooterNote = $derived(data.brand?.footerNote ?? '');
+	const brandCategories = Object.entries(getBrand().categories).map(([slug, c]) => ({
+		slug,
+		name: c.displayName,
+	}));
 	let themeStyle = $derived.by(() => {
 		const t = data.brand?.theme;
 		if (!t) return '';
@@ -147,7 +152,17 @@
 			<Footer {brandName} footerNote={brandFooterNote} tagline={brandTagline} />
 		</div>
 
-		<CartDrawer open={cartOpen} onclose={closeCart} />
-		<PicksTray open={picksOpen} onclose={() => picksOpen = false} />
+		<CartDrawer
+			open={cartOpen}
+			onclose={closeCart}
+			persona={data.personaHint ?? 'gatherer'}
+			categories={brandCategories}
+		/>
+		<PicksTray
+			open={picksOpen}
+			onclose={() => picksOpen = false}
+			persona={data.personaHint ?? 'gatherer'}
+			categories={brandCategories}
+		/>
 	{/if}
 </div>

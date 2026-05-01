@@ -3,10 +3,17 @@
 	import HunterLayout from '$lib/components/layouts/HunterLayout.svelte';
 	import GathererLayout from '$lib/components/layouts/GathererLayout.svelte';
 	import RefinementChat from '$lib/components/RefinementChat.svelte';
+	import EmptyRescue from '$lib/components/EmptyRescue.svelte';
 	import type { Layout } from '$lib/schema/layout';
+	import { getBrand } from '$lib/brand/config';
 
 	let { data }: { data: PageData } = $props();
 	let refinedLayout = $state<Layout | null>(null);
+
+	const brandCategories = Object.entries(getBrand().categories).map(([slug, c]) => ({
+		slug,
+		name: c.displayName,
+	}));
 </script>
 
 <svelte:head>
@@ -30,13 +37,22 @@
 	{/if}
 
 	{#if data.results.length === 0}
-		<div class="py-24 text-center">
-			<h1 class="text-2xl">No results for "{data.query}"</h1>
-			<p class="mt-2 text-surface-muted-fg">Try a different search or browse our categories.</p>
-			<div class="mt-6 flex justify-center gap-4">
-				<a href="/category/living-room" class="text-sm font-medium text-primary hover:text-secondary">Living Room</a>
-				<a href="/category/office" class="text-sm font-medium text-primary hover:text-secondary">Office</a>
-			</div>
+		<!-- PRD-FND-012: zero-result rescue. Foundation owns the headline copy
+			 (so the shopper instantly understands what happened); engine
+			 composes the rescue band beneath. -->
+		<div class="border-b border-surface-border pb-10">
+			<h1 class="font-display text-3xl">No results for “{data.query}”</h1>
+			<p class="mt-2 text-surface-muted-fg">
+				We searched the catalog and didn’t find a match. Here’s what shoppers like you are exploring instead.
+			</p>
+		</div>
+
+		<div class="mt-10">
+			<EmptyRescue
+				reason="empty-search"
+				persona={data.persona ?? 'gatherer'}
+				categories={brandCategories}
+			/>
 		</div>
 	{:else if data.suggestedCategory}
 		<!-- Route to category page with persona-appropriate layout -->

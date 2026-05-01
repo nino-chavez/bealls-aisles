@@ -79,6 +79,40 @@ BRD §6 specifies a walk-through cadence (quarterly product review, monthly engi
 
 ---
 
+### Q-008 — Admin authoring precedence vs. engine output
+
+The Phase 2 zone resolver cascade ([ADR-007](../architecture/decisions/007-section-authoring-model.md)) resolves zone content as **engine → admin → static fallback**. Admin yields to engine. Some merchants may want the inverse — "lock this zone to my content; don't let the AI override it." The current decision is yield-to-engine because admin lock-overrides re-conflate the layers ADR-007 separates, but this is a real merchant-facing question that walk-throughs should test.
+
+**Affects:** STORY-005 (Decisions Inspector), STORY-014 (AI authoring vs. AI assistance preference), [PRD-XLAYER-004](PRD.md) (Admin ↔ Foundation contract), Phase 5 admin authoring.
+
+**Status:** open. Test in CS walk-throughs; if mid-market merchants want lock-overrides, revisit the cascade decision.
+
+---
+
+### Q-009 — Zone catalog versioning
+
+Adding a zone is purely additive (new ID, new schema, new fallback). Renaming or removing a zone is a breaking change for admin-authored content scoped to that zone. As soon as Phase 5 ships and merchants author content, the catalog becomes a stable API the foundation owes them.
+
+Options: (a) implicit versioning (we never break zone IDs; deprecate-and-replace pattern with both alive for migration period), (b) explicit catalog versioning (e.g., `aisles-zones@1.0`; merchants pin to a version; admin shows an upgrade path), (c) defer until first real removal pressure.
+
+**Affects:** [PRD-FND-013](PRD.md), [PRD-XLAYER-004](PRD.md), Phase 5 admin authoring.
+
+**Status:** open. Recommend (a) implicit versioning until a real removal scenario surfaces, but the principle wants formal sign-off before Phase 5 launches.
+
+---
+
+### Q-010 — Per-brand static fallback overrides
+
+Static fallbacks are brand-aware via `getBrand()`. Today this is sufficient — fallbacks read brand-specific config (heroHeadline, top categories, etc.). But Bealls Florida and Home Centric may eventually want **structurally different** fallbacks for the same zone (e.g., HC's `home.hero` is content-mode and should fall back to a locator card, not a photographic hero).
+
+Options: (a) all fallbacks per-zone are functions that branch on `getBrand()` internally (today's shape), (b) per-brand fallback overrides (`fallbacks/bealls-florida/home.ts` shadows the default), (c) declare per-brand fallback in `brand.config.ts`.
+
+**Affects:** [PRD-FND-013](PRD.md), multi-brand work, content-mode brands.
+
+**Status:** open. Don't decide until per-brand divergence is a concrete pain (likely Phase 1 / 2 implementation work surfaces it).
+
+---
+
 ## Resolved
 
 > _empty — items move here with resolution + date when settled._

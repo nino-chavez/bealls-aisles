@@ -4,8 +4,10 @@ import { streamText, Output } from 'ai';
 import {
 	getLayoutSchemaForSurface,
 	inferSurfaceFromCategorySlug,
+	EmptyReason,
 	type Layout,
 	type Surface,
+	type EmptyReason as EmptyReasonType,
 } from '$lib/schema/layout';
 import { buildLayoutPrompt } from '$lib/server/layout-prompt';
 import { loadCategoryProducts, loadHomeProducts } from '$lib/server/catalog';
@@ -27,7 +29,14 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	const sessionId = cookies.get('aisles_session') || undefined;
 
 	try {
-		const { persona, categorySlug, picksContext, probabilities, surface: explicitSurface } = await request.json();
+		const {
+			persona,
+			categorySlug,
+			picksContext,
+			probabilities,
+			surface: explicitSurface,
+			reason: explicitReason,
+		} = await request.json();
 
 		if (!persona || !categorySlug) {
 			return json({ error: 'Missing required fields: persona, categorySlug' }, { status: 400 });
@@ -40,16 +49,24 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		const surface: Surface = explicitSurface ?? inferSurfaceFromCategorySlug(categorySlug);
 		const layoutSchema = getLayoutSchemaForSurface(surface, mode);
 
+		// PRD-FND-012: empty/rescue reason discriminator (see /api/layout for rationale).
+		const reasonResult = surface === 'empty' ? EmptyReason.safeParse(explicitReason) : null;
+		const reason: EmptyReasonType | undefined = reasonResult?.success ? reasonResult.data : undefined;
+		if (surface === 'empty' && !reason) {
+			return json({ error: "Missing/invalid 'reason' for empty surface" }, { status: 400 });
+		}
+		const cacheSlug = surface === 'empty' ? `empty:${reason}` : categorySlug;
+
 		// ─── Cache check — return instantly ────────────────────────
 		const ph = hashPicks(picksContext);
-		const cached = await getCachedLayout(brandId, persona, categorySlug, ph);
+		const cached = await getCachedLayout(brandId, persona, cacheSlug, ph);
 		if (cached) {
 			const elapsed = Date.now() - startTime;
 
 			logGeneration({
 				type: 'layout',
 				persona,
-				categorySlug,
+				categorySlug: cacheSlug,
 				cacheHit: true,
 				generationTimeMs: elapsed,
 				sessionId,
@@ -57,12 +74,13 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 			return json({
 				layout: cached,
-				meta: { persona, categoryName: categorySlug, productCount: 0, generationTimeMs: elapsed, cacheHit: true },
+				meta: { persona, categoryName: cacheSlug, productCount: 0, generationTimeMs: elapsed, cacheHit: true },
 			});
 		}
 
 		// ─── Cache miss — stream via AI Gateway ───────────────────
-		const result = categorySlug === 'home'
+		// Empty/rescue surfaces source from popular products (loadHomeProducts).
+		const result = surface === 'empty' || categorySlug === 'home'
 			? await loadHomeProducts(persona)
 			: await loadCategoryProducts(categorySlug, persona);
 		if (!result) {
@@ -72,7 +90,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		const { products, categoryName } = result;
 		const rules = await getActiveRules(persona, categorySlug);
 		const rulesContext = rulesToPromptContext(rules);
-		const prompt = buildLayoutPrompt(persona, categoryName, products, picksContext, rulesContext, probabilities);
+		const prompt = buildLayoutPrompt(persona, categoryName, products, picksContext, rulesContext, probabilities, { surface, reason });
 
 		const model = 'anthropic/claude-haiku-4.5';
 
@@ -101,13 +119,13 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 					const elapsed = Date.now() - startTime;
 
 					if (layout) {
-						cacheLayout(brandId, persona, categorySlug, layout, ph).catch(() => {});
+						cacheLayout(brandId, persona, cacheSlug, layout, ph).catch(() => {});
 					}
 
 					logGeneration({
 						type: 'layout',
 						persona,
-						categorySlug,
+						categorySlug: cacheSlug,
 						cacheHit: false,
 						generationTimeMs: elapsed,
 						productCount: products.length,

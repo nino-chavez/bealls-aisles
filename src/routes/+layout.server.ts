@@ -18,6 +18,13 @@ export const load: LayoutServerLoad = async ({ url, cookies }) => {
 		? `FREE SHIPPING when you spend $${(freeShippingThreshold / 100).toFixed(0)}+`
 		: null;
 
+	// Surface a server-side persona hint so client-only routes (+error.svelte,
+	// empty-state rescues in CartDrawer/PicksTray) can call /api/layout with
+	// a sensible persona. The aisles_persona cookie is httpOnly by default,
+	// so without this hint the client cannot read it. Default to 'gatherer'
+	// (the cold-start prior) when no cookie is set.
+	const personaHint = cookies.get('aisles_persona') || 'gatherer';
+
 	return {
 		brand: {
 			id: brand.id,
@@ -30,5 +37,6 @@ export const load: LayoutServerLoad = async ({ url, cookies }) => {
 			shippingPromo,
 		},
 		devMode,
+		personaHint,
 	};
 };
