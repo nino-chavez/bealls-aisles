@@ -75,7 +75,7 @@ BRD §6 specifies a walk-through cadence (quarterly product review, monthly engi
 
 **Affects:** RISK-07 mitigation (vanity demo).
 
-**Status:** open. Project lead to identify and confirm sponsors per audience.
+**Status:** open. **Proposed resolution path (2026-05-01):** sponsor pitch 1-pagers authored at [`../strategic/walkthroughs/sponsor-pitches/`](../strategic/walkthroughs/sponsor-pitches/) — one per audience, anchored on the existing STORY walk-throughs and asking for 25–40 min + a written bring-back. Project lead circulates these to identify and confirm sponsors per audience. Status remains open until (a) one sponsor confirmed per audience and (b) one cold run lands per audience under [`../strategic/walkthroughs/runs/`](../strategic/walkthroughs/runs/). Self-runs do not count toward closure.
 
 ---
 
