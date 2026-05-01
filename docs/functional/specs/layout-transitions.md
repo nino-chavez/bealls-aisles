@@ -168,7 +168,7 @@ The current pill (`fixed bottom-20 left-6`) should remain as a subtle confirmati
 
 ## Connection to the Feed Model
 
-The transition animations reinforce the "Products as Content" feed model (see `docs/product-vision.md`). In a streaming feed, content tiles don't appear all at once — they load progressively as the user scrolls or as the feed algorithm prepares them. The section-by-section fade-in mirrors this pattern and makes the category page feel like a living feed rather than a static page that was generated and delivered.
+The transition animations reinforce the "Products as Content" feed model (see `docs/strategic/NORTH-STAR.md`). In a streaming feed, content tiles don't appear all at once — they load progressively as the user scrolls or as the feed algorithm prepares them. The section-by-section fade-in mirrors this pattern and makes the category page feel like a living feed rather than a static page that was generated and delivered.
 
 The persona shift swap (Level 3) is the commerce equivalent of a feed refresh — the content reorganizes because the algorithm learned something new about you. The animation communicates "the store is paying attention" without being intrusive.
 
@@ -176,7 +176,7 @@ The persona shift swap (Level 3) is the commerce equivalent of a feed refresh �
 
 ## Digital Pacing: Feed Length Affects Transition Design
 
-The "Products as Content" model introduces persona-specific pacing (see `docs/product-vision.md`, "Digital Pacing" section). Feed length varies by persona — a hunter sees 8-12 products in a dense grid; a gatherer scrolls through 24+ with editorial breaks. This affects how transitions should behave:
+The "Products as Content" model introduces persona-specific pacing (see `docs/strategic/NORTH-STAR.md`, "Digital Pacing" section). Feed length varies by persona — a hunter sees 8-12 products in a dense grid; a gatherer scrolls through 24+ with editorial breaks. This affects how transitions should behave:
 
 - **Hunter layouts** are short. All sections arrive quickly via the stream. The fade-in cascade (Level 1) completes in under 2 seconds. No progressive loading needed — the page feels "done" almost immediately.
 - **Gatherer layouts** are longer. The fade-in cascade should pace itself — editorial breaks between product rows create natural rest points where the next section can appear as the shopper scrolls. Consider triggering section fade-in on scroll-into-viewport rather than on stream arrival, so sections above the fold appear immediately while below-fold sections animate in as the shopper reaches them.
@@ -203,5 +203,5 @@ Level 1 should ship first. It transforms the loading experience from "wait → s
 - `src/lib/components/layouts/LayoutSkeleton.svelte` — current skeleton component
 - `src/routes/category/[slug]/+page.svelte` — SSE consumption and layout state management
 - `src/routes/api/layout/stream/+server.ts` — SSE streaming endpoint
-- `docs/product-vision.md` — "Products as Content" feed model, design principles
-- `docs/architecture.md` — layout generation pipeline
+- `docs/strategic/NORTH-STAR.md` — "Products as Content" feed model, design principles
+- `docs/architecture/ARCHITECTURE.md` — layout generation pipeline

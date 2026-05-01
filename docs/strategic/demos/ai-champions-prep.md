@@ -2,7 +2,7 @@
 
 **Audience**: Technical internal AI evangelists. They've built things with LLMs. They will push hardest on the parts of the demo that sound too clean.
 
-**Companion doc**: `docs/demo-script.md` (the talk track). This doc is for Q&A and recovery.
+**Companion doc**: `docs/strategic/demos/script.md` (the talk track). This doc is for Q&A and recovery.
 
 ---
 
@@ -31,7 +31,7 @@
 | Brand config line count | ~150 lines per brand | `src/lib/brand/config.ts` |
 | Production cache hit rate (projected) | 80%+ category, 0% refine | Aspirational, say so |
 | Current personas | 4 (gatherer, hunter, researcher, gifter) | |
-| Inference rules active | 27 | `docs/signals-and-inference.md` |
+| Inference rules active | 27 | `docs/architecture/engine/signals-and-inference.md` |
 
 **If you forget the cost numbers**, say *"under a penny per generation, fractions of a cent on cache hits."*
 
@@ -39,7 +39,7 @@
 
 ## Demo flow — 30-second reminders per step
 
-Full version in `docs/demo-script.md`. This is the "don't forget to say" list.
+Full version in `docs/strategic/demos/script.md`. This is the "don't forget to say" list.
 
 **Step 1 — Haven home**. Point to the editorial header. *"This was written by an AI, not a copywriter."* Don't skip the hero product placement.
 

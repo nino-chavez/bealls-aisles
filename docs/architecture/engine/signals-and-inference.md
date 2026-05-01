@@ -410,6 +410,6 @@ The LR fitting pipeline only uses high-confidence labeled sessions (explicit int
 - `src/lib/signals/emitter.ts` — client-side signal emission
 - `src/lib/signals/request.ts` — server-side signal extraction
 - `src/lib/server/layout-prompt.ts` — how inference output feeds layout generation
-- `docs/architecture.md` — system-level data flow
-- `docs/observe.md` — how to observe inference in real time
-- `docs/development.md` — debugging inference during development
+- `docs/architecture/ARCHITECTURE.md` — system-level data flow
+- `docs/architecture/observability.md` — how to observe inference in real time
+- `docs/developer/development.md` — debugging inference during development

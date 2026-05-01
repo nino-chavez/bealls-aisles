@@ -10,3 +10,4 @@ dist
 .playwright-mcp/
 validation/
 .env*.local
+**/.DS_Store

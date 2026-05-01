@@ -7,7 +7,7 @@
 
 ## Purpose
 
-In the "Products as Content" feed model (see `docs/product-vision.md`), the purchase funnel — awareness, consideration, conversion — collapses into a single continuous experience. The category page is a For You page. Products are content tiles. The inference engine detects intent in real time. Every element of the commerce experience should respond to that intent.
+In the "Products as Content" feed model (see `docs/strategic/NORTH-STAR.md`), the purchase funnel — awareness, consideration, conversion — collapses into a single continuous experience. The category page is a For You page. Products are content tiles. The inference engine detects intent in real time. Every element of the commerce experience should respond to that intent.
 
 The current Aisles implementation uses inference output to drive layout generation only. This spec extends inference reach across the **entire funnel** — from product discovery through checkout — identifying eight categories of funnel compression, each with persona-specific behavior.
 
@@ -563,7 +563,7 @@ The client-side handler for `aisles-inference-update` events extends to render `
 
 ## The Data Quality Principle
 
-> Data quality is a background loop, not a rendering gate. See "Speed Over Accuracy: The Fail-Fast Principle" in `docs/product-vision.md`.
+> Data quality is a background loop, not a rendering gate. See "Speed Over Accuracy: The Fail-Fast Principle" in `docs/strategic/NORTH-STAR.md`.
 
 Every feature in this spec follows the same degradation pattern:
 
@@ -634,12 +634,12 @@ The following areas need additional research before features can be fully specif
 
 ## Related Documentation
 
-- `docs/signals-and-inference.md` — signal types, inference rules, and modifier system
-- `docs/specs/behavioral-signals.md` — behavioral signal expansion (provides the triggers)
-- `docs/specs/layout-transitions.md` — layout transition animations
-- `docs/architecture.md` — system architecture and data flow
-- `docs/product-vision.md` — strategic context, feed model, funnel compression
-- `docs/fractal-interface-evaluation.md` — hyper-personalization research and trade-offs
-- `docs/decisions/001-enrichment-vs-feedonomics.md` — enrichment pipeline vs. Feedonomics
-- `docs/specs/aisles-admin.md` — merchandising rules and admin controls
+- `docs/architecture/engine/signals-and-inference.md` — signal types, inference rules, and modifier system
+- `docs/functional/specs/behavioral-signals.md` — behavioral signal expansion (provides the triggers)
+- `docs/functional/specs/layout-transitions.md` — layout transition animations
+- `docs/architecture/ARCHITECTURE.md` — system architecture and data flow
+- `docs/strategic/NORTH-STAR.md` — strategic context, feed model, funnel compression
+- `docs/architecture/engine/fractal-interface-evaluation.md` — hyper-personalization research and trade-offs
+- `docs/architecture/decisions/001-enrichment-vs-feedonomics.md` — enrichment pipeline vs. Feedonomics
+- `docs/functional/specs/aisles-admin.md` — merchandising rules and admin controls
 - `specchain/product/north-star.md` — aspirational platform capabilities

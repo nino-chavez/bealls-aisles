@@ -532,7 +532,7 @@ The following ideas were considered and set aside:
 
 **Mouse tracking / heatmaps**: Captures too much noise. The inference engine should respond to intent signals, not cursor positions. Dwell time via IntersectionObserver is a proxy that captures engagement without the instrumentation overhead.
 
-**Explicit persona declaration** ("Tell us what you're looking for"): Contradicts the product philosophy of invisible personalization. Declared preferences are less reliable than behavioral signals. See `docs/product-vision.md`.
+**Explicit persona declaration** ("Tell us what you're looking for"): Contradicts the product philosophy of invisible personalization. Declared preferences are less reliable than behavioral signals. See `docs/strategic/NORTH-STAR.md`.
 
 **Per-product refinement message analysis**: Analyzing refinement message text to extract product preferences is possible but belongs to a separate enrichment/recommendation layer, not to the session inference engine.
 
@@ -540,8 +540,8 @@ The following ideas were considered and set aside:
 
 ## Related Documentation
 
-- `docs/signals-and-inference.md` — current signal and rule catalog
-- `docs/product-vision.md` — streaming platform inspiration, competitive context
+- `docs/architecture/engine/signals-and-inference.md` — current signal and rule catalog
+- `docs/strategic/NORTH-STAR.md` — streaming platform inspiration, competitive context
 - `src/lib/signals/types.ts` — signal type definitions
 - `src/lib/signals/inference.ts` — rule implementations
 - `src/lib/signals/store.ts` — `toInferenceContext()` (the bottleneck to update)

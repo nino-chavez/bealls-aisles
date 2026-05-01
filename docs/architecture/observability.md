@@ -122,7 +122,7 @@ For a typical demo session (5–10 category views, a search, and a refinement), 
 
 ### Panel 3a: Schema Validation Health Metric
 
-A top-level health indicator tracking the percentage of LLM calls that produce schema-valid outputs on the first try. This is the operational measurement of the core correctness invariant (`∀I, ∀P, f(I, P) → S ∈ V`) — see `docs/decisions/004-vocabulary-constraint-invariant.md`.
+A top-level health indicator tracking the percentage of LLM calls that produce schema-valid outputs on the first try. This is the operational measurement of the core correctness invariant (`∀I, ∀P, f(I, P) → S ∈ V`) — see `docs/architecture/decisions/004-vocabulary-constraint-invariant.md`.
 
 **The metric**: first-try validation success rate, computed as `(generations validated on Haiku first try) / (total generations excluding cache hits)`, over a rolling 1-hour window.
 
@@ -191,7 +191,7 @@ The dashboard polls two endpoints every 2 seconds:
 - `GET /api/observe/session?id={sessionId}&key=aisles-observe`
 - `GET /api/observe/logs?limit=20&session={sessionId}&key=aisles-observe`
 
-This is intentionally simple — no WebSockets, no SSE, no pub/sub infrastructure. For demo sessions with low event volumes, 2-second polling latency is imperceptible to the audience. See `docs/decisions/observe-dashboard.md` (inline in `docs/specs/observe-dashboard.md`) for the full rationale.
+This is intentionally simple — no WebSockets, no SSE, no pub/sub infrastructure. For demo sessions with low event volumes, 2-second polling latency is imperceptible to the audience. See `docs/architecture/decisions/observe-dashboard.md` (inline in `docs/functional/specs/observe-dashboard.md`) for the full rationale.
 
 ---
 

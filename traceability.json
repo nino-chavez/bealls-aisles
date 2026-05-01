@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "updated": "2026-04-30",
+  "description": "Trace ID registry for Aisles. Every PRD requirement gets a trace ID. BRD stories and ADRs cite trace IDs they fulfill or affect.",
+  "id_format": "PRD-<LAYER>-<NNN>",
+  "layers": ["ENG", "FND", "ADM", "XLAYER"],
+  "next_ids": {
+    "ENG": 1,
+    "FND": 1,
+    "ADM": 1,
+    "XLAYER": 1
+  },
+  "registry": []
+}

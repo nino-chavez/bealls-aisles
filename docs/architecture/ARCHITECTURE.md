@@ -1,10 +1,70 @@
-# Aisles — Architecture Overview
+# Aisles — Architecture (Capability-level)
 
-**Version**: 0.1.0
-**Last Updated**: 2026-04-06
-**Audience**: Developers, Technical Stakeholders
+**Version**: 0.3.0
+**Last Updated**: 2026-04-30
+**Audience**: Engineers, technical leadership
 
-## Overview
+> **Note**: this doc was reframed for the three-layer architecture on 2026-04-30. The pre-restructure overview (v0.1.0) is preserved below from §"Legacy overview" onward. The §"Three-layer architecture" section below it is the new canonical framing; subsequent docs (PRD, BRD, ADRs) trace to the three-layer model.
+
+---
+
+## Three-layer architecture
+
+```
+┌───────────────────────────────────────────────────────────────────┐
+│                  AISLES-ADMIN (control plane)                     │
+│  Merchant authoring · rule library · A/B · observability · CMS    │
+│                  (separate deployment, BC marketplace app)        │
+└──────────┬──────────────────────────────────┬─────────────────────┘
+           │ writes rules / content           │ reads telemetry
+           ▼                                  ▲
+┌───────────────────────────────────────────────────────────────────┐
+│                       AISLES ENGINE                               │
+│   Persona inference · signal pipeline · prompt construction       │
+│   AI composition (per-surface, per-mode, per-state schemas)       │
+│   Layout cache (Upstash) · enrichment store (Neon Postgres)       │
+└──────────┬──────────────────────────────────┬─────────────────────┘
+           │ composed layouts (JSON)          │ events / signals
+           ▼                                  ▲
+┌───────────────────────────────────────────────────────────────────┐
+│                    ECOMM APP FOUNDATION                           │
+│  Catalog (BigCommerce GraphQL) · Cart · Checkout · Account        │
+│  Search · Locator · Static templates · Renderer                   │
+│              (SvelteKit + Vercel deployment)                      │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+### Layer responsibilities
+
+**Engine.** Receives request context (URL surface, persona signals, picks, rules). Selects surface-typed schema and prompt. Calls AI Gateway (Haiku 4.5 primary, Sonnet 4.6 fallback). Validates output against schema. Returns composed layout JSON to the foundation renderer. Caches by `(brandId, surface, persona, picks-hash, rule-version)`.
+
+**Foundation.** Renders composed layouts via the component library. Owns runtime state primitives the engine never composes: cart, checkout flow, account, search results, locator. Owns static templates: PDP gallery scaffold, checkout step structure, account dashboard frame. Surfaces signals upstream (page view, dwell, picks, cart events) for the engine's inference.
+
+**Admin.** Lives in `aisles-admin` repo (separate deployment). Authors merchant rules (promo, BOPIS, brand-spotlight cadence) consumed by the engine. Reads telemetry (cache hit rates, generation latency, persona distribution) from the engine. Authors static content (CMS-style) consumed by the foundation.
+
+### Cross-layer contracts
+
+> _to be authored. Each contract names: what flows, in which direction, with what schema, and what the failure mode is._
+>
+> - **Engine ↔ Foundation:** layout JSON contract, signal event contract.
+> - **Admin ↔ Engine:** rule schema contract, telemetry export contract.
+> - **Admin ↔ Foundation:** content authoring contract, static template variants.
+
+### Detail docs
+
+- `engine/composition-taxonomy.md` — block catalog and surface × block matrix
+- `engine/signals-and-inference.md` — persona inference engine
+- `engine/fractal-interface-evaluation.md` — composition philosophy
+- `multi-brand.md` — brand isolation across the engine
+- `observability.md` — observe dashboard
+- `decisions/README.md` — ADR index
+- `../functional/specs/aisles-admin.md` — admin layer spec
+
+---
+
+## Legacy overview (v0.1.0, 2026-04-06)
+
+> _Preserved for trace continuity. Superseded by the three-layer framing above._
 
 Aisles is an AI-native headless storefront platform that personalizes the shopping experience in real time. A persona inference engine reads client signals, computes a probability distribution across four shopper archetypes, and feeds that distribution directly into AI layout generation. The result is a category page that reorganizes itself for each visitor — editorially for a browser, functionally for a buyer.
 
@@ -28,7 +88,7 @@ This is the invariant that makes AI-generated UI work in production rather than 
 2. **Structured LLM output**: the Vercel AI SDK passes the schema to the LLM as a token-generation constraint via `generateObject` / `streamObject`, producing schema-compliant outputs by construction
 3. **Fallback cascade**: Haiku → Sonnet → static Svelte layouts guarantee a valid S always exists, even under model failure
 
-Every other subsystem in Aisles — the inference loop, the cache, the Observe dashboard, the signal pipeline — depends on this invariant holding. See `docs/decisions/004-vocabulary-constraint-invariant.md` for the full rationale, the operational consequences (schema validation success rate as a health metric, vocabulary evolution process, cache invalidation), and the trade-off between vocabulary size and invariant strength.
+Every other subsystem in Aisles — the inference loop, the cache, the Observe dashboard, the signal pipeline — depends on this invariant holding. See `docs/architecture/decisions/004-vocabulary-constraint-invariant.md` for the full rationale, the operational consequences (schema validation success rate as a health metric, vocabulary evolution process, cache invalidation), and the trade-off between vocabulary size and invariant strength.
 
 ---
 
@@ -197,20 +257,20 @@ Two layers of caching reduce cost and latency:
 - Cache hit: sub-100ms response, no AI call
 - Cache miss: 2–15s generation, then cached for subsequent visitors
 - Invalidated manually or after enrichment runs
-- Design stance: serve stale-but-fast over fresh-but-slow. A recoverable wrong answer (cached layout for a slightly drifted persona) beats a delayed right answer. See "Speed Over Accuracy" in `docs/product-vision.md`.
+- Design stance: serve stale-but-fast over fresh-but-slow. A recoverable wrong answer (cached layout for a slightly drifted persona) beats a delayed right answer. See "Speed Over Accuracy" in `docs/strategic/NORTH-STAR.md`.
 
 **Session store (Redis, `aisles:session:{sessionId}`)**
 - 30-minute TTL, sliding
 - In-memory hot cache per function instance for zero-latency reads
 - Falls back to in-memory only if Redis is not configured
 
-**Why not prerender?** Category pages are persona-dependent — the same URL renders four different layouts. Prerendering would bake one persona into static HTML. See `docs/decisions/003-prerender-vs-cache-warming.md`.
+**Why not prerender?** Category pages are persona-dependent — the same URL renders four different layouts. Prerendering would bake one persona into static HTML. See `docs/architecture/decisions/003-prerender-vs-cache-warming.md`.
 
 ---
 
 ## Multi-Brand Architecture
 
-See `docs/multi-brand.md` for the full setup guide.
+See `docs/architecture/multi-brand.md` for the full setup guide.
 
 In brief: `BRAND_ID` (or `VITE_BRAND_ID` in the browser context) selects the active brand from `src/lib/brand/config.ts`. The brand config drives:
 - BigCommerce channel ID and category prefix
@@ -246,7 +306,7 @@ Current pipeline:
 
 ### Planned Data Flow (Post-Expansion)
 
-The behavioral signal expansion (see `docs/specs/behavioral-signals.md`) will add feedback loops at three levels:
+The behavioral signal expansion (see `docs/functional/specs/behavioral-signals.md`) will add feedback loops at three levels:
 
 ```
 Expanded pipeline:
@@ -290,22 +350,22 @@ The expansion is modeled on behavioral personalization lessons from Netflix, Spo
 - **Session context matters** (Hulu grazing vs. committing): session arc modeling tracks trajectory, not just instantaneous state
 - **Full probability vectors, not categories** (continuous embeddings): Phase 4 passes `PersonaProbabilities` to layout generation to enable blended layouts for ambiguous sessions
 
-See `docs/product-vision.md` for the extended analysis and `docs/specs/behavioral-signals.md` for the implementation spec.
+See `docs/strategic/NORTH-STAR.md` for the extended analysis and `docs/functional/specs/behavioral-signals.md` for the implementation spec.
 
 ---
 
 ## Related Documentation
 
-- `docs/multi-brand.md` — adding and configuring brands
-- `docs/api-reference.md` — all API endpoints
-- `docs/observe.md` — Observe dashboard for demos
-- `docs/development.md` — local setup and tooling
-- `docs/signals-and-inference.md` — complete signal and rule catalog
-- `docs/specs/behavioral-signals.md` — signal expansion implementation spec
-- `docs/product-vision.md` — product mission and streaming platform inspiration
-- `docs/specs/intent-driven-commerce.md` — intent-driven commerce features (incentives, alternatives, cross-sells)
-- `docs/specs/layout-transitions.md` — layout transition animations (section fade-in, skeleton morph, persona shift swap)
-- `docs/decisions/001-enrichment-vs-feedonomics.md`
-- `docs/decisions/002-streaming-layout-generation.md`
-- `docs/decisions/003-prerender-vs-cache-warming.md`
-- `docs/decisions/004-vocabulary-constraint-invariant.md` — the core correctness invariant and its enforcement
+- `docs/architecture/multi-brand.md` — adding and configuring brands
+- `docs/developer/api-reference.md` — all API endpoints
+- `docs/architecture/observability.md` — Observe dashboard for demos
+- `docs/developer/development.md` — local setup and tooling
+- `docs/architecture/engine/signals-and-inference.md` — complete signal and rule catalog
+- `docs/functional/specs/behavioral-signals.md` — signal expansion implementation spec
+- `docs/strategic/NORTH-STAR.md` — product mission and streaming platform inspiration
+- `docs/functional/specs/intent-driven-commerce.md` — intent-driven commerce features (incentives, alternatives, cross-sells)
+- `docs/functional/specs/layout-transitions.md` — layout transition animations (section fade-in, skeleton morph, persona shift swap)
+- `docs/architecture/decisions/001-enrichment-vs-feedonomics.md`
+- `docs/architecture/decisions/002-streaming-layout-generation.md`
+- `docs/architecture/decisions/003-prerender-vs-cache-warming.md`
+- `docs/architecture/decisions/004-vocabulary-constraint-invariant.md` — the core correctness invariant and its enforcement

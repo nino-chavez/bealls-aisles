@@ -129,7 +129,7 @@ Roughly net-neutral on cost. **Substantially better demo value** and **respects 
 
 ### ADR
 
-Captured as a permanent architectural decision: `docs/decisions/005-storefront-vs-content-modes.md`.
+Captured as a permanent architectural decision: `docs/architecture/decisions/005-storefront-vs-content-modes.md`.
 
 ## Schema additions confirmed by this audit
 

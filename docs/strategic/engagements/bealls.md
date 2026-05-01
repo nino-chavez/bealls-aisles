@@ -130,7 +130,7 @@ Same persona inference engine, same layout AI, same brand-config router — diff
 
 This dissolves the operational-restrictions caveat entirely (no implied fulfillment HomeCentric may not have) and matches HomeCentric's real posture. It also unlocks a cross-banner persona-continuity demo: a *gatherer* on `homecentric.com` browses bedroom inspiration → switches to `bealls.com` via brand strip → sees bedding products on sale, same persona maintained. The engine is identical.
 
-**Net effort delta vs the synthesize-online approach**: roughly net-neutral (~+0.4 d human / +0.1 d agent). The HomeCentric catalog scrape (~1 day saved) is replaced by platform mode capability (~1.4 d added: mode flag, mode-aware schema, content-mode CTA routing, curated content items model). **The mode flag is a permanent platform capability**, reusable beyond this engagement. ADR: `docs/decisions/005-storefront-vs-content-modes.md`.
+**Net effort delta vs the synthesize-online approach**: roughly net-neutral (~+0.4 d human / +0.1 d agent). The HomeCentric catalog scrape (~1 day saved) is replaced by platform mode capability (~1.4 d added: mode flag, mode-aware schema, content-mode CTA routing, curated content items model). **The mode flag is a permanent platform capability**, reusable beyond this engagement. ADR: `docs/architecture/decisions/005-storefront-vs-content-modes.md`.
 
 **Phase 1 actuals** (preliminary, agent-assisted):
 
@@ -219,7 +219,7 @@ Run the existing enrichment pipeline against each new BC channel. Sonnet generat
 
 ### Phase 6 — Three Vercel projects + envs (~½ day)
 
-Same git repo, three Vercel projects, three sets of env vars (`BRAND_ID`, `BC_CHANNEL_ID`, `STOREFRONT_TOKEN`, shared Redis + Neon). Already documented in `docs/multi-brand.md`.
+Same git repo, three Vercel projects, three sets of env vars (`BRAND_ID`, `BC_CHANNEL_ID`, `STOREFRONT_TOKEN`, shared Redis + Neon). Already documented in `docs/architecture/multi-brand.md`.
 
 ### Phase 7 — Demo polish (~1–2 days)
 
@@ -334,7 +334,7 @@ _TBD — phases where supervision, judgment, or wall-clock costs ate the savings
 
 ## Related docs
 
-- `docs/architecture.md` — platform architecture, the V invariant, signal pipeline
-- `docs/multi-brand.md` — adding a new brand (config, BC channel, Vercel project)
-- `docs/decisions/004-vocabulary-constraint-invariant.md` — why the schema is the contract
-- `docs/specs/behavioral-signals.md` — signal pipeline expansion roadmap
+- `docs/architecture/ARCHITECTURE.md` — platform architecture, the V invariant, signal pipeline
+- `docs/architecture/multi-brand.md` — adding a new brand (config, BC channel, Vercel project)
+- `docs/architecture/decisions/004-vocabulary-constraint-invariant.md` — why the schema is the contract
+- `docs/functional/specs/behavioral-signals.md` — signal pipeline expansion roadmap

@@ -117,7 +117,7 @@ The vocabulary evolution process:
 
 This process is mandatory for every V change. Skipping any step risks a production regression.
 
-**Current state**: no documented process. Schema changes are made ad-hoc. The intent-driven commerce spec (`docs/specs/intent-driven-commerce.md`) proposes ten new component types, every one of which would be a V expansion that needs to go through this process. Without a documented process, adding these components will silently degrade system reliability.
+**Current state**: no documented process. Schema changes are made ad-hoc. The intent-driven commerce spec (`docs/functional/specs/intent-driven-commerce.md`) proposes ten new component types, every one of which would be a V expansion that needs to go through this process. Without a documented process, adding these components will silently degrade system reliability.
 
 ### Cache Invalidation on Schema Change
 
@@ -212,15 +212,15 @@ Define a large V (20+ components) but use "soft" validation — accept any outpu
 
 ## Action Items
 
-- [ ] **Add an "Invariant" section to `docs/architecture.md`** as the opening concept, before the tech stack table
-- [ ] **Reference this ADR from `docs/product-vision.md`** in the "invisible to shopper, transparent to operator" principle
+- [ ] **Add an "Invariant" section to `docs/architecture/ARCHITECTURE.md`** as the opening concept, before the tech stack table
+- [ ] **Reference this ADR from `docs/strategic/NORTH-STAR.md`** in the "invisible to shopper, transparent to operator" principle
 - [ ] **Elevate vocabulary constraint in `specchain/product/competitive-moat.md`** as the primary technical moat
-- [ ] **Add schema validation success rate to `docs/observe.md`** as a top-level health metric
+- [ ] **Add schema validation success rate to `docs/architecture/observability.md`** as a top-level health metric
 - [ ] **Implement the validation rate metric** in `generation_logs` and the Observe dashboard API
 - [ ] **Document the vocabulary evolution process** as a required checklist before any V expansion
 - [ ] **Add schema versioning to the layout cache** to handle cache invalidation on V changes
 - [ ] **Stand up visual regression suite** across V × personas × viewports before expanding V for intent-driven commerce components
-- [ ] **Reference this ADR from `docs/specs/intent-driven-commerce.md`** as a prerequisite for component additions
+- [ ] **Reference this ADR from `docs/functional/specs/intent-driven-commerce.md`** as a prerequisite for component additions
 
 ---
 
@@ -229,9 +229,9 @@ Define a large V (20+ components) but use "soft" validation — accept any outpu
 - `src/lib/schema/layout.ts` — the literal definition of V
 - `src/lib/server/layout-prompt.ts` — the prompt construction that guides the AI toward V-compliant outputs
 - `src/routes/api/layout/+server.ts` and `src/routes/api/layout/stream/+server.ts` — the generation pipeline with Haiku → Sonnet fallback
-- `docs/architecture.md` — system architecture (to be updated with the invariant)
-- `docs/product-vision.md` — product vision and design principles
-- `docs/observe.md` — Observe dashboard (to be updated with validation metric)
-- `docs/specs/intent-driven-commerce.md` — proposed V expansion requiring process compliance
-- `docs/fractal-interface-evaluation.md` — the research document that first articulated the formal invariant in the context of non-deterministic UI testing
+- `docs/architecture/ARCHITECTURE.md` — system architecture (to be updated with the invariant)
+- `docs/strategic/NORTH-STAR.md` — product vision and design principles
+- `docs/architecture/observability.md` — Observe dashboard (to be updated with validation metric)
+- `docs/functional/specs/intent-driven-commerce.md` — proposed V expansion requiring process compliance
+- `docs/architecture/engine/fractal-interface-evaluation.md` — the research document that first articulated the formal invariant in the context of non-deterministic UI testing
 - `specchain/product/competitive-moat.md` — strategic positioning (to be updated with elevated moat framing)

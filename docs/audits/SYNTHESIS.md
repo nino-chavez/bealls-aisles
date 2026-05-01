@@ -135,7 +135,7 @@ The delta is small enough that it does not threaten the engagement timeline; the
 - Curate ~12–20 hand-authored content items per banner (store locations, brand pillars, categories, lifestyle scenes). These play the role catalog plays in storefront mode.
 - Effort: covered within the platform mode-work allocation above.
 
-**Captured in ADR**: `docs/decisions/005-storefront-vs-content-modes.md` (created with this revision).
+**Captured in ADR**: `docs/architecture/decisions/005-storefront-vs-content-modes.md` (created with this revision).
 
 ---
 

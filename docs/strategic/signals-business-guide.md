@@ -182,6 +182,6 @@ No. The system operates on anonymous session signals only: search queries, refer
 
 ## Related Documentation
 
-- `docs/signals-and-inference.md` — technical reference for developers
-- `docs/observe.md` — Observe dashboard setup and usage
-- `docs/development.md` — developer debugging guide
+- `docs/architecture/engine/signals-and-inference.md` — technical reference for developers
+- `docs/architecture/observability.md` — Observe dashboard setup and usage
+- `docs/developer/development.md` — developer debugging guide

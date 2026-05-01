@@ -14,7 +14,7 @@ The business user — a merchandiser, brand manager, or growth lead — sees exa
 
 This tension — invisible to the shopper, transparent to the operator — is the product's core design principle.
 
-Transparency is only meaningful if the system's behavior is *explainable*, and explainability is only possible because the AI operates under a formal correctness invariant: every layout the AI produces must be an element of a finite, typed set of valid configurations defined in code. This invariant (`∀I, ∀P, f(I, P) → S ∈ V`) is what makes the Observe dashboard possible — you can surface "which component the AI chose and why" only if the components come from a known vocabulary. Without the vocabulary constraint, the system would be a black box even to its own operators. See `docs/decisions/004-vocabulary-constraint-invariant.md` for the full rationale and enforcement.
+Transparency is only meaningful if the system's behavior is *explainable*, and explainability is only possible because the AI operates under a formal correctness invariant: every layout the AI produces must be an element of a finite, typed set of valid configurations defined in code. This invariant (`∀I, ∀P, f(I, P) → S ∈ V`) is what makes the Observe dashboard possible — you can surface "which component the AI chose and why" only if the components come from a known vocabulary. Without the vocabulary constraint, the system would be a black box even to its own operators. See `docs/architecture/decisions/004-vocabulary-constraint-invariant.md` for the full rationale and enforcement.
 
 ### Speed Over Accuracy: The Fail-Fast Principle
 
@@ -130,7 +130,7 @@ This is not an analogy — it is a structural claim about how the Aisles archite
 | Genre/mood filter | Category + refinement chat | Category routing + `refine.message` signal |
 | Thumbnail A/B test | Persona-driven card presentation | Same product renders as hero (gatherer) or compact card (hunter) |
 | "For You" row | Modular CLP sections | AI selects `editorial-header` vs. `category-header` based on persona |
-| Autoplay next | Cross-sell suggestion | `cross-sell-strip` component (see `docs/specs/intent-driven-commerce.md`) |
+| Autoplay next | Cross-sell suggestion | `cross-sell-strip` component (see `docs/functional/specs/intent-driven-commerce.md`) |
 
 ### Why This Framing Matters
 
@@ -228,7 +228,7 @@ This is not yet implemented but is the natural next step. Without image variatio
 
 ## What Streaming Platforms Teach Us
 
-Aisles draws explicit inspiration from the personalization systems built by Netflix, Spotify, and Hulu. These are not analogies — they are the most rigorous deployed examples of behavioral personalization at scale. The signal expansion work (see `docs/signals-and-inference.md` and `docs/specs/behavioral-signals.md`) is directly motivated by what these platforms learned.
+Aisles draws explicit inspiration from the personalization systems built by Netflix, Spotify, and Hulu. These are not analogies — they are the most rigorous deployed examples of behavioral personalization at scale. The signal expansion work (see `docs/architecture/engine/signals-and-inference.md` and `docs/functional/specs/behavioral-signals.md`) is directly motivated by what these platforms learned.
 
 ### Behavior Beats Declared Intent (Netflix)
 
@@ -390,9 +390,9 @@ This preserves the business legibility of named personas while capturing the con
 
 ## Related Documentation
 
-- `docs/architecture.md` — system architecture and data flow
-- `docs/signals-and-inference.md` — signal types and inference rules in detail
-- `docs/specs/behavioral-signals.md` — implementation spec for signal expansion
-- `docs/multi-brand.md` — brand configuration and setup
+- `docs/architecture/ARCHITECTURE.md` — system architecture and data flow
+- `docs/architecture/engine/signals-and-inference.md` — signal types and inference rules in detail
+- `docs/functional/specs/behavioral-signals.md` — implementation spec for signal expansion
+- `docs/architecture/multi-brand.md` — brand configuration and setup
 - `docs/aisles-admin.md` — BC marketplace admin app (planned)
-- `docs/observe.md` — Observe dashboard for business users and demos
+- `docs/architecture/observability.md` — Observe dashboard for business users and demos

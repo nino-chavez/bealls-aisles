@@ -168,4 +168,4 @@ The `homecentric` brand config will be the first content-mode brand. The `haven`
 - ADR 004 — Vocabulary Constraint Invariant (the V invariant this decision strengthens)
 - `docs/audits/homecentric.md` — site audit that surfaced the operational reality
 - `docs/audits/SYNTHESIS.md` — cross-banner audit synthesis
-- `docs/BEALLS-ENGAGEMENT.md` — engagement plan and frozen estimates
+- `docs/strategic/engagements/bealls.md` — engagement plan and frozen estimates

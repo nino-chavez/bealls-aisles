@@ -386,13 +386,13 @@ npm run check
 
 6. Test the rule with a manual `infer()` call as described above, verifying the rule fires on expected input and returns null on non-matching input.
 
-See `docs/signals-and-inference.md` for the complete list of existing signal types and rules to avoid duplication.
+See `docs/architecture/engine/signals-and-inference.md` for the complete list of existing signal types and rules to avoid duplication.
 
 ---
 
 ## Architecture Decisions
 
-See `docs/decisions/` for records of significant decisions:
+See `docs/architecture/decisions/` for records of significant decisions:
 
 - `001-enrichment-vs-feedonomics.md` — why a custom enrichment pipeline rather than Feedonomics
 - `002-streaming-layout-generation.md` — why streaming was added (and how it works)
