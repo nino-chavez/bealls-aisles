@@ -1,14 +1,487 @@
 {
-  "version": 1,
+  "version": 2,
   "updated": "2026-04-30",
-  "description": "Trace ID registry for Aisles. Every PRD requirement gets a trace ID. BRD stories and ADRs cite trace IDs they fulfill or affect.",
+  "description": "Trace ID registry for Aisles. Each capability in PRD.md has a row here. Each row binds to the source canonical-state doc, the BRD stories that exercise it, ADRs that affect it, and the hypothesis it tests.",
   "id_format": "PRD-<LAYER>-<NNN>",
   "layers": ["ENG", "FND", "ADM", "XLAYER"],
-  "next_ids": {
-    "ENG": 1,
-    "FND": 1,
-    "ADM": 1,
-    "XLAYER": 1
+  "hypotheses": {
+    "H1": "Schema-typed generative composition is production-viable",
+    "H2": "Bundling engine + foundation + admin changes outcomes",
+    "H3": "BC-native packaging reaches merchants our current motion can't"
   },
-  "registry": []
+  "next_ids": {
+    "ENG": 18,
+    "FND": 15,
+    "ADM": 11,
+    "XLAYER": 5
+  },
+  "registry": [
+    {
+      "id": "PRD-ENG-001",
+      "capability": "Schema-typed AI layout output enforced by V invariant",
+      "layer": "engine",
+      "hypotheses": ["H1"],
+      "status": "demonstrated",
+      "stories": ["STORY-006"],
+      "adrs": ["004-vocabulary-constraint-invariant"],
+      "companion": ["PRD-XLAYER-001"]
+    },
+    {
+      "id": "PRD-ENG-002",
+      "capability": "4-persona probability vector inference",
+      "layer": "engine",
+      "hypotheses": ["H1"],
+      "status": "demonstrated",
+      "stories": ["STORY-001"],
+      "adrs": [],
+      "companion": ["PRD-ENG-002"]
+    },
+    {
+      "id": "PRD-ENG-003",
+      "capability": "Multi-brand isolation via single codebase + BRAND_ID",
+      "layer": "engine",
+      "hypotheses": ["H2", "H3"],
+      "status": "demonstrated",
+      "stories": ["STORY-008", "STORY-013"],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-ENG-004",
+      "capability": "Layout cache keyed on (brandId, surface, persona, picksHash)",
+      "layer": "engine",
+      "hypotheses": ["H1"],
+      "status": "demonstrated",
+      "stories": ["STORY-007"],
+      "adrs": ["003-prerender-vs-cache-warming"],
+      "companion": []
+    },
+    {
+      "id": "PRD-ENG-005",
+      "capability": "Streaming layout generation (SSE)",
+      "layer": "engine",
+      "hypotheses": ["H1"],
+      "status": "demonstrated",
+      "stories": [],
+      "adrs": ["002-streaming-layout-generation"],
+      "companion": []
+    },
+    {
+      "id": "PRD-ENG-006",
+      "capability": "Storefront vs. content brand-mode split",
+      "layer": "engine",
+      "hypotheses": ["H2"],
+      "status": "demonstrated",
+      "stories": ["STORY-003", "STORY-015", "STORY-021"],
+      "adrs": ["005-storefront-vs-content-modes"],
+      "companion": ["PRD-ENG-006"]
+    },
+    {
+      "id": "PRD-ENG-007",
+      "capability": "AI Gateway model fallback cascade",
+      "layer": "engine",
+      "hypotheses": ["H1"],
+      "status": "demonstrated",
+      "stories": ["STORY-006", "STORY-011"],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-ENG-008",
+      "capability": "AI-composed homepage with persona-aware section selection",
+      "layer": "engine",
+      "hypotheses": ["H1", "H2"],
+      "status": "demonstrated",
+      "stories": ["STORY-001", "STORY-002", "STORY-014", "STORY-018", "STORY-019"],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-ENG-009",
+      "capability": "AI-composed PLP with persona-aware section selection",
+      "layer": "engine",
+      "hypotheses": ["H1"],
+      "status": "demonstrated",
+      "stories": ["STORY-001", "STORY-002", "STORY-014"],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-ENG-010",
+      "capability": "Refinement chat — natural-language layout override",
+      "layer": "engine",
+      "hypotheses": ["H1"],
+      "status": "demonstrated",
+      "stories": ["STORY-004"],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-ENG-011",
+      "capability": "Product enrichment with persona-fit scoring",
+      "layer": "engine",
+      "hypotheses": ["H1"],
+      "status": "demonstrated",
+      "stories": [],
+      "adrs": ["001-enrichment-vs-feedonomics"],
+      "companion": []
+    },
+    {
+      "id": "PRD-ENG-012",
+      "capability": "Constrained AI URL/image generation (no hallucination)",
+      "layer": "engine",
+      "hypotheses": ["H1"],
+      "status": "demonstrated",
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-ENG-013",
+      "capability": "Surface-typed schemas (split LayoutSchema → 6)",
+      "layer": "engine",
+      "hypotheses": ["H1"],
+      "status": "building",
+      "phase": 3,
+      "stories": ["STORY-010"],
+      "adrs": [],
+      "companion": ["PRD-ENG-013"]
+    },
+    {
+      "id": "PRD-ENG-014",
+      "capability": "PDP composition with fixed scaffold + named insertion zones",
+      "layer": "engine",
+      "hypotheses": ["H1"],
+      "status": "planned",
+      "phase": 3,
+      "stories": ["STORY-010"],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-ENG-015",
+      "capability": "Cart composition with last-chance upsell + free-shipping-meter",
+      "layer": "engine",
+      "hypotheses": ["H1", "H2"],
+      "status": "planned",
+      "phase": 3,
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-ENG-016",
+      "capability": "Checkout composition (very narrow latitude)",
+      "layer": "engine",
+      "hypotheses": ["H1"],
+      "status": "planned",
+      "phase": 3,
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-ENG-017",
+      "capability": "BOPIS strip composition with proximity awareness",
+      "layer": "engine",
+      "hypotheses": ["H2", "H3"],
+      "status": "planned",
+      "phase": 6,
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-FND-001",
+      "capability": "BigCommerce GraphQL Storefront catalog adapter",
+      "layer": "foundation",
+      "hypotheses": ["H3"],
+      "status": "demonstrated",
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-FND-002",
+      "capability": "Multi-brand routing per Vercel project",
+      "layer": "foundation",
+      "hypotheses": ["H2", "H3"],
+      "status": "demonstrated",
+      "stories": ["STORY-008"],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-FND-003",
+      "capability": "Cart state primitive (session-scoped)",
+      "layer": "foundation",
+      "hypotheses": ["H2"],
+      "status": "demonstrated",
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-FND-004",
+      "capability": "Picks / wishlist primitive",
+      "layer": "foundation",
+      "hypotheses": ["H2"],
+      "status": "demonstrated",
+      "stories": ["STORY-020"],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-FND-005",
+      "capability": "Brand-strip cross-banner navigation",
+      "layer": "foundation",
+      "hypotheses": ["H2", "H3"],
+      "status": "demonstrated",
+      "stories": ["STORY-013"],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-FND-006",
+      "capability": "Photographic editorial hero with brand-specific imagery",
+      "layer": "foundation",
+      "hypotheses": ["H2"],
+      "status": "demonstrated",
+      "stories": ["STORY-018"],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-FND-007",
+      "capability": "Static fallback layouts when AI fails",
+      "layer": "foundation",
+      "hypotheses": ["H1", "H2"],
+      "status": "demonstrated",
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-FND-008",
+      "capability": "Prominent AI-building loading state",
+      "layer": "foundation",
+      "hypotheses": ["H1"],
+      "status": "demonstrated",
+      "stories": ["STORY-018"],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-FND-009",
+      "capability": "Account dashboard (orders / addresses / loyalty)",
+      "layer": "foundation",
+      "hypotheses": ["H2"],
+      "status": "planned",
+      "phase": 1,
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-FND-010",
+      "capability": "Real checkout via BC Optimized One-Page handoff",
+      "layer": "foundation",
+      "hypotheses": ["H2", "H3"],
+      "status": "planned",
+      "phase": 1,
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-FND-011",
+      "capability": "Search results page with facets",
+      "layer": "foundation",
+      "hypotheses": ["H2"],
+      "status": "planned",
+      "phase": 1,
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-FND-012",
+      "capability": "Branded 404 / empty-state pages",
+      "layer": "foundation",
+      "hypotheses": ["H1", "H2"],
+      "status": "planned",
+      "phase": 1,
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-FND-013",
+      "capability": "Section authoring model — named insertion zones",
+      "layer": "foundation",
+      "hypotheses": ["H2"],
+      "status": "planned",
+      "phase": 2,
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-FND-014",
+      "capability": "Store locator with BOPIS data",
+      "layer": "foundation",
+      "hypotheses": ["H2", "H3"],
+      "status": "planned",
+      "phase": 6,
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-ADM-001",
+      "capability": "Generation log",
+      "layer": "admin",
+      "hypotheses": ["H1"],
+      "status": "demonstrated",
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-ADM-002",
+      "capability": "Observe dashboard (operational telemetry)",
+      "layer": "admin",
+      "hypotheses": ["H1"],
+      "status": "demonstrated-upstream",
+      "note": "shipped in aisles-storefront upstream; pending in bealls-aisles fork",
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-ADM-003",
+      "capability": "Decisions Inspector (primary admin daily-driver)",
+      "layer": "admin",
+      "hypotheses": ["H1"],
+      "status": "building",
+      "phase": 4,
+      "stories": ["STORY-005", "STORY-012"],
+      "adrs": [],
+      "companion": ["PRD-ADM-003"]
+    },
+    {
+      "id": "PRD-ADM-004",
+      "capability": "Per-decision audit trail with explainability",
+      "layer": "admin",
+      "hypotheses": ["H1"],
+      "status": "building",
+      "phase": 4,
+      "stories": ["STORY-005", "STORY-012"],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-ADM-005",
+      "capability": "Brand voice editor",
+      "layer": "admin",
+      "hypotheses": ["H2"],
+      "status": "planned",
+      "stories": ["STORY-019"],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-ADM-006",
+      "capability": "Persona-fit overrides per product",
+      "layer": "admin",
+      "hypotheses": ["H2"],
+      "status": "planned",
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-ADM-007",
+      "capability": "Rule weight tuning per channel",
+      "layer": "admin",
+      "hypotheses": ["H2"],
+      "status": "planned",
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-ADM-008",
+      "capability": "Cache invalidation on demand",
+      "layer": "admin",
+      "hypotheses": ["H2"],
+      "status": "planned",
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-ADM-009",
+      "capability": "Multi-brand workspaces",
+      "layer": "admin",
+      "hypotheses": ["H2", "H3"],
+      "status": "planned",
+      "phase": 5,
+      "stories": ["STORY-016"],
+      "adrs": [],
+      "companion": ["PRD-ADM-009 / PRD-ADM-010"]
+    },
+    {
+      "id": "PRD-ADM-010",
+      "capability": "Role-based access control (5 roles)",
+      "layer": "admin",
+      "hypotheses": ["H2"],
+      "status": "planned",
+      "phase": 5,
+      "stories": [],
+      "adrs": [],
+      "companion": ["PRD-ADM-009 / PRD-ADM-010"]
+    },
+    {
+      "id": "PRD-XLAYER-001",
+      "capability": "Engine ↔ Foundation contract — typed layout JSON",
+      "layer": "cross-layer",
+      "hypotheses": ["H1", "H2"],
+      "status": "demonstrated",
+      "stories": [],
+      "adrs": ["004-vocabulary-constraint-invariant"],
+      "companion": ["PRD-XLAYER-001"]
+    },
+    {
+      "id": "PRD-XLAYER-002",
+      "capability": "Signal pipeline — foundation emits events; engine consumes for inference",
+      "layer": "cross-layer",
+      "hypotheses": ["H1", "H2"],
+      "status": "demonstrated",
+      "stories": ["STORY-009"],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-XLAYER-003",
+      "capability": "Admin ↔ Engine contract — rules schema",
+      "layer": "cross-layer",
+      "hypotheses": ["H2"],
+      "status": "building",
+      "phase": 4,
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-XLAYER-004",
+      "capability": "Admin ↔ Foundation contract — content authoring schema",
+      "layer": "cross-layer",
+      "hypotheses": ["H2"],
+      "status": "planned",
+      "stories": [],
+      "adrs": [],
+      "companion": []
+    }
+  ]
 }
