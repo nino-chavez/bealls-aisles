@@ -1,14 +1,19 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { streamText, Output } from 'ai';
-import { LayoutSchema, type Layout } from '$lib/schema/layout';
+import {
+	getLayoutSchemaForSurface,
+	inferSurfaceFromCategorySlug,
+	type Layout,
+	type Surface,
+} from '$lib/schema/layout';
 import { buildLayoutPrompt } from '$lib/server/layout-prompt';
 import { loadCategoryProducts, loadHomeProducts } from '$lib/server/catalog';
 import { getCachedLayout, cacheLayout, hashPicks } from '$lib/server/cache';
 import { logGeneration } from '$lib/server/generation-log';
 import { getActiveRules, rulesToPromptContext } from '$lib/server/rules';
 import { layoutModel, gatewayProviderOptions } from '$lib/server/ai-model';
-import { getBrand } from '$lib/brand/config';
+import { getBrand, getBrandMode } from '$lib/brand/config';
 
 /**
  * POST /api/layout/stream
@@ -22,13 +27,18 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	const sessionId = cookies.get('aisles_session') || undefined;
 
 	try {
-		const { persona, categorySlug, picksContext, probabilities } = await request.json();
+		const { persona, categorySlug, picksContext, probabilities, surface: explicitSurface } = await request.json();
 
 		if (!persona || !categorySlug) {
 			return json({ error: 'Missing required fields: persona, categorySlug' }, { status: 400 });
 		}
 
-		const brandId = getBrand().id;
+		const brand = getBrand();
+		const brandId = brand.id;
+		const mode = getBrandMode(brand);
+		// Per ADR-006: prefer explicit surface from request; fall back to category-slug inference
+		const surface: Surface = explicitSurface ?? inferSurfaceFromCategorySlug(categorySlug);
+		const layoutSchema = getLayoutSchemaForSurface(surface, mode);
 
 		// ─── Cache check — return instantly ────────────────────────
 		const ph = hashPicks(picksContext);
@@ -69,7 +79,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		// Haiku primary; Sonnet fallback only via gateway path (skipped for direct).
 		const stream = streamText({
 			model: layoutModel(),
-			output: Output.object({ schema: LayoutSchema }),
+			output: Output.object({ schema: layoutSchema }),
 			prompt,
 			providerOptions: gatewayProviderOptions(persona, categorySlug),
 		});

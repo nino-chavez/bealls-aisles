@@ -11,11 +11,11 @@ Append-only log of load-bearing runtime architecture decisions. See `../../metho
 | [003](003-prerender-vs-cache-warming.md) | Prerender vs. cache warming | Accepted | _see file_ | engine |
 | [004](004-vocabulary-constraint-invariant.md) | Vocabulary-constraint invariant | Accepted | _see file_ | engine |
 | [005](005-storefront-vs-content-modes.md) | Storefront vs. content modes | Accepted | _see file_ | engine + foundation |
+| [006](006-surface-typed-schemas.md) | Surface-typed schemas (split LayoutSchema → 6) | Accepted | 2026-04-30 | engine |
 
 ## Pending (drafts)
 
-- ADR-006 — Surface-typed schemas (split single LayoutSchema into 6) — _drafts in Task #45_
-- ADR-007 — Three-layer architecture commitment — _drafts in Task #42 alongside NORTH-STAR_
+- ADR-007 — Three-layer architecture commitment — _drafts alongside future NORTH-STAR refinement_
 
 ## Conventions
 
