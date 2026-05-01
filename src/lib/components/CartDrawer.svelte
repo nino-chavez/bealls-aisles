@@ -23,7 +23,17 @@
 		imageUrl: string;
 	}
 
+	interface UpsellProduct {
+		id: string;
+		entityId: number;
+		name: string;
+		price: number;
+		image?: string;
+		imageAlt?: string;
+	}
+
 	let items = $state<CartItem[]>([]);
+	let upsells = $state<UpsellProduct[]>([]);
 	let isLoading = $state(false);
 	let total = $derived(items.reduce((sum, item) => sum + item.salePrice.value * item.quantity, 0));
 	let itemCount = $derived(items.reduce((sum, item) => sum + item.quantity, 0));
@@ -44,6 +54,53 @@
 			items = [];
 		} finally {
 			isLoading = false;
+		}
+		// Fetch surface=cart upsells in parallel — cart line items come
+		// from cart state (foundation primitive); upsells come from the
+		// engine via /api/layout. Cache key + observability tag the
+		// surface as 'cart' even though the schema is currently a stub
+		// (ADR-006). PRD-ENG-015 specializes the schema later.
+		if (items.length > 0) {
+			loadUpsells();
+		} else {
+			upsells = [];
+		}
+	}
+
+	async function loadUpsells() {
+		try {
+			const res = await fetch('/api/layout', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					surface: 'cart',
+					categorySlug: 'cart',
+					persona,
+				}),
+			});
+			if (!res.ok) {
+				upsells = [];
+				return;
+			}
+			const data = await res.json();
+			const sections = data?.layout?.sections ?? [];
+			// Pick the first product-grid / product-carousel for upsell row.
+			const productSection = sections.find((s: { component: string }) =>
+				s.component === 'product-grid' || s.component === 'product-carousel'
+			);
+			const productRefs: Array<{ productId: string }> = productSection?.props?.products ?? [];
+			const candidates: UpsellProduct[] = data?.products ?? [];
+			// Refs use slug-style productId; candidates carry id (slug) +
+			// entityId. Dedupe by entityId so we don't pitch what's in cart.
+			const inCart = new Set(items.map((i) => i.productEntityId));
+			const resolved: UpsellProduct[] = [];
+			for (const ref of productRefs) {
+				const p = candidates.find((c) => c.id === ref.productId);
+				if (p && !inCart.has(p.entityId)) resolved.push(p);
+			}
+			upsells = resolved.slice(0, 3);
+		} catch {
+			upsells = [];
 		}
 	}
 </script>
@@ -121,6 +178,36 @@
 							</li>
 						{/each}
 					</ul>
+
+					<!-- AI-composed upsells (engine layer; surface=cart). -->
+					{#if upsells.length > 0}
+						<div class="mt-6 border-t border-surface-border pt-6">
+							<h3 class="text-xs font-semibold uppercase tracking-wider text-surface-muted-fg">
+								You might also like
+							</h3>
+							<ul class="mt-3 space-y-3">
+								{#each upsells as p}
+									<li>
+										<a
+											href={`/product/${p.id}`}
+											onclick={onclose}
+											class="flex gap-3 hover:opacity-80"
+										>
+											{#if p.image}
+												<img src={p.image} alt={p.imageAlt ?? p.name} class="h-16 w-16 rounded-sm object-cover" />
+											{:else}
+												<div class="h-16 w-16 rounded-sm bg-surface-muted"></div>
+											{/if}
+											<div class="flex flex-1 flex-col">
+												<span class="text-sm">{p.name}</span>
+												<span class="mt-auto text-sm font-medium">${p.price.toLocaleString()}</span>
+											</div>
+										</a>
+									</li>
+								{/each}
+							</ul>
+						</div>
+					{/if}
 				{/if}
 			</div>
 

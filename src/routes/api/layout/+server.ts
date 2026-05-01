@@ -69,12 +69,13 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 				sessionId,
 			}).catch(() => {});
 
-			// Empty/rescue surfaces need products inline so the client-only
-			// rescue component (no +page.server.ts) can render product blocks
-			// without a second roundtrip. Re-load popular products on cache
-			// hit — same set the cached layout was generated against.
+			// Empty/rescue + cart surfaces need products inline so client-only
+			// consumers (EmptyRescue, CartDrawer — no +page.server.ts) can
+			// render upsell/rescue product blocks without a second roundtrip.
+			// Re-load popular products on cache hit — same set the cached
+			// layout was generated against.
 			let cachedProducts: Awaited<ReturnType<typeof loadHomeProducts>>['products'] = [];
-			if (surface === 'empty' && mode === 'storefront') {
+			if ((surface === 'empty' || surface === 'cart') && mode === 'storefront') {
 				const popular = await loadHomeProducts(persona);
 				cachedProducts = popular.products;
 			}
@@ -93,9 +94,12 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		}
 
 		// ─── Cache miss — generate via AI Gateway ──────────────────
-		// Empty/rescue surfaces source from popular products (loadHomeProducts);
-		// content-mode rescues run with no products at all.
-		const result = surface === 'empty' || categorySlug === 'home'
+		// Empty/rescue + cart surfaces source from popular products
+		// (loadHomeProducts) — they're upsell/rescue contexts where we
+		// want a brand-wide candidate pool. Content-mode rescues run with
+		// no products at all (handled inside loadHomeProducts).
+		const useHomeProducts = surface === 'empty' || surface === 'cart' || categorySlug === 'home';
+		const result = useHomeProducts
 			? await loadHomeProducts(persona)
 			: await loadCategoryProducts(categorySlug, persona);
 		if (!result) {
@@ -146,10 +150,10 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 		return json({
 			layout,
-			// Inline products only for empty/rescue surfaces — see cache-hit
-			// branch above for rationale. Other surfaces resolve products via
+			// Inline products for empty/rescue + cart surfaces — see cache-hit
+			// branch above for rationale. PLP/PDP surfaces resolve products via
 			// their own +page.server.ts.
-			products: surface === 'empty' ? products : undefined,
+			products: surface === 'empty' || surface === 'cart' ? products : undefined,
 			meta: {
 				persona,
 				categoryName,
