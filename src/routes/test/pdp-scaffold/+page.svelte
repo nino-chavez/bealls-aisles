@@ -48,7 +48,7 @@
 		<div class="flex flex-col gap-6">
 			<ProductTitleBlock
 				productName="Walnut coffee table"
-				brandLabel="Haven Originals"
+				brandLabel="Bealls"
 				price={649}
 				salePrice={499}
 				rating={4.6}

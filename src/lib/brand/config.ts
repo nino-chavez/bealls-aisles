@@ -89,7 +89,7 @@ export interface BrandIncentivesConfig {
 	loyalty?: {
 		programId: string;
 		programName: string;
-		/** Unit label, e.g. "points", "Bealls Bucks", "embers". */
+		/** Unit label, e.g. "points", "Bealls Bucks", "stars". */
 		unit: string;
 		/** Ordered tiers from lowest to highest. First is the entry tier. */
 		tiers?: Array<{ name: string; unitsRequired: number }>;
@@ -105,7 +105,7 @@ const BRANDS: Record<string, BrandConfig> = {
 		footerNote: 'bealls is a demo storefront powered by Aisles',
 
 		bc: {
-			channelId: 1846324, // bealls — repurposed from Ember headless channel (was Demo→ch1, moved 2026-04-30)
+			channelId: 1846324, // bealls headless channel
 			categoryPrefix: 'Bealls',
 		},
 
@@ -190,7 +190,7 @@ const BRANDS: Record<string, BrandConfig> = {
 		footerNote: 'Bealls Florida is a demo storefront powered by Aisles',
 
 		bc: {
-			channelId: 1846321, // Bealls Florida — repurposed from Volt
+			channelId: 1846321, // Bealls Florida headless channel
 			categoryPrefix: 'BeallsFlorida',
 		},
 

@@ -394,7 +394,7 @@ Reassurance should appear based on behavioral signals, not statically:
 
 ### Priority: **P1**
 
-Reassurance has the highest impact for high-consideration purchases (Haven furniture, Volt electronics). It costs nothing (no margin impact like coupons) and directly addresses the fear that blocks conversion.
+Reassurance has the highest impact for high-consideration purchases (furniture, electronics, premium home). It costs nothing (no margin impact like coupons) and directly addresses the fear that blocks conversion.
 
 ---
 
@@ -620,7 +620,7 @@ Missing data should never produce a wrong recommendation and should never block 
 
 The following areas need additional research before features can be fully specified:
 
-1. **Cart abandonment benchmarks by vertical**: Baymard Institute data is aggregate. What are the specific abandonment drivers for furniture (Haven), electronics (Volt), and outdoor (Ember)?
+1. **Cart abandonment benchmarks by vertical**: Baymard Institute data is aggregate. What are the specific abandonment drivers for furniture, electronics, and outdoor verticals?
 
 2. **Express checkout conversion lift**: What is the measured impact of Apple Pay / Google Pay buttons on BC stores? Is the BC Checkout SDK integration stable enough for production?
 

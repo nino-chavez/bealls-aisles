@@ -77,7 +77,7 @@ These exist on `main` and require zero engagement-specific work:
 | Layout cache (Upstash Redis, 1hr TTL) | `src/lib/server/cache.ts` |
 | Catalog seed scaffold (BC v3 API) | `scripts/setup-catalog.mjs` |
 
-Three reference brands ship in the repo (`haven`, `volt`, `ember`) demonstrating different verticals, color systems, voice profiles, and persona definitions. Bealls's three banners follow the same shape.
+The repo's brand-config shape supports multiple brands per build, each with its own vertical, color system, voice profile, and persona definitions. Bealls's three banners follow that shape.
 
 ---
 
@@ -145,7 +145,7 @@ Actual came in faster than agent target — to be confirmed once retro tabulates
 
 **Goal**: expand the AI's compositional vocabulary from 4 components (DTC editorial) to ~9 components (department-store + promo-driven).
 
-The current vocabulary (`editorial-header`, `hero-product`, `product-grid`, `category-header`) cannot represent Bealls's promo-density, sub-category tiles, or savings-tier merchandising. The AI will produce layouts that look like Haven with different colors — which undercuts the platform's core claim that *the AI matches the brand*.
+The current vocabulary (`editorial-header`, `hero-product`, `product-grid`, `category-header`) cannot represent Bealls's promo-density, sub-category tiles, or savings-tier merchandising. The AI will produce layouts that look like a generic DTC editorial site with different colors — which undercuts the platform's core claim that *the AI matches the brand*.
 
 **Each new component touches 4 files** (the unit cost):
 
@@ -191,7 +191,7 @@ For each of the three banners:
 |---|---|---|
 | `bealls.com` | FL coastal value, promo-heavy, family-oriented | Gatherer = vacation outfits; hunter = restocking on coupon; gifter = snowbird grandparents |
 | `beallsflorida.com` | Resort wear, beach lifestyle, slightly more aspirational | Gatherer = resort/beach inspiration; hunter = outfit completion; gifter = gift shopping for the FL recipient |
-| `homecentric.com` | Off-price home, closeout-driven | Closer to Haven, but with off-price/closeout angle in voice |
+| `homecentric.com` | Off-price home, closeout-driven | DTC-home-editorial framing, but with an off-price/closeout angle in voice |
 
 **Per banner deliverable**:
 - `brands/{banner}.json` (brand identity spec — colors, typography, voice attributes, anti-patterns)
@@ -262,7 +262,7 @@ Same git repo, three Vercel projects, three sets of env vars (`BRAND_ID`, `BC_CH
 
 | Risk / Decision | Impact | Mitigation / Resolution |
 |---|---|---|
-| Component vocabulary expansion is the schedule pivot. | If we keep the 4-component vocabulary, we ship in ~1 week but layouts look like Haven-with-different-colors, undercutting the platform claim. | Commit to Tier 1+2 (5 components) up front. |
+| Component vocabulary expansion is the schedule pivot. | If we keep the 4-component vocabulary, we ship in ~1 week but layouts look like a DTC-editorial template recolored, undercutting the platform claim. | Commit to Tier 1+2 (5 components) up front. |
 | Catalog quality compounds. | A thin or noisy scrape produces uninspiring layouts no matter how good the AI is. | Budget time to clean titles/prices/images before enrichment runs. Spot-check 10 random products per banner before enrichment. |
 | Legal exposure on scraped imagery. | Even for a sales demo, republishing a merchant's product imagery on a public URL is a gray area. | Password-gate or `noindex` all three demos until written consent. |
 | `editorial-lookbook` rendering complexity. | Hotspot interactivity = 1.5 days; static composition = 0.5 day. | **Decision: static for v1.** Re-open if the demo lands and we want a v2. |

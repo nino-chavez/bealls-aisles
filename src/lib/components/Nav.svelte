@@ -4,7 +4,7 @@
 
 	import { getBrand } from '$lib/brand/config';
 
-	let { cartCount = 0, picksCount = 0, onCartClick, onPicksClick, brandName = 'Haven', brandMode = 'storefront' }: {
+	let { cartCount = 0, picksCount = 0, onCartClick, onPicksClick, brandName = 'Aisles', brandMode = 'storefront' }: {
 		cartCount?: number;
 		picksCount?: number;
 		onCartClick?: () => void;

@@ -8,7 +8,7 @@ A `/observe` route in the Aisles SvelteKit app that acts as a "man behind the cu
 
 ```
 ┌─────────────────────────┐  ┌──────────────────────────────┐
-│   Haven Storefront       │  │   Observe Dashboard           │
+│   Aisles Storefront      │  │   Observe Dashboard           │
 │   (shopper POV)          │  │   (architect POV)             │
 │                          │  │                               │
 │   Browsing Living Room   │  │   Session: abc-123            │
@@ -135,7 +135,7 @@ A single SvelteKit page with these panels:
 
 ### Styling
 
-Use the same brand tokens (Haven design system) but with a dark theme to visually distinguish from the storefront. The dashboard should feel like a mission control — information-dense, monospace numbers, no editorial copy.
+Use the same brand tokens (the active brand's design system) but with a dark theme to visually distinguish from the storefront. The dashboard should feel like a mission control — information-dense, monospace numbers, no editorial copy.
 
 ### Polling Strategy
 

@@ -10,7 +10,7 @@ import { getBrand } from '$lib/brand/config';
 
 function getGraphQLConfig() {
 	const brand = getBrand();
-	// Brand-specific storefront tokens: VOLT_STOREFRONT_TOKEN, EMBER_STOREFRONT_TOKEN, etc.
+	// Brand-specific storefront tokens: BEALLS_STOREFRONT_TOKEN, BEALLSFLORIDA_STOREFRONT_TOKEN, etc.
 	const tokenKey = `${brand.id.toUpperCase()}_STOREFRONT_TOKEN`;
 	const storeHash = env.BIGCOMMERCE_STORE_HASH;
 	const storefrontToken = env[tokenKey] || env.BIGCOMMERCE_STOREFRONT_TOKEN;
@@ -481,7 +481,7 @@ export function customFieldsToRecord(product: BCProduct): Record<string, string>
 	return fields;
 }
 
-/** Get the category slug from a BC category path (e.g., "/haven-living-room/" → "haven-living-room") */
+/** Get the category slug from a BC category path (e.g., "/bealls-women/" → "bealls-women") */
 export function categorySlug(path: string): string {
 	return path.replace(/^\/|\/$/g, '');
 }
