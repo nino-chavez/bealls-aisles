@@ -11,6 +11,7 @@
 	import ReviewsSummary from '$lib/components/layouts/sections/ReviewsSummary.svelte';
 	import ReviewsList from '$lib/components/layouts/sections/ReviewsList.svelte';
 	import BOPISStrip from '$lib/components/layouts/sections/BOPISStrip.svelte';
+	import AILoadingInline from '$lib/components/AILoadingInline.svelte';
 	import ZoneRenderer from '$lib/foundation/ZoneRenderer.svelte';
 
 	let { data }: { data: PageData } = $props();
@@ -135,9 +136,8 @@
 			{#if pairingsLoading}
 				<div class="border-t border-surface-border pt-6">
 					<h3 class="font-display text-lg">Pairs well with</h3>
-					<div class="mt-3 animate-pulse space-y-2">
-						<div class="h-10 rounded bg-surface-muted"></div>
-						<div class="h-10 rounded bg-surface-muted"></div>
+					<div class="mt-3">
+						<AILoadingInline label="Finding pieces that pair with this" size="small" />
 					</div>
 				</div>
 			{:else if pairings.length > 0}

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getPickItems, removePick, clearPicks, totalPrice, pickCount } from '$lib/stores/picks.svelte';
 	import EmptyRescue from '$lib/components/EmptyRescue.svelte';
+	import AILoadingInline from '$lib/components/AILoadingInline.svelte';
 
 	let {
 		open = false,
@@ -134,11 +135,7 @@
 					<!-- AI Suggestions -->
 					{#if loadingSuggestions}
 						<div class="mt-4 border-t border-surface-border pt-4">
-							<p class="text-xs font-medium uppercase tracking-wider text-surface-muted-fg">Suggested</p>
-							<div class="mt-2 animate-pulse space-y-2">
-								<div class="h-8 rounded bg-surface-muted"></div>
-								<div class="h-8 rounded bg-surface-muted"></div>
-							</div>
+							<AILoadingInline label="Building suggestions from your picks" size="small" />
 						</div>
 					{:else if suggestions.length > 0}
 						<div class="mt-4 border-t border-surface-border pt-4">

@@ -6,6 +6,7 @@
 	import FreeShippingMeter from '$lib/components/layouts/sections/FreeShippingMeter.svelte';
 	import PromoCodeEntry from '$lib/components/layouts/sections/PromoCodeEntry.svelte';
 	import LastChanceUpsellRow from '$lib/components/layouts/sections/LastChanceUpsellRow.svelte';
+	import AILoadingInline from '$lib/components/AILoadingInline.svelte';
 	import EmptyRescue from '$lib/components/EmptyRescue.svelte';
 	import type { CartLineItem } from '$lib/components/layouts/sections/CartLineItems.svelte';
 	import type { Product } from '$lib/types';
@@ -17,6 +18,7 @@
 	let items = $state<CartLineItem[]>(data.cart?.lineItems.physicalItems ?? []);
 	let upsellProducts = $state<Product[]>([]);
 	let upsellTitle = $state('Last chance — pair these with your order');
+	let upsellLoading = $state(false);
 
 	let subtotal = $derived(items.reduce((sum, i) => sum + i.salePrice.value * i.quantity, 0));
 	let itemCount = $derived(items.reduce((sum, i) => sum + i.quantity, 0));
@@ -46,6 +48,7 @@
 	}
 
 	async function loadUpsells() {
+		upsellLoading = true;
 		try {
 			// PRD-ENG-019: cart line-item entityIds drive the tag-overlap
 			// neighborhood that becomes the upsell candidate pool.
@@ -70,6 +73,8 @@
 				.slice(0, 4);
 		} catch {
 			// upsells are optional; continue without them
+		} finally {
+			upsellLoading = false;
 		}
 	}
 </script>
@@ -105,7 +110,11 @@
 					</div>
 				{/if}
 
-				{#if upsellProducts.length > 0}
+				{#if upsellLoading}
+					<div class="mt-10 border-t border-surface-border pt-8">
+						<AILoadingInline label="Selecting pieces that pair with your cart" />
+					</div>
+				{:else if upsellProducts.length > 0}
 					<div class="mt-10 border-t border-surface-border pt-8">
 						<!-- Engine: last-chance-upsell-row -->
 						<LastChanceUpsellRow title={upsellTitle} products={upsellProducts} />

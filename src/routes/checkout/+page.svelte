@@ -3,6 +3,7 @@
 	import type { PageData } from './$types';
 	import AssuranceStripCheckout from '$lib/components/layouts/sections/AssuranceStripCheckout.svelte';
 	import LastChanceUpsellRow from '$lib/components/layouts/sections/LastChanceUpsellRow.svelte';
+	import AILoadingInline from '$lib/components/AILoadingInline.svelte';
 	import type { Product } from '$lib/types';
 	import { resolveZone } from '$lib/foundation/resolve-zone';
 
@@ -105,7 +106,11 @@
 		</div>
 
 		<!-- Engine: AI-composed last-chance upsell (optional). -->
-		{#if upsellProducts.length > 0}
+		{#if isLoading}
+			<div class="mt-8 border-t border-surface-border pt-8">
+				<AILoadingInline label="Personalizing your checkout" />
+			</div>
+		{:else if upsellProducts.length > 0}
 			<div class="mt-8 border-t border-surface-border pt-8">
 				<LastChanceUpsellRow title={upsellTitle} products={upsellProducts} />
 			</div>
@@ -141,10 +146,5 @@
 			{/if}
 		</div>
 
-		{#if isLoading}
-			<p class="mt-6 text-center text-xs text-surface-muted-fg" aria-live="polite">
-				Personalizing checkout for you…
-			</p>
-		{/if}
 	{/if}
 </div>

@@ -5,6 +5,7 @@
 	import FreeShippingMeter from '$lib/components/layouts/sections/FreeShippingMeter.svelte';
 	import PromoCodeEntry from '$lib/components/layouts/sections/PromoCodeEntry.svelte';
 	import LastChanceUpsellRow from '$lib/components/layouts/sections/LastChanceUpsellRow.svelte';
+	import AILoadingInline from '$lib/components/AILoadingInline.svelte';
 	import type { CartLineItem } from '$lib/components/layouts/sections/CartLineItems.svelte';
 	import type { Product } from '$lib/types';
 	import { getBrand } from '$lib/brand/config';
@@ -25,6 +26,7 @@
 	let upsellProducts = $state<Product[]>([]);
 	let upsellTitle = $state('You might also like');
 	let isLoading = $state(false);
+	let upsellLoading = $state(false);
 	let subtotal = $derived(items.reduce((sum, item) => sum + item.salePrice.value * item.quantity, 0));
 	let itemCount = $derived(items.reduce((sum, item) => sum + item.quantity, 0));
 
@@ -62,6 +64,7 @@
 	}
 
 	async function loadUpsells() {
+		upsellLoading = true;
 		try {
 			// PRD-ENG-019: pass the cart's line-item entityIds so the layout
 			// API can source upsell candidates from their tag-overlap
@@ -99,6 +102,8 @@
 				.slice(0, 3);
 		} catch {
 			upsellProducts = [];
+		} finally {
+			upsellLoading = false;
 		}
 	}
 </script>
@@ -164,7 +169,11 @@
 					{/if}
 
 					<!-- Engine: AI-composed upsell row above checkout CTA. -->
-					{#if upsellProducts.length > 0}
+					{#if upsellLoading}
+						<div class="mt-6 border-t border-surface-border pt-6">
+							<AILoadingInline label="Selecting pieces that pair with your cart" size="small" />
+						</div>
+					{:else if upsellProducts.length > 0}
 						<div class="mt-6 border-t border-surface-border pt-6">
 							<LastChanceUpsellRow title={upsellTitle} products={upsellProducts} />
 						</div>
