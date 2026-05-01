@@ -1,10 +1,27 @@
-# Aisles — Product Vision
+# Aisles — North Star
 
-**Version**: 0.2.0
-**Last Updated**: 2026-04-06
-**Audience**: Product, Business Stakeholders, Developers
+**Version**: 0.3.0
+**Last Updated**: 2026-04-30
+**Audience**: commerce.com product leadership (primary) · product, design, engineering (secondary)
+**Example merchant**: Bealls (with family — Bealls Florida + Home Centric)
 
-## Mission
+> **Reframing note (2026-04-30):** v0.2.0 was a single-layer product vision focused on the AI personalization engine. v0.3.0 reframes Aisles as a three-layer commercial product (engine + ecomm foundation + admin control plane) targeted at commerce.com merchants, with Bealls as the example merchant. The engine-layer design philosophy from v0.2.0 (mission, fail-fast principle, feed model, streaming-platform lessons) is preserved verbatim in §3.1 ("Engine — design philosophy"). New material: §1 (what Aisles is), §2 (the three layers), §3.2 (foundation), §3.3 (admin), §4 (Bealls as example merchant), §6 (reference brands).
+
+---
+
+## 1. What Aisles is
+
+**A three-layer commercial product for BigCommerce-native merchants who want AI-personalized commerce without being a data-engineering company.**
+
+Aisles bundles three things that today's merchants assemble piecemeal across vendors:
+
+1. **An AI composition engine** that reads shopper signals and generates page layouts in real time, surface by surface, with formal correctness guarantees.
+2. **A complete ecommerce app foundation** — catalog, cart, checkout, account, search, locator — that exists whether or not the engine is personalizing it.
+3. **A merchant control plane** (`aisles-admin`) that gives non-technical operators rule authoring, content authoring, A/B, and observability over the AI's behavior.
+
+The product is sellable to merchants because it is **complete**: a merchant turns it on and gets a working storefront, not a personalization layer they then need to integrate into a separate ecomm platform.
+
+### Mission
 
 Make AI personalization invisible to the shopper and visible to the business user.
 
@@ -33,86 +50,53 @@ The recoverable wrong answer is always preferable to the delayed right answer. T
 
 ---
 
-## Three-Brand Demo
+## 2. The three layers
 
-Aisles ships with three built-in brands that prove the architecture is vertical-agnostic. The same inference rules, layout engine, and AI pipeline serve furniture, electronics, and outdoor goods without modification.
+```
+┌───────────────────────────────────────────────────────────────────┐
+│   3.3  AISLES-ADMIN (control plane)                               │
+│        Merchant authoring · rule library · A/B · observability    │
+│        (separate deployment, BC marketplace app — `aisles-admin`) │
+└──────────┬──────────────────────────────────┬─────────────────────┘
+           │ writes rules / content           │ reads telemetry
+           ▼                                  ▲
+┌───────────────────────────────────────────────────────────────────┐
+│   3.1  AISLES ENGINE                                              │
+│        Persona inference · signal pipeline · prompt construction  │
+│        AI composition (per-surface, per-mode, per-state schemas)  │
+│        Layout cache (Upstash) · enrichment store (Neon Postgres)  │
+└──────────┬──────────────────────────────────┬─────────────────────┘
+           │ composed layouts (JSON)          │ events / signals
+           ▼                                  ▲
+┌───────────────────────────────────────────────────────────────────┐
+│   3.2  ECOMM APP FOUNDATION                                       │
+│        Catalog (BigCommerce GraphQL) · Cart · Checkout · Account  │
+│        Search · Locator · Static templates · Renderer             │
+│              (SvelteKit + Vercel deployment)                      │
+└───────────────────────────────────────────────────────────────────┘
+```
 
-| Brand | Domain | Positioning |
-|---|---|---|
-| **Haven** | DTC home furniture | Warm, editorial. Emphasizes lifestyle storytelling and aesthetic discovery. |
-| **Volt** | Consumer audio & electronics | Technical, spec-forward. Emphasizes performance data and compatibility. |
-| **Ember** | Outdoor lifestyle & fire | Rugged, seasonal. Emphasizes activity fit and weather-appropriate bundling. |
+| # | Layer | Owns | Composition latitude (per [composition taxonomy](../architecture/engine/composition-taxonomy.md)) |
+|---|---|---|---|
+| 3.1 | **Engine** | AI composition, persona inference, signal pipeline, prompt construction, schema validation, caching | Wide on Home/PLP, narrow on PDP, fixed on cart/checkout |
+| 3.2 | **Foundation** | Routes, runtime state primitives (cart/checkout/account), static templates, search, locator, BC catalog adapter | None — foundation renders what the engine composes plus its own scaffolds |
+| 3.3 | **Admin** | Rule authoring, content authoring, A/B, audience builder, observability, audit log | Authors the inputs the engine consumes; doesn't compose layouts itself |
 
-The brands share no product data, no BC channel, and no visual identity. They do share the inference engine, the layout component vocabulary, the enrichment pipeline, and the prompt construction logic. A brand is a configuration file — `src/lib/brand/config.ts` — not a fork.
+**Why three layers, not one product:** conflating the layers is the project's known failure mode. Treating engine + foundation + admin as one undifferentiated stack produces (a) prompts that drift toward "compose everything" on every surface, (b) admin features that try to control composition output instead of composition inputs, and (c) foundation primitives that get re-implemented per surface because they were never named as their own layer. Naming the layers explicitly is what makes each independently shippable, separately priceable, and clearly bounded for the merchant.
 
-This is intentional positioning for the BC marketplace app: a merchant installs Aisles once and configures their brand. No code changes required.
-
----
-
-## Business User Personas
-
-Aisles is designed for three business user types. Each has different goals and interacts with different parts of the system.
-
-### Merchandiser
-
-The merchandiser is responsible for what appears on category pages and in what order. Their pain: the default BC sort order is based on creation date or manual ranking. It does not adapt to shopper intent.
-
-With Aisles, the merchandiser runs the enrichment pipeline after adding products. The enrichment scores each product on four persona-fit dimensions (gatherer, hunter, researcher, gifter) and tags it with semantic intent labels. The AI layout engine uses these scores to present high-fit products first. The merchandiser sees the scores in the Observe dashboard's product enrichment panel.
-
-Future: the admin layer (BC marketplace app) will let the merchandiser override persona-fit scores for specific products and pin items to specific positions within a persona layout.
-
-### Brand Manager
-
-The brand manager is responsible for voice, visual identity, and the narrative the store tells. Their pain: AI-generated copy often sounds generic.
-
-The brand config's `prompt.voiceGuidance` field feeds into every layout generation prompt. Haven's voice guidance instructs the model to write "warm, editorial, magazine-like" copy; Volt's instructs it to be "precise and performance-focused." The brand manager owns this field.
-
-Future: the admin layer will expose voice guidance as an editable text field. The brand manager will be able to test changes against live categories without a code deployment.
-
-### Growth Lead
-
-The growth lead is responsible for acquisition and conversion. Their pain: they can see UTM campaign performance in analytics but cannot see how incoming traffic intent maps to layout decisions.
-
-The Observe dashboard exposes per-session signal attribution. A `utm_campaign=holiday-gift` tag on an inbound URL triggers the `utm-gift-campaign` inference rule, shifting the persona toward gifter, which produces a layout with editorial gift framing and curated price tiers. The growth lead can verify this chain without opening the codebase.
-
-Future: the admin layer will surface aggregate intent distributions — what percentage of sessions from a given UTM source land as hunter vs. gifter — so growth leads can calibrate campaign messaging against layout outcomes.
+For the per-layer architecture detail, see `docs/architecture/ARCHITECTURE.md` and `docs/architecture/{engine,foundation,admin}/`.
 
 ---
 
-## The Admin Layer
+## 3. The three layers in detail
 
-The BC marketplace app (tracked separately in `docs/aisles-admin.md`) is the business-user control plane for Aisles. It runs as a BigCommerce embedded app and is the channel through which non-technical users interact with the system.
+### 3.1 Engine — design philosophy
 
-Planned controls:
-- **Brand voice editor**: edit `voiceGuidance` without a code deploy
-- **Persona-fit overrides**: pin a product to a persona or suppress it from specific layouts
-- **Rule weight tuning**: increase or decrease the influence of specific inference rules per channel
-- **Cache invalidation**: force fresh layout generation for a category after merchandising changes
-- **Observe access**: view the real-time Observe dashboard from within the BC admin
+> _v0.2.0 vision content preserved verbatim below. This is the AI composition engine's design rationale, drawing on streaming/social-platform personalization research and the formal correctness invariant._
 
-The admin app is the product's primary commercial surface. The inference engine and layout pipeline are the technology; the admin app is what a merchant buys.
 
----
 
-## Competitive Positioning
-
-### vs. Amazon's "Frequently Bought Together"
-
-Amazon's recommendation engine is statistical: it identifies items that appear together in purchase histories across millions of orders. "Customers who bought X also bought Y." The correlation is real but the reasoning is opaque. If no one has ever bought two items together, there is no signal.
-
-Aisles uses reasoning-based compatibility. The enrichment pipeline calls Claude Sonnet to evaluate each product against four persona archetypes. The model reasons about material, use case, price tier, and aesthetic fit — not co-purchase frequency. A new product with zero sales history gets correct persona scores on day one.
-
-The distinction matters most for new brands and niche catalogs where statistical co-purchase data does not exist. This is exactly the BigCommerce merchant profile.
-
-### vs. Rule-Based Personalization Platforms (Nosto, Dynamic Yield)
-
-Existing personalization platforms for BC merchants are rule-based: "if the shopper is on mobile and in the furniture category, show the bestsellers widget." Rules require manual maintenance, do not compose well, and cannot produce layout-level changes (only widget-level injection).
-
-Aisles infers intent continuously and uses that intent to drive the entire layout — not a single widget, but the number of columns, the presence or absence of editorial copy, the sort order, and the call-to-action pattern. Layout-level personalization requires an AI that understands composition, not rules that swap products.
-
----
-
-## Products as Content: The Feed Model
+### 3.1.1 Products as Content: The Feed Model
 
 A category page is a For You page. Products are the content tiles.
 
@@ -226,7 +210,7 @@ This is not yet implemented but is the natural next step. Without image variatio
 
 ---
 
-## What Streaming Platforms Teach Us
+### 3.1.2 What Streaming Platforms Teach Us
 
 Aisles draws explicit inspiration from the personalization systems built by Netflix, Spotify, and Hulu. These are not analogies — they are the most rigorous deployed examples of behavioral personalization at scale. The signal expansion work (see `docs/architecture/engine/signals-and-inference.md` and `docs/functional/specs/behavioral-signals.md`) is directly motivated by what these platforms learned.
 
@@ -268,7 +252,7 @@ The Aisles equivalent is already in production: the same product appears as a he
 
 ---
 
-## What Social Feed Platforms Teach Us
+### 3.1.3 What Social Feed Platforms Teach Us
 
 The streaming platform lessons above focus on content consumption — sessions measured in minutes, with a single content stream. Social feed platforms (TikTok, YouTube, Instagram) operate at a different timescale and interaction density. Their feeds process hundreds of micro-decisions per session, making them the closest deployed analogs to an e-commerce browsing session where a shopper scans dozens of product cards in rapid succession.
 
@@ -319,11 +303,11 @@ Instagram Reels uses a modular, adaptive interface to manage the "attention econ
 
 ---
 
-## Implementation Considerations
+### 3.1.4 Implementation Considerations
 
 The streaming and social feed platform analysis surfaces three areas where Aisles should evolve. These are not bugs — the current architecture supports all three changes — but they represent weight tuning, prompt enrichment, and philosophical decisions that should be made deliberately.
 
-### 1. Negative Signal Weight Asymmetry
+#### 3.1.4.1 Negative Signal Weight Asymmetry
 
 **The pattern**: TikTok and Spotify both weight negative signals (skips, swipe-aways) more heavily than positive signals (watches, saves). The reasoning is that rejections reveal preference boundaries faster than confirmations. A user who listens to a full song may be passively tolerating it; a user who skips after 3 seconds is actively rejecting it.
 
@@ -345,7 +329,7 @@ The streaming and social feed platform analysis surfaces three areas where Aisle
 
 **Recommendation**: Test the asymmetry with a modest bump (0.7 for bounce, 0.8 for cart removal) before going to full TikTok-level asymmetry. Monitor the Observe dashboard's shift detection rate — if shifts increase by more than 30% after the weight change, the asymmetry is too aggressive.
 
-### 2. Device-Aware Format Hints in Layout Generation
+#### 3.1.4.2 Device-Aware Format Hints in Layout Generation
 
 **The pattern**: YouTube does not just change *which* content appears on different devices — it changes the *format*. Short-form clips on mobile at night; long-form documentaries on TV on weekends. The device context affects presentation structure, not just content ranking.
 
@@ -371,7 +355,7 @@ Grid layouts can use 3-4 columns.
 
 **Risk**: Low. The format hint is advisory — the AI can blend it with persona guidance. A researcher on mobile should still see specs, but in a vertically-stacked layout rather than a wide comparison table.
 
-### 3. Continuous vs. Discrete Persona Modeling
+#### 3.1.4.3 Continuous vs. Discrete Persona Modeling
 
 **The pattern**: TikTok does not use personas at all. Every user is a point in a continuous embedding space that drifts with each interaction. There are no "types" — only positions in a mathematical space.
 
@@ -388,11 +372,167 @@ This preserves the business legibility of named personas while capturing the con
 
 ---
 
-## Related Documentation
+### 3.2 Foundation — design philosophy
 
-- `docs/architecture/ARCHITECTURE.md` — system architecture and data flow
-- `docs/architecture/engine/signals-and-inference.md` — signal types and inference rules in detail
-- `docs/functional/specs/behavioral-signals.md` — implementation spec for signal expansion
-- `docs/architecture/multi-brand.md` — brand configuration and setup
-- `docs/aisles-admin.md` — BC marketplace admin app (planned)
-- `docs/architecture/observability.md` — Observe dashboard for business users and demos
+The foundation is the table-stakes ecommerce app: catalog browsing, cart, checkout, account, search, locator, and the static templates the renderer composes from. **The foundation exists whether or not the engine is personalizing it.** A merchant who turns the engine off should still have a working storefront.
+
+The foundation's responsibilities are defined by what every reference ecommerce platform ships out of the box (BigCommerce Stencil, Shopify Dawn, Magento Hyvä, commercetools Frontend, Saleor, Vue Storefront). Detailed competitive comparison is in [`docs/research/foundation/`](../research/foundation/) — the synthesis: there is a table-stakes minimum (8 canonical surfaces × ~15 universal sections) every credible ecomm site has. Aisles' foundation must hit that minimum, then differentiate by **how cleanly it integrates with the engine** — specifically, by exposing well-named insertion zones the engine composes into without the foundation having to know about persona inference or AI prompts.
+
+**Design principles for the foundation:**
+
+- **Engine-agnostic.** A foundation surface (PDP, cart, account) should be inspectable and shippable without the engine present. The engine is an optional input, not a hard dependency.
+- **Surface-typed scaffolds.** Each surface has a fixed scaffold (PDP gallery / title / variants / ATC / description / reviews) plus named insertion zones. The engine fills the zones; the foundation owns the scaffold.
+- **BC-native catalog adapter.** Catalog reads go through the BigCommerce GraphQL Storefront API. We do not maintain our own product DB.
+- **Composition-aware static templates.** Templates that the engine never composes (cart line items, checkout step structure, account dashboard frame) are still parameterized — the engine can swap the upsell row contents in cart, choose the assurance copy variant in checkout, etc.
+
+For per-surface foundation detail (which sections are mandatory, where the engine inserts, how cart/checkout/account flows work), see [`docs/architecture/foundation/`](../architecture/foundation/) (populates after PRD/BRD work).
+
+---
+
+### 3.3 Admin — design philosophy
+
+The admin is the merchant control plane. It lives in a separate repository (`aisles-admin`) and deploys as a BigCommerce marketplace app embedded as an iframe in the BC admin panel. **The admin is the product's primary commercial surface.** The engine and the foundation are technology; the admin is what a merchant buys.
+
+A merchant should be able to:
+
+- **Author rules** that shape engine inputs (e.g., "always surface the BOPIS strip on PDP for shoppers in zip codes within 30 miles of a store").
+- **Author content** that the engine composes into AI surfaces (e.g., a brand-spotlight block, a trend-shop card, an editorial-article teaser) and that the foundation renders on static surfaces (cart trust copy, account empty states).
+- **Author audiences** distinct from the engine's persona inference (e.g., "first-time buyers from Florida who have not purchased in 90 days").
+- **Run experiments** (A/B between engine compositions, rule variants, content variants).
+- **Observe** what the engine is doing (cache hit rates, generation latency, persona distribution, rule firing frequency, AI decision explainability) and intervene when it drifts.
+- **Audit** every change (who changed which rule when, with what justification).
+
+**The explainability primacy.** The single most important admin capability is making the AI's behavior **explainable to non-technical merchants**. Why did the AI show this layout to this shopper? Which signals fired, which rules applied, which products got selected, and why? The composition engine's V invariant (every layout is an element of a finite typed schema) is what makes this explainability possible — you can surface "the AI chose component X because rule Y fired on signal Z" only when components come from a known vocabulary. Without explainability, the admin reduces to "trust the AI," which incumbent personalization vendors already offer and merchants already distrust.
+
+Per the admin-layer competitive research, the field clusters into four archetypes — rule-builders (Dynamic Yield, Monetate), experiment-builders (Optimizely, VWO), CMS (Contentful, Sanity, Builder.io), and analytics (Mixpanel, Amplitude). No incumbent does all four well; merchants stitch. The **explainability gap is structurally favorable to Aisles**: Adobe Target Auto-Personalization, DY Predictive Targeting, and Monetate bandits are black boxes. The admin's daily-driver should be a **Decisions Inspector** ("what did the AI just do, and why?"), not a Rules tab. Rule authoring is secondary.
+
+**Initial admin capabilities (already specified):**
+
+- **Brand voice editor** — edit `voiceGuidance` without a code deploy.
+- **Persona-fit overrides** — pin a product to a persona or suppress it from specific layouts.
+- **Rule weight tuning** — increase or decrease the influence of specific inference rules per channel.
+- **Cache invalidation** — force fresh layout generation for a category after merchandising changes.
+- **Observe access** — view the real-time Observe dashboard from within the BC admin.
+
+**V1 must include workspaces + role-based access control.** Bealls is a family of three brands plus an agency relationship — retrofitting permissions later costs roughly 10x. Adopt the Contentful role taxonomy (Admin / Developer / Editor / Author / Analyst) plus Adobe Target's Workspaces concept. Per-capability admin detail and the proposed path from current `aisles-admin` v0.1 stub to V1 lives in [`docs/research/admin/`](../research/admin/) and the spec at [`../functional/specs/aisles-admin.md`](../functional/specs/aisles-admin.md).
+
+---
+
+## 4. Cross-layer business user personas
+
+These are the merchant-side personas the system serves. They cross all three layers — they observe engine behavior, configure admin rules, and rely on foundation primitives (catalog, cart, locator).
+
+### 4.1 Merchandiser
+
+Responsible for what appears on category pages and in what order. Pain: the default BC sort order is based on creation date or manual ranking. It does not adapt to shopper intent.
+
+With Aisles, the merchandiser runs the enrichment pipeline after adding products. The enrichment scores each product on four persona-fit dimensions (gatherer, hunter, researcher, gifter) and tags it with semantic intent labels. The AI layout engine uses these scores to present high-fit products first. The merchandiser sees the scores in the Observe dashboard's product enrichment panel.
+
+**Admin controls (target):** override persona-fit scores for specific products, pin items to specific positions within a persona layout, schedule rule changes, preview before publish.
+
+### 4.2 Brand Manager
+
+Responsible for voice, visual identity, and the narrative the store tells. Pain: AI-generated copy often sounds generic.
+
+The brand config's `prompt.voiceGuidance` field feeds into every layout generation prompt. Bealls' voice instructs the model toward "off-price retail, family-friendly, comparable-value-first"; Bealls Florida's instructs "coastal lifestyle, sun-soaked, family"; Home Centric's instructs "in-store discovery, treasure-hunt, refreshed weekly." The brand manager owns these fields.
+
+**Admin controls (target):** voice guidance editor, brand-block library (recurring promo modules), preview against live categories, side-by-side voice A/B.
+
+### 4.3 Growth Lead
+
+Responsible for acquisition and conversion. Pain: they can see UTM campaign performance in analytics but cannot see how incoming traffic intent maps to layout decisions.
+
+The Observe dashboard exposes per-session signal attribution. A `utm_campaign=holiday-gift` tag on an inbound URL triggers the `utm-gift-campaign` inference rule, shifting the persona toward gifter, which produces a layout with editorial gift framing and curated price tiers. The growth lead can verify this chain without opening the codebase.
+
+**Admin controls (target):** aggregate intent distributions per UTM source, campaign-bound rule variants, conversion attribution per layout composition.
+
+---
+
+## 5. Example merchant — Bealls
+
+Bealls Inc. operates three retail brands (Bealls, Bealls Florida, Home Centric) on commerce.com. They are the example merchant for Aisles because their properties make every layer of the product visible and testable in a single engagement:
+
+| Bealls property | Why it matters for Aisles |
+|---|---|
+| **Off-price retail with comparable-value pricing** | Hunter-persona dominant; pricing language is non-MSRP ("up to 70% off comparable value"); price-rail merchandising is critical |
+| **Family of three brands sharing loyalty** | Cross-brand navigation, shared `Bealls Bucks` loyalty wallet, brand-strip nav as a foundation primitive — exercises multi-brand configuration |
+| **BOPIS-heavy operationally** | `bopis-strip`, `bopis-picker`, store-locator integration are first-order requirements, not afterthoughts |
+| **Bealls Bucks loyalty across all three brands** | Loyalty becomes a cross-brand engine input: "show Bucks balance pill in header, surface earn-preview on PDP, last-chance redemption in cart" |
+| **Home Centric is content-only** | The storefront/content mode split is **real**, not synthetic. HC has no online catalog; its surfaces are editorial + locator. Forces the engine to support both modes from day one |
+| **Real BigCommerce merchant** | The BC-native architecture (channels, GraphQL Storefront, marketplace app) maps to actual commerce.com infrastructure, not theoretical |
+
+Bealls is not a one-off demo. The capabilities the engagement surfaces (multi-brand, BOPIS, loyalty, mode-aware composition, off-price pricing language) are general-purpose product features. **The engagement is the demo, but the features are the product.**
+
+For the engagement plan, deliverables, and current state, see [`docs/strategic/engagements/bealls.md`](engagements/bealls.md).
+
+---
+
+## 6. Reference brands
+
+Aisles ships with three additional reference brands (Haven, Volt, Ember) that prove the architecture is vertical-agnostic. The same inference rules, layout engine, and AI pipeline serve furniture, electronics, and outdoor goods without modification.
+
+| Brand | Domain | Positioning |
+|---|---|---|
+| **Haven** | DTC home furniture | Warm, editorial. Emphasizes lifestyle storytelling and aesthetic discovery. |
+| **Volt** | Consumer audio & electronics | Technical, spec-forward. Emphasizes performance data and compatibility. |
+| **Ember** | Outdoor lifestyle & fire | Rugged, seasonal. Emphasizes activity fit and weather-appropriate bundling. |
+
+The reference brands share no product data, no BC channel, and no visual identity. They do share the inference engine, the layout component vocabulary, the enrichment pipeline, and the prompt construction logic. A brand is a configuration file — `src/lib/brand/config.ts` — not a fork.
+
+This is intentional positioning for the BC marketplace app: a merchant installs Aisles once and configures their brand. No code changes required. The reference brands serve as ready-made demonstrations of vertical-agnostic configurability when pitching merchants in adjacent verticals.
+
+---
+
+## 7. Competitive positioning (summary)
+
+Detailed positioning, the comparison matrix across Dynamic Yield / Monetate / Bloomreach Discovery / Salesforce Personalization / Adobe Target / Algolia Recommend / Coveo / Klevu / Constructor.io, and the full discussion of competitive risk lives in [`STRATEGY.md`](STRATEGY.md). The headline positioning:
+
+### vs. Amazon's "Frequently Bought Together"
+
+Amazon's recommendation engine is statistical: items that appear together in purchase histories. The correlation is real but the reasoning is opaque. If no one has ever bought two items together, there is no signal.
+
+Aisles uses **reasoning-based compatibility**. The enrichment pipeline uses Claude to evaluate each product against four persona archetypes, reasoning about material, use case, price tier, and aesthetic fit — not co-purchase frequency. A new product with zero sales history gets correct persona scores on day one. The distinction matters most for new brands and niche catalogs where statistical co-purchase data does not exist. This is exactly the BigCommerce merchant profile.
+
+### vs. Rule-based personalization platforms (Nosto, Dynamic Yield, Monetate)
+
+Existing personalization platforms for BC merchants are insertion-rule-based: "if the shopper is on mobile and in the furniture category, show the bestsellers widget." Rules require manual maintenance, do not compose well, and cannot produce layout-level changes (only widget-level injection).
+
+Aisles infers intent continuously and uses that intent to drive **the entire layout** — the number of columns, the presence or absence of editorial copy, the sort order, the call-to-action pattern, the merchandising blocks. Layout-level personalization requires an AI that understands composition, not rules that swap products.
+
+### The defensible wedge
+
+Per the engine-layer competitive research, **no incumbent generates whole ecomm surfaces as typed component trees.** Eleven of twelve surveyed personalization platforms top out at insert/rank/A-B. The "generative storefront" lane is empty — either a real opportunity or a market signal that merchants don't want it. Aisles' bet is the former, with the explicit hedge that **merchant override and explainability** (admin layer) prevent "the AI built something we didn't approve" from becoming the steel-man competitors use against generative composition.
+
+The combination of (a) schema-typed AI output (the V invariant), (b) BC-native architecture, and (c) merchant control plane with explainability is structurally hard to copy. The biggest competitive risk is Bloomreach, whose Loomi + Clarity + Discovery + Content + Engagement stack and Elite BigCommerce partnership compress this wedge if Clarity extends from chat to surface composition within the next 12 months.
+
+---
+
+## 8. Related documentation
+
+**Within this canonical-state tree:**
+
+- [`STRATEGY.md`](STRATEGY.md) — competitive positioning detail, scope boundaries, strategic risks
+- [`risks.md`](risks.md) — load-bearing strategic bets and fallback paths
+- [`engagements/bealls.md`](engagements/bealls.md) — Bealls engagement plan
+- [`../functional/PRD.md`](../functional/PRD.md) — product requirements (populates after Task #44)
+- [`../functional/BRD.md`](../functional/BRD.md) — user stories with trace IDs (populates after Task #44)
+- [`../architecture/ARCHITECTURE.md`](../architecture/ARCHITECTURE.md) — capability-level architecture
+
+**Engine layer (§3.1):**
+
+- [`../architecture/engine/composition-taxonomy.md`](../architecture/engine/composition-taxonomy.md) — block catalog × surface matrix × latitude rules
+- [`../architecture/engine/signals-and-inference.md`](../architecture/engine/signals-and-inference.md) — signal types and inference rules
+- [`../architecture/engine/fractal-interface-evaluation.md`](../architecture/engine/fractal-interface-evaluation.md) — composition philosophy
+- [`../functional/specs/behavioral-signals.md`](../functional/specs/behavioral-signals.md) — signal expansion spec
+- [`../research/engine/`](../research/engine/) — competitive research (Dynamic Yield, Monetate, Bloomreach, etc.)
+
+**Foundation layer (§3.2):**
+
+- [`../architecture/multi-brand.md`](../architecture/multi-brand.md) — brand configuration
+- [`../research/foundation/`](../research/foundation/) — reference platform research (Stencil, Dawn, etc.)
+
+**Admin layer (§3.3):**
+
+- [`../functional/specs/aisles-admin.md`](../functional/specs/aisles-admin.md) — admin layer spec
+- [`../architecture/observability.md`](../architecture/observability.md) — Observe dashboard
+- [`../research/admin/`](../research/admin/) — merchant-control-plane research
