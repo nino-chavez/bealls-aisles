@@ -6,6 +6,18 @@
 import { getDb } from '../db';
 import type { PersonaFitScores } from './types';
 
+/**
+ * In-process vocabulary cache. Per ADR-008 Phase A: query once per process,
+ * reuse for the lifetime of the function instance. Each Vercel deployment
+ * is single-brand (BRAND_ID env-scoped), so a process-wide cache is
+ * brand-scoped trivially.
+ *
+ * Bucket-keyed by `brandId` so a future multi-tenant DB doesn't quietly
+ * leak vocab across brands; today the value is always the same per process.
+ */
+const tagVocabularyCache = new Map<string, { tags: string[]; cachedAt: number }>();
+const TAG_VOCAB_TTL_MS = 1000 * 60 * 60; // 1 hour
+
 export interface ProductEnrichment {
 	bcEntityId: number;
 	personaFit: PersonaFitScores;
@@ -55,5 +67,45 @@ export async function getEnrichmentByEntityIds(entityIds: number[]): Promise<Map
 	} catch (err) {
 		console.warn('[enrichment] Failed to fetch enrichment data:', err);
 		return new Map();
+	}
+}
+
+/**
+ * Return the brand's distinct semantic-tag vocabulary — the union of every
+ * tag assigned by enrichment to this brand's catalog.
+ *
+ * Used by ADR-008 Phase A as a constraint on refinement-chat tag-intent
+ * extraction: the AI may only return tags from this set, never a hallucinated
+ * tag. Empty set is a valid (cold) state — caller should fall back to
+ * persona-only behavior.
+ *
+ * Cached in-process for TAG_VOCAB_TTL_MS. Pass `force=true` to bypass.
+ */
+export async function getBrandTagVocabulary(brandId: string, force = false): Promise<string[]> {
+	const cached = tagVocabularyCache.get(brandId);
+	if (!force && cached && Date.now() - cached.cachedAt < TAG_VOCAB_TTL_MS) {
+		return cached.tags;
+	}
+
+	try {
+		const sql = getDb();
+		// Order by frequency descending so the prompt's top-N cap shows the
+		// most representative tags first. The brand's enrichment vocabulary
+		// can grow to thousands of long-tail entries; without frequency
+		// ordering, an alphabetical top-N skips common labels like
+		// "casual wear" or "resort wear" in favor of long-tail noise.
+		const rows = await sql`
+			SELECT tag, count(*) AS freq
+			FROM (SELECT unnest(semantic_tags) AS tag FROM enriched_products) t
+			WHERE tag IS NOT NULL AND length(tag) > 0
+			GROUP BY tag
+			ORDER BY freq DESC, tag ASC
+		`;
+		const tags = rows.map((r) => String(r.tag)).filter(Boolean);
+		tagVocabularyCache.set(brandId, { tags, cachedAt: Date.now() });
+		return tags;
+	} catch (err) {
+		console.warn('[enrichment] Failed to load tag vocabulary:', err);
+		return cached?.tags ?? [];
 	}
 }

@@ -8,8 +8,12 @@
 
 import { getCategories, getProductsByCategory, getProducts, customFieldsToRecord, type BCProduct } from './bigcommerce';
 import { getEnrichmentByEntityIds } from './enrichment/query';
+import { rankByTagAndPersona } from './tag-rerank';
 import { getBrand, getBrandMode } from '$lib/brand/config';
 import type { Product } from '$lib/types';
+
+// Re-export so existing callers / tests can keep importing from catalog.
+export { rankByTagAndPersona };
 
 /** Category map — driven by the active brand config */
 export const CATEGORY_MAP: Record<string, { bcName: string; displayName: string }> = getBrand().categories;
@@ -23,11 +27,17 @@ export interface EnrichedProduct extends Product {
  * Load products for a category slug, merged with enrichment data.
  * Sorted by persona-fit for the given persona.
  *
+ * When `tagIntents` is non-empty (ADR-008 Phase A), products with at least
+ * one matching semantic tag are filtered in and ranked by tag-overlap count
+ * (most matches first), persona-fit secondary. Empty/undefined `tagIntents`
+ * preserves the persona-only behavior (Q-012 fallback).
+ *
  * Returns null if the category doesn't exist.
  */
 export async function loadCategoryProducts(
 	categorySlug: string,
 	persona?: string,
+	tagIntents?: string[],
 ): Promise<{ products: EnrichedProduct[]; categoryName: string } | null> {
 	const catConfig = CATEGORY_MAP[categorySlug];
 	if (!catConfig) return null;
@@ -52,16 +62,8 @@ export async function loadCategoryProducts(
 		};
 	});
 
-	// Sort by persona-fit if persona is provided
-	if (persona) {
-		enrichedProducts.sort((a, b) => {
-			const fitA = a.personaFit?.[persona as keyof NonNullable<EnrichedProduct['personaFit']>] ?? 0.5;
-			const fitB = b.personaFit?.[persona as keyof NonNullable<EnrichedProduct['personaFit']>] ?? 0.5;
-			return fitB - fitA;
-		});
-	}
-
-	return { products: enrichedProducts, categoryName: catConfig.displayName };
+	const ranked = rankByTagAndPersona(enrichedProducts, persona, tagIntents);
+	return { products: ranked, categoryName: catConfig.displayName };
 }
 
 /**
@@ -71,10 +73,14 @@ export async function loadCategoryProducts(
  * Pulls top N from BC's global product query (default 30 — large enough that
  * the AI has variety, small enough to stay in the prompt's MAX_LAYOUT_PRODUCTS=15
  * window after persona-fit ranking).
+ *
+ * `tagIntents` (ADR-008 Phase A): when non-empty, filter+rerank by tag overlap
+ * before persona-fit secondary. Empty/undefined preserves persona-only behavior.
  */
 export async function loadHomeProducts(
 	persona?: string,
 	limit = 30,
+	tagIntents?: string[],
 ): Promise<{ products: EnrichedProduct[]; categoryName: string }> {
 	// Content-mode brands have no online catalog — AI generates from
 	// content-mode component subset with empty products.
@@ -96,16 +102,10 @@ export async function loadHomeProducts(
 		};
 	});
 
-	if (persona) {
-		enrichedProducts.sort((a, b) => {
-			const fitA = a.personaFit?.[persona as keyof NonNullable<EnrichedProduct['personaFit']>] ?? 0.5;
-			const fitB = b.personaFit?.[persona as keyof NonNullable<EnrichedProduct['personaFit']>] ?? 0.5;
-			return fitB - fitA;
-		});
-	}
-
-	return { products: enrichedProducts, categoryName: 'Home' };
+	const ranked = rankByTagAndPersona(enrichedProducts, persona, tagIntents);
+	return { products: ranked, categoryName: 'Home' };
 }
+
 
 /** Transform a BC product into the shape our layout components expect */
 function transformProduct(p: BCProduct): Product {

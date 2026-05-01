@@ -24,6 +24,11 @@
 	let overridePersona = $state<string | null>(null);
 	let sessionCost = $state<{ totalCost: number; generations: number; tokens: number; cacheHitRate: number } | null>(null);
 	let currentPersona = $derived(overridePersona ?? data.persona ?? 'gatherer');
+	// ADR-008 Phase A: tag intents extracted by the refinement chat. When
+	// the shopper says "warm and cozy", the chat surfaces those tags here
+	// and subsequent /api/layout calls pass them through for filtering/rerank.
+	// Resets when the category changes (intent is contextual to the surface).
+	let tagIntents = $state<string[]>([]);
 
 	// Fetch AI-generated layout on mount / persona change
 	// Track category to reset layout on navigation
@@ -38,6 +43,7 @@
 		if (slug !== lastCategory) {
 			aiLayout = null;
 			aiMeta = null;
+			tagIntents = [];
 			lastCategory = slug;
 		}
 
@@ -73,6 +79,7 @@
 					categorySlug: data.category.slug,
 					picksContext: picksContextForPrompt(),
 					probabilities: data.inference?.probabilities,
+					tagIntents,
 				}),
 				signal: controller.signal,
 			});
@@ -425,6 +432,7 @@
 		categorySlug={data.category.slug}
 		currentLayout={aiLayout}
 		onLayoutUpdate={(newLayout) => { aiLayout = newLayout; }}
+		onTagIntentsUpdate={(next) => { tagIntents = next; }}
 	/>
 {/if}
 {/if}

@@ -6,6 +6,8 @@ import { loadCategoryProducts, CATEGORY_MAP } from '$lib/server/catalog';
 import { logGeneration } from '$lib/server/generation-log';
 import { getBrand } from '$lib/brand/config';
 import { getActiveRules, rulesToPromptContext } from '$lib/server/rules';
+import { getBrandTagVocabulary } from '$lib/server/enrichment/query';
+import { filterToVocabulary, formatTagVocabularyForPrompt } from '$lib/server/tag-intent';
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	const startTime = Date.now();
@@ -57,6 +59,13 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		const rules = await getActiveRules(persona, categorySlug);
 		const rulesContext = rulesToPromptContext(rules);
 		const availableCategories = Object.values(brand.categories).map((c) => c.displayName).join(', ');
+
+		// ADR-008 Phase A: load brand tag vocabulary once per request and surface
+		// it to the prompt. The AI returns tagIntents from this set only; we
+		// post-validate after the call to defend against hallucinated tags.
+		const tagVocabulary = await getBrandTagVocabulary(brand.id);
+		const tagVocabularyContext = formatTagVocabularyForPrompt(tagVocabulary);
+
 		const prompt = `You are a merchandising AI for ${brand.prompt.storeName}, ${brand.prompt.storeDescription}. A shopper is refining their browse experience through conversation.
 ${rulesContext}
 
@@ -72,7 +81,7 @@ SHOPPER'S MESSAGE: "${message}"
 ${constraintHistory ? `ACCUMULATED CONSTRAINTS:\n${constraintHistory}\n` : ''}
 AVAILABLE PRODUCTS (${products.length} items, pre-sorted by ${persona} relevance):
 ${productSummaries}
-
+${tagVocabularyContext}
 PREVIOUS LAYOUT:
 ${currentLayout ? JSON.stringify(currentLayout.sections.map((s: any) => s.component), null, 2) : 'None'}
 
@@ -80,6 +89,7 @@ INSTRUCTIONS:
 1. Extract a constraint from the shopper's message (e.g., "under $500", "wireless only", "for camping")
 2. Apply ALL accumulated constraints + the new one to filter and reorder products
 3. Generate a new layout reflecting the refined intent
+4. Extract tagIntents per the TAG INTENT EXTRACTION RULES above (vocabulary-constrained subset)
 
 CONSTRAINT NEGOTIATION:
 - If the new constraint conflicts with existing ones (e.g., "leather" + "under $100" with no matches), set constraintConflict=true
@@ -129,15 +139,32 @@ Generate a refined layout with a conversational response.`;
 			sessionId,
 		}).catch(() => {});
 
+		// ADR-008 Phase A: vocabulary-constrain the AI's tag extraction. Even
+		// with the prompt rule, an LLM may emit tags outside the brand set —
+		// drop those silently rather than fail. Empty result is the documented
+		// fallback (Q-012): persona-only ranking continues.
+		const tagIntents = filterToVocabulary(output?.tagIntents, tagVocabulary);
+
 		return json({
 			layout: output?.layout,
 			chatResponse: output?.chatResponse || 'Layout updated.',
 			newConstraint: output?.constraintApplied || message.trim(),
 			constraintConflict: output?.constraintConflict || false,
+			tagIntents,
+			// `personaUpdate` echoes the persona vector that drove this turn so
+			// the client can pass both `persona` and `tagIntents` back to
+			// /api/layout for the next recompose. The actual persona inference
+			// continues to run via the signal store; this field is the
+			// effective vector for this turn (ADR-008 Phase A leaves persona
+			// inference unchanged — refinement chat contributes only via the
+			// existing `refinement-chat-engaged` signal rule).
+			personaUpdate: { primary: persona },
 			meta: {
 				generationTimeMs: elapsed,
 				persona,
 				constraintCount: (constraints?.length || 0) + 1,
+				tagIntentCount: tagIntents.length,
+				tagVocabularySize: tagVocabulary.length,
 			},
 		});
 	} catch (err) {

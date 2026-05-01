@@ -139,5 +139,55 @@ console.log('\nEmpty-surface rescue clamps the category line');
 	);
 }
 
+console.log('\nTag intents — surface intents into the prompt when present');
+{
+	// ADR-008 Phase A: when refinement chat extracted tag intents, the
+	// prompt must surface them so the AI can rerank within the persona's
+	// composition style. When absent, the tagIntents block must NOT leak
+	// (regression check — empty intents shouldn't decorate the prompt).
+	const withIntents = buildLayoutPrompt(
+		'gatherer',
+		'Women',
+		products,
+		undefined,
+		undefined,
+		undefined,
+		{ surface: 'plp', tagIntents: ['cozy', 'warm'] },
+	);
+	const withoutIntents = buildLayoutPrompt(
+		'gatherer',
+		'Women',
+		products,
+		undefined,
+		undefined,
+		undefined,
+		{ surface: 'plp' },
+	);
+
+	assert(
+		'Tag intents prompt includes SHOPPER INTENT TAGS line',
+		withIntents.includes('SHOPPER INTENT TAGS'),
+		'tag intents block missing from prompt',
+	);
+	assert(
+		'Tag intents prompt names every intent',
+		withIntents.includes('"cozy"') && withIntents.includes('"warm"'),
+		'specific intent names missing from prompt',
+	);
+	assert(
+		'No-intents prompt omits SHOPPER INTENT TAGS line',
+		!withoutIntents.includes('SHOPPER INTENT TAGS'),
+		'tag intents block leaked into a no-intents prompt',
+	);
+	assert(
+		'Empty intents array omits SHOPPER INTENT TAGS line',
+		!buildLayoutPrompt('gatherer', 'Women', products, undefined, undefined, undefined, {
+			surface: 'plp',
+			tagIntents: [],
+		}).includes('SHOPPER INTENT TAGS'),
+		'empty intents leaked the block into the prompt',
+	);
+}
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 if (failed > 0) throw new Error(`${failed} test(s) failed`);

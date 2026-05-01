@@ -7,11 +7,17 @@
 		categorySlug,
 		currentLayout,
 		onLayoutUpdate,
+		onTagIntentsUpdate,
 	}: {
 		persona: string;
 		categorySlug: string;
 		currentLayout: Layout | null;
 		onLayoutUpdate: (layout: Layout) => void;
+		// ADR-008 Phase A: bubble refinement-derived tag intents up so the
+		// parent surface includes them in subsequent /api/layout calls.
+		// Optional — pages that don't recompose on persona/category change
+		// can ignore it.
+		onTagIntentsUpdate?: (tagIntents: string[]) => void;
 	} = $props();
 
 	let isOpen = $state(false);
@@ -58,6 +64,14 @@
 			if (data.layout) {
 				constraints = [...constraints, data.newConstraint];
 				onLayoutUpdate(data.layout);
+
+				// ADR-008 Phase A: surface extracted tag intents to the parent.
+				// Empty array is the documented Q-012 fallback (NL too generic) —
+				// the parent should clear any stale intents in that case so
+				// successive turns don't carry forward state from earlier ones.
+				if (Array.isArray(data.tagIntents)) {
+					onTagIntentsUpdate?.(data.tagIntents);
+				}
 
 				chatHistory = [...chatHistory, {
 					role: 'assistant',

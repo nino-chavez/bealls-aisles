@@ -228,7 +228,7 @@ export function buildLayoutPrompt(
 	picksContext?: string,
 	rulesContext?: string,
 	probabilities?: { gatherer: number; hunter: number; researcher: number; gifter: number },
-	options?: { surface?: Surface; reason?: EmptyReason },
+	options?: { surface?: Surface; reason?: EmptyReason; tagIntents?: string[] },
 ): string {
 	const brand = getBrand();
 	const mode = getBrandMode(brand);
@@ -293,6 +293,14 @@ VALID IMAGES:
 	const isEmpty = options?.surface === 'empty';
 	const isCart = options?.surface === 'cart';
 	const isCheckout = options?.surface === 'checkout';
+
+	// ADR-008 Phase A: when refinement chat extracted shopper-intent tags,
+	// surface them so the AI orders product sections by tag relevance + persona-fit
+	// and aligns section copy with the intent. Empty/missing → no-op.
+	const tagIntentsBlock = options?.tagIntents && options.tagIntents.length > 0
+		? `\nSHOPPER INTENT TAGS: ${options.tagIntents.map((t) => `"${t}"`).join(', ')}.
+The shopper has expressed concrete attribute intent through refinement chat. Products in AVAILABLE PRODUCTS are pre-filtered + reranked by tag-overlap with these intents. Order grids and the hero (if any) by tag relevance first, persona-fit second. Reflect the intent in section copy where natural — e.g., "Cozy picks", "Built for warm-weather", "Hand-picked classics" — without parroting the tag names verbatim.\n`
+		: '';
 	const reason = options?.reason;
 	const surfaceLabel = isEmpty
 		? `${reason ?? 'rescue'} rescue page`
@@ -331,7 +339,7 @@ ${personaDef}
 ${probabilities ? `
 PROBABILITY VECTOR: gatherer ${Math.round(probabilities.gatherer * 100)}% | hunter ${Math.round(probabilities.hunter * 100)}% | researcher ${Math.round(probabilities.researcher * 100)}% | gifter ${Math.round(probabilities.gifter * 100)}%
 The primary persona is ${persona}, but blend in elements from secondary personas if their score is above 25%. For example, if researcher is 30% alongside a hunter primary, show specs alongside the dense grid.` : ''}
-${categoryLine}${homeGuidance}
+${categoryLine}${homeGuidance}${tagIntentsBlock}
 ${productsBlock}${picksContext || ''}${rulesContext || ''}${validHrefBlock}
 ${getComponentGuide(mode)}
 

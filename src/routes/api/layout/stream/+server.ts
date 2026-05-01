@@ -12,6 +12,19 @@ import {
 import { buildLayoutPrompt } from '$lib/server/layout-prompt';
 import { loadCategoryProducts, loadHomeProducts } from '$lib/server/catalog';
 import { getCachedLayout, cacheLayout, hashPicks } from '$lib/server/cache';
+
+// Mirror of /api/layout's discriminator — keep both endpoints' cache keys
+// aligned so a stream response and a non-stream response for the same
+// (persona, slug, picks, tagIntents) tuple share a cache slot.
+function composeCacheDiscriminator(picksContext?: string, tagIntents: string[] = []): string | undefined {
+	const tagPart = tagIntents.length > 0
+		? 'tags:' + [...tagIntents].map((t) => t.toLowerCase()).sort().join(',')
+		: '';
+	const combined = picksContext || tagPart
+		? `${picksContext ?? ''}|${tagPart}`
+		: undefined;
+	return hashPicks(combined);
+}
 import { logGeneration } from '$lib/server/generation-log';
 import { getActiveRules, rulesToPromptContext } from '$lib/server/rules';
 import { layoutModel, gatewayProviderOptions } from '$lib/server/ai-model';
@@ -36,7 +49,12 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 			probabilities,
 			surface: explicitSurface,
 			reason: explicitReason,
+			tagIntents: rawTagIntents,
 		} = await request.json();
+
+		const tagIntents: string[] = Array.isArray(rawTagIntents)
+			? rawTagIntents.filter((t): t is string => typeof t === 'string' && t.length > 0)
+			: [];
 
 		if (!persona || !categorySlug) {
 			return json({ error: 'Missing required fields: persona, categorySlug' }, { status: 400 });
@@ -58,7 +76,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		const cacheSlug = surface === 'empty' ? `empty:${reason}` : categorySlug;
 
 		// ─── Cache check — return instantly ────────────────────────
-		const ph = hashPicks(picksContext);
+		const ph = composeCacheDiscriminator(picksContext, tagIntents);
 		const cached = await getCachedLayout(brandId, persona, cacheSlug, ph);
 		if (cached) {
 			const elapsed = Date.now() - startTime;
@@ -81,8 +99,8 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		// ─── Cache miss — stream via AI Gateway ───────────────────
 		// Empty/rescue surfaces source from popular products (loadHomeProducts).
 		const result = surface === 'empty' || categorySlug === 'home'
-			? await loadHomeProducts(persona)
-			: await loadCategoryProducts(categorySlug, persona);
+			? await loadHomeProducts(persona, undefined, tagIntents)
+			: await loadCategoryProducts(categorySlug, persona, tagIntents);
 		if (!result) {
 			return json({ error: `Category "${categorySlug}" not found` }, { status: 404 });
 		}
@@ -90,7 +108,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		const { products, categoryName } = result;
 		const rules = await getActiveRules(persona, categorySlug);
 		const rulesContext = rulesToPromptContext(rules);
-		const prompt = buildLayoutPrompt(persona, categoryName, products, picksContext, rulesContext, probabilities, { surface, reason });
+		const prompt = buildLayoutPrompt(persona, categoryName, products, picksContext, rulesContext, probabilities, { surface, reason, tagIntents });
 
 		const model = 'anthropic/claude-haiku-4.5';
 
