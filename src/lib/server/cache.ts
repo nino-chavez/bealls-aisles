@@ -83,6 +83,53 @@ export async function cacheLayout(brandId: string, persona: string, categorySlug
 }
 
 /**
+ * Suggestion cache (PDP "pairs well with" + PicksTray suggestions).
+ *
+ * Pairings are deterministic per (brand × picks set) — the LLM has no
+ * personalization input beyond the picks themselves. Without caching,
+ * every PDP visit re-pays the 2–4s suggest latency for the same answer.
+ * 1h TTL matches the layout cache; bust on enrichment runs alongside
+ * the layout cache invalidation.
+ */
+const SUGGEST_TTL_S = 60 * 60; // 1h
+
+function suggestKey(brandId: string, picksHash: string): string {
+	return `aisles:suggest:${brandId}:${picksHash}`;
+}
+
+export interface SuggestionEntry {
+	id: string;
+	name: string;
+	price: number;
+	reason: string;
+	type: 'accessory' | 'upsell' | 'cross-sell' | 'complement';
+}
+
+export async function getCachedSuggestions(brandId: string, picksHash: string): Promise<SuggestionEntry[] | null> {
+	const r = await getRedis();
+	if (!r) return null;
+	try {
+		return await r.get<SuggestionEntry[]>(suggestKey(brandId, picksHash));
+	} catch {
+		return null;
+	}
+}
+
+export async function cacheSuggestions(
+	brandId: string,
+	picksHash: string,
+	suggestions: SuggestionEntry[],
+): Promise<void> {
+	const r = await getRedis();
+	if (!r) return;
+	try {
+		await r.set(suggestKey(brandId, picksHash), suggestions, { ex: SUGGEST_TTL_S });
+	} catch {
+		// non-fatal
+	}
+}
+
+/**
  * Invalidate cached layouts. Called after enrichment runs or manual flush.
  * If no args, invalidates all layout caches.
  */

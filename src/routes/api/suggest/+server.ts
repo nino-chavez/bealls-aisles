@@ -4,6 +4,7 @@ import { generateText, Output, gateway } from 'ai';
 import { z } from 'zod';
 import { loadCategoryProducts, CATEGORY_MAP } from '$lib/server/catalog';
 import { getBrand } from '$lib/brand/config';
+import { cacheSuggestions, getCachedSuggestions, hashPicks, type SuggestionEntry } from '$lib/server/cache';
 
 const SuggestionSchema = z.object({
 	suggestions: z.array(z.object({
@@ -28,6 +29,21 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		const brand = getBrand();
+
+		// Suggestions are deterministic per (brand × picks set). Build a
+		// canonical hash of picks ids (sorted) and serve from cache when
+		// the same shopper signal recurs — single-product PDP pairings
+		// hit the cache nearly always once warm.
+		const picksKey = picks
+			.map((p: { id?: string }) => String(p?.id ?? ''))
+			.filter(Boolean)
+			.sort()
+			.join(',');
+		const picksHash = hashPicks(picksKey);
+		if (picksHash) {
+			const cached = await getCachedSuggestions(brand.id, picksHash);
+			if (cached) return json({ suggestions: cached, cacheHit: true });
+		}
 
 		// Load products from all categories
 		const allProducts: Array<{ id: string; name: string; price: number; category: string; specs: Record<string, string>; salePrice?: number; compatibleWith: string[] }> = [];
@@ -111,7 +127,7 @@ IMPORTANT:
 		});
 
 		// Resolve suggestions to include name/price for the UI
-		const suggestions = (result.output?.suggestions || []).map((s) => {
+		const suggestions: SuggestionEntry[] = (result.output?.suggestions || []).map((s) => {
 			const product = candidates.find((p) => p.id === s.productId) || allProducts.find((p) => p.id === s.productId);
 			return {
 				id: s.productId,
@@ -122,7 +138,11 @@ IMPORTANT:
 			};
 		}).filter((s) => s.price > 0); // Filter out unresolved products
 
-		return json({ suggestions });
+		if (picksHash && suggestions.length > 0) {
+			cacheSuggestions(brand.id, picksHash, suggestions).catch(() => {});
+		}
+
+		return json({ suggestions, cacheHit: false });
 	} catch (err) {
 		console.error('Suggestion generation failed:', err);
 		return json({ suggestions: [] });
