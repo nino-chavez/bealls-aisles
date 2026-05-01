@@ -1,94 +1,48 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { browser } from '$app/environment';
+	import type { PageData } from './$types';
 
-	let checkoutContainer: HTMLDivElement;
-	let isLoading = $state(true);
-	let error = $state('');
-	let cartId = $state('');
-
-	onMount(async () => {
-		// Get cart ID from our API
-		try {
-			const res = await fetch('/api/cart');
-			const data = await res.json();
-
-			if (!data.cart?.entityId) {
-				error = 'Your cart is empty. Add some items before checking out.';
-				isLoading = false;
-				return;
-			}
-
-			cartId = data.cart.entityId;
-			await loadEmbeddedCheckout(cartId);
-		} catch (err) {
-			error = 'Failed to load checkout. Please try again.';
-			isLoading = false;
-		}
-	});
-
-	async function loadEmbeddedCheckout(cartEntityId: string) {
-		try {
-			// Load the BC Checkout SDK script
-			const script = document.createElement('script');
-			script.src = 'https://checkout-sdk.bigcommerce.com/v1/loader.js';
-			script.async = true;
-
-			await new Promise<void>((resolve, reject) => {
-				script.onload = () => resolve();
-				script.onerror = () => reject(new Error('Failed to load checkout SDK'));
-				document.head.appendChild(script);
-			});
-
-			// Initialize embedded checkout
-			const module = await (window as any).checkoutKitLoader.load('checkout-sdk');
-			const service = module.createCheckoutService();
-
-			// For embedded checkout, we need the checkout URL
-			// BC embedded checkout uses a redirect URL approach
-			const checkoutUrl = `https://store-${import.meta.env.VITE_BC_STORE_HASH || 'cdfqf9k6zf'}.mybigcommerce.com/checkout`;
-
-			// Create an iframe-based checkout
-			const iframe = document.createElement('iframe');
-			iframe.src = `${checkoutUrl}?cartId=${cartEntityId}`;
-			iframe.style.width = '100%';
-			iframe.style.minHeight = '600px';
-			iframe.style.border = 'none';
-			iframe.allow = 'payment';
-
-			checkoutContainer.innerHTML = '';
-			checkoutContainer.appendChild(iframe);
-			isLoading = false;
-		} catch (err) {
-			console.error('Checkout SDK error:', err);
-			// Fallback: redirect to BC hosted checkout
-			if (browser) {
-				window.location.href = `https://store-${import.meta.env.VITE_BC_STORE_HASH || 'cdfqf9k6zf'}.mybigcommerce.com/checkout?cartId=${cartEntityId}`;
-			}
-		}
-	}
+	let { data }: { data: PageData } = $props();
 </script>
 
 <svelte:head>
-	<title>Checkout — Haven</title>
+	<title>Checkout</title>
 </svelte:head>
 
-<div class="mx-auto max-w-4xl px-6 py-8">
-	<h1 class="text-2xl">Checkout</h1>
-
-	{#if error}
-		<div class="mt-8 rounded-sm border border-error/30 bg-error/5 p-6 text-center">
-			<p class="text-surface-muted-fg">{error}</p>
-			<a href="/" class="mt-4 inline-block text-sm font-medium text-primary hover:text-secondary">
+<div class="mx-auto max-w-2xl px-6 py-16">
+	{#if data.reason === 'empty'}
+		<h1 class="font-display text-2xl">Your cart is empty</h1>
+		<p class="mt-3 text-surface-muted-fg">Add some items before checking out.</p>
+		<a href="/" class="mt-6 inline-block text-sm font-medium text-primary hover:text-secondary">
+			Continue shopping
+		</a>
+	{:else}
+		<!-- Demo-fallback splash: BC Optimized Checkout isn't configured for
+		     this channel, or the redirect URL mint failed. The shopper would
+		     proceed to real BC checkout in production. -->
+		<div class="rounded-sm border border-surface-border bg-surface-card p-8">
+			<div class="text-xs font-semibold uppercase tracking-wider text-surface-muted-fg">
+				Demo checkout
+			</div>
+			<h1 class="mt-2 font-display text-2xl">Order would proceed to BC Optimized Checkout</h1>
+			<p class="mt-4 text-sm text-surface-muted-fg">
+				In production, this CTA hands off to BigCommerce's Optimized One-Page Checkout
+				with cart contents and customer context attached. Hosted by BigCommerce, branded
+				per merchant, PCI-compliant by default.
+			</p>
+			<div class="mt-6 flex items-center justify-between rounded-sm bg-surface-muted px-4 py-3">
+				<span class="text-sm text-surface-muted-fg">{data.itemCount} item{data.itemCount === 1 ? '' : 's'}</span>
+				<span class="font-medium">${data.subtotal.toLocaleString()}</span>
+			</div>
+			<p class="mt-6 text-xs text-surface-muted-fg">
+				This demo channel doesn't have Optimized Checkout enabled, so we surface the
+				handoff intent here instead of dead-ending on a 404.
+			</p>
+			<a
+				href="/"
+				class="mt-6 inline-block rounded-sm bg-surface-fg px-6 py-3 text-sm font-semibold text-surface-bg hover:opacity-85"
+			>
 				Continue shopping
 			</a>
 		</div>
-	{:else}
-		{#if isLoading}
-			<div class="mt-8 flex items-center justify-center py-24">
-				<div class="animate-pulse text-surface-muted-fg">Loading checkout...</div>
-			</div>
-		{/if}
-		<div bind:this={checkoutContainer} class="mt-6"></div>
 	{/if}
 </div>
