@@ -5,7 +5,7 @@
 		categoryName = '',
 	}: {
 		persona?: string;
-		surface?: 'homepage' | 'category';
+		surface?: 'homepage' | 'category' | 'cart' | 'empty' | 'rescue';
 		categoryName?: string;
 	} = $props();
 
@@ -44,7 +44,15 @@
 	const ESTIMATED_MS = 8000;
 	let progressPct = $derived(Math.min(95, Math.round((elapsedMs / ESTIMATED_MS) * 100)));
 	let surfaceLabel = $derived(
-		surface === 'category' && categoryName ? categoryName : surface === 'homepage' ? 'homepage' : 'page'
+		surface === 'category' && categoryName
+			? categoryName
+			: surface === 'homepage'
+				? 'homepage'
+				: surface === 'cart'
+					? 'cart recommendations'
+					: surface === 'empty' || surface === 'rescue'
+						? 'next steps'
+						: 'page'
 	);
 	let personaLabel = $derived(PERSONA_LABEL[persona] ?? PERSONA_LABEL.gatherer);
 </script>

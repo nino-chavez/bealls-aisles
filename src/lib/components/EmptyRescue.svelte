@@ -63,7 +63,7 @@
 </script>
 
 {#if isLoading}
-	<LayoutBuildingState {persona} surface="homepage" />
+	<LayoutBuildingState {persona} surface={reason === 'empty-cart' ? 'cart' : 'rescue'} />
 {:else if layout && !failed}
 	<LayoutRenderer {layout} {products} />
 {:else}

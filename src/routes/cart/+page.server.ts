@@ -29,9 +29,9 @@ export const load: PageServerLoad = async ({ cookies }) => {
 		};
 	}
 
-	let cart = getCachedCart(cartId)?.cart ?? null;
+	let cart = (await getCachedCart(cartId))?.cart ?? null;
 	if (!cart) {
-		const sessionCookie = getSessionCookie(cartId) ?? undefined;
+		const sessionCookie = (await getSessionCookie(cartId)) ?? undefined;
 		try {
 			cart = await getCart(cartId, sessionCookie);
 		} catch {
