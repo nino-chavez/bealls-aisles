@@ -8,8 +8,9 @@
  *
  * - cart.above-checkout-cta: Hidden by default. Engine emits the
  *   last-chance upsell row when the AI composer finds qualifying
- *   neighborhood products (TODO PRD-ENG-019: tag-overlap query when
- *   ADR-008 Phase B lands; today: persona-fit ranking).
+ *   neighborhood products. Candidate pool is the tag-overlap aggregate
+ *   of the cart's line items (ADR-008 Phase B / PRD-ENG-019); empty
+ *   cart falls back to popular products for resilience.
  * - cart.below-fold: Hidden by default. Behavioral surface; pulls
  *   forward when viewed-products session state lands.
  * - cart.empty-state: Hidden — the existing CartDrawer EmptyRescue

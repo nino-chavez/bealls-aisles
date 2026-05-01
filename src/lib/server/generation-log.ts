@@ -38,6 +38,11 @@ async function ensureTable() {
 	await sql`ALTER TABLE generation_logs ADD COLUMN IF NOT EXISTS model TEXT`.catch(() => {});
 	await sql`ALTER TABLE generation_logs ADD COLUMN IF NOT EXISTS estimated_cost REAL`.catch(() => {});
 	await sql`ALTER TABLE generation_logs ADD COLUMN IF NOT EXISTS session_id TEXT`.catch(() => {});
+	await sql`ALTER TABLE generation_logs ADD COLUMN IF NOT EXISTS brand_id TEXT`.catch(() => {});
+	await sql`ALTER TABLE generation_logs ADD COLUMN IF NOT EXISTS surface TEXT`.catch(() => {});
+	await sql`ALTER TABLE generation_logs ADD COLUMN IF NOT EXISTS persona_distribution JSONB`.catch(() => {});
+	await sql`CREATE INDEX IF NOT EXISTS generation_logs_session_idx ON generation_logs (session_id)`.catch(() => {});
+	await sql`CREATE INDEX IF NOT EXISTS generation_logs_brand_created_idx ON generation_logs (brand_id, created_at DESC)`.catch(() => {});
 	tableCreated = true;
 }
 
@@ -66,6 +71,9 @@ export interface GenerationLogEntry {
 	evalScore?: number;
 	model?: string;
 	sessionId?: string;
+	brandId?: string;
+	surface?: string;
+	personaDistribution?: { gatherer: number; hunter: number; researcher: number; gifter: number };
 }
 
 export async function logGeneration(entry: GenerationLogEntry): Promise<void> {
@@ -77,13 +85,16 @@ export async function logGeneration(entry: GenerationLogEntry): Promise<void> {
 			INSERT INTO generation_logs (
 				type, persona, category_slug, cache_hit, generation_ms,
 				product_count, input_tokens, output_tokens, eval_score,
-				model, estimated_cost, session_id
+				model, estimated_cost, session_id,
+				brand_id, surface, persona_distribution
 			) VALUES (
 				${entry.type}, ${entry.persona}, ${entry.categorySlug},
 				${entry.cacheHit}, ${entry.generationTimeMs},
 				${entry.productCount ?? null}, ${entry.inputTokens ?? null},
 				${entry.outputTokens ?? null}, ${entry.evalScore ?? null},
-				${entry.model ?? null}, ${cost}, ${entry.sessionId ?? null}
+				${entry.model ?? null}, ${cost}, ${entry.sessionId ?? null},
+				${entry.brandId ?? null}, ${entry.surface ?? null},
+				${entry.personaDistribution ? JSON.stringify(entry.personaDistribution) : null}
 			)
 		`;
 	} catch (err) {

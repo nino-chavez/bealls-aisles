@@ -226,13 +226,15 @@ This scores all products in the channel for persona-fit and generates semantic t
 
 4. Deploy. The first deploy will warm the cache on demand (first visitor per persona+category triggers generation).
 
-5. Optionally run cache warming after deploy:
+5. Optionally run cache pre-warming after deploy:
 
 ```bash
-npx tsx scripts/warm-cache.ts newbrand
+npm run prewarm
 ```
 
-This requires adding your brand to the `BRANDS` map in `scripts/warm-cache.ts`.
+This requires adding your brand entry (URL + categories) to `scripts/cache/prewarm-cells.json`. The cell list is data, not code — no script edit needed. Pre-warm covers home + PLP cells × all four personas. PDP, cart, checkout, empty, and content-mode brands are intentionally excluded; see [`docs/audits/perf/cold-start-baseline-2026-05-01.md`](../audits/perf/cold-start-baseline-2026-05-01.md) for rationale.
+
+The legacy `scripts/warm-cache.ts` is superseded — do not extend it for new brands.
 
 ---
 

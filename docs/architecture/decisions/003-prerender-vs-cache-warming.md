@@ -16,7 +16,11 @@ Cache warming fills the Redis cache with layouts for each persona+category combi
 
 ## Implementation
 
-`scripts/warm-cache.ts` hits `/api/layout` for priority persona+category combinations after each deploy. The cache TTL is 1 hour, after which layouts regenerate on demand.
+`scripts/cache/prewarm.ts` (with cell list at `scripts/cache/prewarm-cells.json`) hits `/api/layout` for each `(brand × surface × persona)` cell after each deploy. The cache TTL is 1 hour, after which layouts regenerate on demand. Wired as `npm run prewarm`.
+
+Surface coverage is home + PLP only (28 cells across active brands). PDP, cart, checkout, empty, and HC-PLP are excluded — rationale documented in [`docs/audits/perf/cold-start-baseline-2026-05-01.md`](../../audits/perf/cold-start-baseline-2026-05-01.md) (Pre-warm scope section).
+
+**Superseded:** `scripts/warm-cache.ts` (the original deploy-time warmer) is left in place for now but has been superseded by `scripts/cache/prewarm.ts`. The new script reads its cell list as data (JSON), supports surface-typed pre-warming (per ADR-006), and has graceful per-cell error handling. Doc references and `npm` scripts have been migrated. Remove `scripts/warm-cache.ts` once any remaining external callers (CI hooks, deploy automations) are migrated.
 
 ## When to revisit
 

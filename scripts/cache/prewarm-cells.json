@@ -1,0 +1,31 @@
+{
+  "_comment": "Pre-warm cell list. Read by scripts/cache/prewarm.ts. Edit here, not in code. Surface coverage rationale lives in docs/audits/perf/cold-start-baseline-2026-05-01.md (Pre-warm scope section).",
+  "_personas": ["gatherer", "hunter", "researcher", "gifter"],
+  "brands": [
+    {
+      "id": "bealls",
+      "baseUrl": "https://aisles-demo-1-signal-x-studio-labs.vercel.app",
+      "surfaces": [
+        { "surface": "home", "categorySlug": "home" },
+        { "surface": "plp", "categorySlug": "women" },
+        { "surface": "plp", "categorySlug": "kids" }
+      ]
+    },
+    {
+      "id": "beallsflorida",
+      "baseUrl": "https://aisles-demo-2-signal-x-studio-labs.vercel.app",
+      "surfaces": [
+        { "surface": "home", "categorySlug": "home" },
+        { "surface": "plp", "categorySlug": "women" },
+        { "surface": "plp", "categorySlug": "swim" }
+      ]
+    },
+    {
+      "id": "homecentric",
+      "baseUrl": "https://aisles-demo-3-signal-x-studio-labs.vercel.app",
+      "surfaces": [
+        { "surface": "home", "categorySlug": "home" }
+      ]
+    }
+  ]
+}

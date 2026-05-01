@@ -34,24 +34,30 @@ export const homeFallbacks: Partial<Record<string, ZoneFallback>> = {
 
 	// home.brand-spotlight — Hidden per spec §3.1.
 
+	// home.below-fold — brand-aware service-trust callouts. Universal across
+	// brands (shipping / returns / BOPIS / rewards) and degrades gracefully
+	// for content-mode brands that have no transactional callouts. The
+	// AI may override this with a richer composition; see PRD-ENG-020.
 	'home.below-fold': (brandId) => {
 		const brand = getBrandById(brandId);
 		if (!brand) return null;
-		const tiles = Object.entries(brand.categories)
-			.slice(0, 6)
-			.map(([slug, cfg]) => ({
-				label: cfg.displayName,
-				image: '',
-				href: `/category/${slug}`,
-			}));
-		if (tiles.length < 2) return null;
+		const isContent = brand.mode === 'content';
+		const callouts = isContent
+			? [
+				{ icon: '📍', label: 'Find a store', body: 'Locator with hours + directions' },
+				{ icon: '✉️', label: 'Newsletter', body: 'Be first to know when stores open' },
+				{ icon: '🤝', label: 'In-store help', body: 'Ask any associate' },
+			]
+			: [
+				{ icon: '🚚', label: 'Free shipping', body: 'On orders $99+' },
+				{ icon: '↩️', label: 'Easy returns', body: '30 days, in store or by mail' },
+				{ icon: '🏬', label: 'Buy online, pick up', body: 'Ready in 2 hours' },
+				{ icon: '💎', label: brand.incentives ? 'Bealls Bucks rewards' : 'Member perks', body: 'Earn on every order' },
+			];
+		const columns = (callouts.length === 4 ? 4 : 3) as 3 | 4;
 		return {
-			component: 'category-tile-grid',
-			props: {
-				sectionLabel: 'Browse by category',
-				columns: Math.min(tiles.length, 4) as 2 | 3 | 4,
-				tiles,
-			},
+			component: 'service-callouts-grid',
+			props: { columns, callouts },
 		};
 	},
 };

@@ -10,6 +10,7 @@
 	import DescriptionTabs from '$lib/components/layouts/sections/DescriptionTabs.svelte';
 	import ReviewsSummary from '$lib/components/layouts/sections/ReviewsSummary.svelte';
 	import ReviewsList from '$lib/components/layouts/sections/ReviewsList.svelte';
+	import BOPISStrip from '$lib/components/layouts/sections/BOPISStrip.svelte';
 	import ZoneRenderer from '$lib/foundation/ZoneRenderer.svelte';
 
 	let { data }: { data: PageData } = $props();
@@ -108,6 +109,19 @@
 				productCategory={product.category}
 			/>
 
+			<!-- PRD-ENG-017 — proximity-aware BOPIS strip. Renders only when shopper
+			     ZIP geocodes to a pickup-ready store within 30 mi. -->
+			{#if data.bopisStrip}
+				<BOPISStrip
+					storeName={data.bopisStrip.storeName}
+					distanceMi={data.bopisStrip.distanceMi}
+					readyByLabel={data.bopisStrip.readyByLabel}
+					productName={data.bopisStrip.productName}
+					ctaLabel={data.bopisStrip.ctaLabel}
+					ctaHref={data.bopisStrip.ctaHref}
+				/>
+			{/if}
+
 			<button
 				onclick={() => isPicked(product.id) ? removePick(product.id) : addPick(product)}
 				class="self-start rounded-sm border py-2.5 px-5 text-sm font-medium transition-colors
@@ -171,17 +185,18 @@
 		<ReviewsList reviews={data.reviewsList} />
 	</div>
 
-	<!-- pdp.cross-sell zone — populated from same-category fetch (TODO PRD-ENG-019: tag-overlap) -->
+	<!-- pdp.cross-sell zone — tag-overlap neighborhood (ADR-008 Phase B / PRD-ENG-019) -->
 	<div class="mt-16">
 		<ZoneRenderer resolution={data.crossSellZone} products={relatedProducts} />
 	</div>
 
-	<!-- pdp.related zone — populated from same-category fetch (TODO PRD-ENG-019: tag-overlap) -->
+	<!-- pdp.related zone — tag-overlap neighborhood, stricter (minOverlap=3) -->
 	<div class="mt-12">
 		<ZoneRenderer resolution={data.relatedZone} products={relatedProducts} />
 	</div>
 
-	<!-- pdp.recently-viewed zone — Hidden until session has 3+ viewed products -->
+	<!-- pdp.recently-viewed zone — tag-overlap fallback substrate per ADR-008 §Cold-start safe;
+	     real session-tracked viewed-products list lands with PRD-FND-018. -->
 	<div class="mt-12">
 		<ZoneRenderer resolution={data.recentlyViewedZone} products={relatedProducts} />
 	</div>

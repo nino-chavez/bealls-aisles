@@ -142,40 +142,29 @@ Done.
 
 ## Cache Warming
 
-After deploying to Vercel, the Redis layout cache is empty. The first visitor per persona+category combination triggers a fresh generation (2–15 seconds). Cache warming pre-fills the cache so all first visitors get instant responses.
+After deploying to Vercel, the Redis layout cache is empty. The first visitor per cell (brand × surface × persona) triggers a fresh generation (~10–13s on home/PLP). Cache warming pre-fills the cache so all first visitors get instant responses (sub-100ms cache hits per `docs/audits/perf/cold-start-baseline-2026-05-01.md`).
 
 ```bash
-# Warm Haven (gatherer + hunter for all Haven categories)
-npx tsx scripts/warm-cache.ts haven
-
-# Warm Volt
-npx tsx scripts/warm-cache.ts volt
-
-# Warm Ember
-npx tsx scripts/warm-cache.ts ember
-
-# Warm all brands
-npx tsx scripts/warm-cache.ts all
+# Warm all cells defined in scripts/cache/prewarm-cells.json
+npm run prewarm
 ```
 
-The script hits the deployed URLs (not localhost) and warms gatherer + hunter for each category. Researcher and gifter are not pre-warmed — they are less common cold starts and generate on demand.
+The cell list (active brands × home/PLP × all four personas) lives in `scripts/cache/prewarm-cells.json` — edit there, not in code. PDP, cart, checkout, empty, and HC-PLP surfaces are intentionally excluded from pre-warming; rationale is documented in the perf audit doc above.
 
-**Expected output**:
+**Expected output (second run, fully cached)**:
 
 ```
-=== HAVEN (https://aisles-signal-x-studio-labs.vercel.app) ===
-12 combinations
-
-  gatherer:living-room... GENERATED (2840ms)
-  gatherer:office... GENERATED (3120ms)
-  gatherer:bedroom... CACHED (62ms)
-  hunter:living-room... GENERATED (1950ms)
-  ...
-
-  10 generated, 2 cached, 0 failed
+=== bealls (https://aisles-demo-1.vercel.app) ===
+home / gatherer ... CACHED (87ms)
+home / hunter   ... CACHED (54ms)
+PLP:women / gatherer ... CACHED (62ms)
+...
+12 cells, 0 generated, 12 cached, 0 failed (0.5s total)
 ```
 
-Run after every production deploy where product catalog or enrichment data has changed. Cache TTL is 1 hour — the cache self-refreshes on demand after expiry.
+Run after every production deploy where product catalog or enrichment data has changed. Cache TTL is 1 hour — the cache self-refreshes on demand after expiry. Per-cell errors are reported but do not abort the run (graceful degradation).
+
+**Legacy:** `scripts/warm-cache.ts` is the original deploy-time warmer, superseded by `scripts/cache/prewarm.ts` (per [ADR-003](../architecture/decisions/003-prerender-vs-cache-warming.md)). The legacy script is still in the repo for any external callers; new pre-warm work should go through `npm run prewarm`.
 
 ---
 
@@ -229,7 +218,8 @@ The project uses strict TypeScript. Run a type check before pushing if you've mo
 | `src/routes/api/observe/` | Observe dashboard API endpoints |
 | `src/routes/observe/+page.svelte` | Observe dashboard UI |
 | `src/routes/category/[slug]/` | Category page with AI layout |
-| `scripts/warm-cache.ts` | Cache warming script |
+| `scripts/cache/prewarm.ts` | Cache pre-warm script (active). Cell list at `scripts/cache/prewarm-cells.json`. Wired as `npm run prewarm`. |
+| `scripts/warm-cache.ts` | Legacy warmer — superseded by `scripts/cache/prewarm.ts`. Kept for external callers; do not extend. |
 | `tools/seed-channels/` | Product seeding scripts |
 | `brands/` | Brand identity JSON files |
 

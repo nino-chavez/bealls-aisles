@@ -13,6 +13,12 @@
 	import EditorialHero from './sections/EditorialHero.svelte';
 	import BeallsBucksCallout from './sections/BeallsBucksCallout.svelte';
 	import LifestylePriceHero from './sections/LifestylePriceHero.svelte';
+	import EventCountdown from './sections/EventCountdown.svelte';
+	import BrandSpotlight from './sections/BrandSpotlight.svelte';
+	import TrendShop from './sections/TrendShop.svelte';
+	import EmailCaptureInline from './sections/EmailCaptureInline.svelte';
+	import ServiceCalloutsGrid from './sections/ServiceCalloutsGrid.svelte';
+	import LocatorStrip from './sections/LocatorStrip.svelte';
 
 	let { layout, products }: { layout: Layout; products: Product[] } = $props();
 
@@ -121,6 +127,55 @@
 			image={section.props.image}
 			category={section.props.category}
 			priceLabel={section.props.priceLabel}
+			ctaLabel={section.props.ctaLabel}
+			ctaHref={section.props.ctaHref}
+		/>
+	{:else if section.component === 'event-countdown' && section.props?.endsAt}
+		<EventCountdown
+			eyebrow={section.props.eyebrow}
+			headline={section.props.headline}
+			body={section.props.body}
+			endsAt={section.props.endsAt}
+			ctaLabel={section.props.ctaLabel}
+			ctaHref={section.props.ctaHref}
+		/>
+	{:else if section.component === 'brand-spotlight' && section.props?.brandName}
+		<BrandSpotlight
+			brandName={section.props.brandName}
+			eyebrow={section.props.eyebrow}
+			headline={section.props.headline}
+			body={section.props.body}
+			image={section.props.image}
+			ctaLabel={section.props.ctaLabel}
+			ctaHref={section.props.ctaHref}
+		/>
+	{:else if section.component === 'trend-shop' && section.props?.headline}
+		<TrendShop
+			sectionLabel={section.props.sectionLabel}
+			headline={section.props.headline}
+			image={section.props.image}
+			ctaLabel={section.props.ctaLabel}
+			ctaHref={section.props.ctaHref}
+		/>
+	{:else if section.component === 'email-capture-inline' && section.props?.headline}
+		<EmailCaptureInline
+			eyebrow={section.props.eyebrow}
+			headline={section.props.headline}
+			body={section.props.body}
+			offerCopy={section.props.offerCopy}
+			ctaLabel={section.props.ctaLabel}
+			privacyNote={section.props.privacyNote}
+		/>
+	{:else if section.component === 'service-callouts-grid' && section.props?.callouts?.length}
+		<ServiceCalloutsGrid
+			columns={section.props.columns}
+			callouts={section.props.callouts}
+		/>
+	{:else if section.component === 'locator-strip' && section.props?.headline}
+		<LocatorStrip
+			eyebrow={section.props.eyebrow}
+			headline={section.props.headline}
+			body={section.props.body}
 			ctaLabel={section.props.ctaLabel}
 			ctaHref={section.props.ctaHref}
 		/>

@@ -1,8 +1,12 @@
 import type { PageServerLoad } from './$types';
-import { getProductByPath, getProductsByCategory, customFieldsToRecord, type BCProduct } from '$lib/server/bigcommerce';
+import { getProductByPath, customFieldsToRecord, type BCProduct } from '$lib/server/bigcommerce';
 import { error } from '@sveltejs/kit';
 import { getBrand } from '$lib/brand/config';
 import { resolveZone } from '$lib/foundation/resolve-zone';
+import { loadProductsByTagOverlap, type TagOverlapProduct } from '$lib/server/catalog';
+import { logZoneRetrieval } from '$lib/server/zone-retrieval-log';
+import { getStoresForBrand } from '$lib/server/locator/stores';
+import { getBOPISContext } from '$lib/server/locator/proximity';
 
 export const load: PageServerLoad = async ({ params, url, parent }) => {
 	const slug = params.slug;
@@ -19,19 +23,27 @@ export const load: PageServerLoad = async ({ params, url, parent }) => {
 
 	const product = transformProduct(bcProduct);
 
-	// Fetch related products from the same category
-	let relatedProducts: ReturnType<typeof transformProduct>[] = [];
-	const firstCategory = bcProduct.categories.edges[0]?.node;
-	if (firstCategory) {
-		try {
-			const { products: categoryProducts } = await getProductsByCategory(firstCategory.entityId);
-			relatedProducts = categoryProducts
-				.filter((p) => p.entityId !== bcProduct.entityId)
-				.slice(0, 8)
-				.map(transformProduct);
-		} catch {
-			// Related products are optional — fail silently
-		}
+	// PRD-ENG-019: tag-overlap product neighborhoods replace persona-fit
+	// stubs as the substrate for pdp.cross-sell, pdp.related, and
+	// pdp.recently-viewed (cold-start fallback) per ADR-008 Phase B.
+	//
+	// Two queries: cross-sell uses minOverlap=2 (loose pairing), related
+	// uses minOverlap=3 (tighter match). The in-process cache absorbs the
+	// duplicate seed lookup. Sparse-tag seeds gracefully degrade to fewer
+	// results — never error.
+	const [crossSellMatches, relatedMatches] = await Promise.all([
+		loadProductsByTagOverlap(bcProduct.entityId, { minOverlap: 2, limit: 8 }),
+		loadProductsByTagOverlap(bcProduct.entityId, { minOverlap: 3, limit: 4 }),
+	]);
+
+	// Combined product pool for the PDP — superset that ZoneRenderer's
+	// resolveProducts() can look up productIds against. Dedupe by entityId.
+	const seenEntityIds = new Set<number>();
+	const relatedProducts: TagOverlapProduct[] = [];
+	for (const p of [...crossSellMatches, ...relatedMatches]) {
+		if (seenEntityIds.has(p.entityId)) continue;
+		seenEntityIds.add(p.entityId);
+		relatedProducts.push(p);
 	}
 
 	// Phase 3 PDP scaffold — derive scaffold-block props from the product.
@@ -53,17 +65,21 @@ export const load: PageServerLoad = async ({ params, url, parent }) => {
 	const reviewsSummary = synthesizeReviewsSummary(product.entityId);
 	const reviewsList = synthesizeReviewsList(product.entityId);
 
-	// Slice 2 — populate PDP zones from page-load context. Until engine
-	// composition extends to PDP (Phase 3) and the tag-overlap retrieval
-	// query lands (PRD-ENG-019, ADR-008 Phase B), we shape the engine output
-	// here from the same-category BC fetch.
-	//
-	// TODO PRD-ENG-019: replace these synthetic engine payloads with a
-	// `getProductsByTagOverlap(productId, ...)` call once Phase B ships.
-	// The cascade then resolves naturally — engine output wins, this stub
-	// disappears.
-	const relatedRefs = relatedProducts.slice(0, 4).map((p) => ({ productId: p.id, role: 'standard' as const }));
-	const crossSellRefs = relatedProducts.slice(4, 8).map((p) => ({ productId: p.id, role: 'standard' as const }));
+	// PDP cross-sell zones are populated from tag-overlap neighborhoods
+	// (PRD-ENG-019). The engine output is synthesized here from the
+	// retrieval substrate — no AI composition for these zones; the AI
+	// involvement happens upstream in enrichment (tag generation) and
+	// downstream in the cart upsell. Cascade then resolves naturally
+	// — engine output wins, falls through to fallback when sparse.
+	const relatedRefs = relatedMatches.slice(0, 4).map((p) => ({ productId: p.id, role: 'standard' as const }));
+	const crossSellRefs = crossSellMatches.slice(0, 8).map((p) => ({ productId: p.id, role: 'standard' as const }));
+
+	// pdp.recently-viewed is a behavioral surface (PRD-FND-018, deferred).
+	// Until session-tracked viewed-products land, ADR-008 §"Cold-start safe"
+	// allows tag-overlap as the substitute substrate so the zone renders
+	// something useful from day one. When recently-viewed ships, this
+	// fallback path is removed and the real session list takes over.
+	const recentlyViewedRefs = crossSellMatches.slice(0, 6).map((p) => ({ productId: p.id, role: 'standard' as const }));
 
 	const engineOutput = {
 		zones: {
@@ -83,8 +99,64 @@ export const load: PageServerLoad = async ({ params, url, parent }) => {
 						},
 					}
 				: {}),
+			...(recentlyViewedRefs.length >= 3
+				? {
+						'pdp.recently-viewed': {
+							component: 'product-carousel',
+							props: { title: 'Recently viewed', products: recentlyViewedRefs, showRating: false },
+						},
+					}
+				: {}),
 		},
 	};
+
+	// Decisions Inspector substrate: structured log per zone with the
+	// sharedTags + overlapScore per product. ADR-008 §"Decisions Inspector
+	// explainability sharpens" — the inspector renders these verbatim
+	// ("shown because tags X, Y, Z overlap"). Phase 4 reads from this log;
+	// today it's a structured-log line, Phase 4 follow-up wires the UI.
+	logZoneRetrieval({
+		surface: 'pdp',
+		seedEntityId: bcProduct.entityId,
+		zones: {
+			'pdp.cross-sell': crossSellMatches.map((p) => ({
+				productId: p.id,
+				entityId: p.entityId,
+				overlapScore: p.overlapScore,
+				sharedTags: p.sharedTags,
+			})),
+			'pdp.related': relatedMatches.map((p) => ({
+				productId: p.id,
+				entityId: p.entityId,
+				overlapScore: p.overlapScore,
+				sharedTags: p.sharedTags,
+			})),
+			'pdp.recently-viewed': crossSellMatches.slice(0, 6).map((p) => ({
+				productId: p.id,
+				entityId: p.entityId,
+				overlapScore: p.overlapScore,
+				sharedTags: p.sharedTags,
+			})),
+		},
+	});
+
+	// PRD-ENG-017 — proximity-aware BOPIS strip. Foundation-rendered, not
+	// zone-targeted: the proximity decision is request-data driven (shopper
+	// ZIP from `?zip=` or session), and the surface decides whether to
+	// render the strip without consulting the AI engine. Renders only when
+	// the shopper ZIP geocodes AND a pickup-ready store is within 30 mi.
+	const shopperZip = url.searchParams.get('zip');
+	const bopisCtx = getBOPISContext(getStoresForBrand(brand.id), shopperZip);
+	const bopisStrip = bopisCtx
+		? {
+				storeName: bopisCtx.store.name,
+				distanceMi: bopisCtx.store.distanceMi,
+				readyByLabel: bopisCtx.readyByLabel,
+				productName: product.name,
+				ctaLabel: 'Check availability',
+				ctaHref: '/store-locator',
+			}
+		: null;
 
 	const belowDescriptionZone = resolveZone({ zoneId: 'pdp.below-description', brandId: brand.id, engineOutput });
 	const relatedZone = resolveZone({ zoneId: 'pdp.related', brandId: brand.id, engineOutput });
@@ -123,6 +195,7 @@ export const load: PageServerLoad = async ({ params, url, parent }) => {
 		crossSellZone,
 		recentlyViewedZone,
 		belowRecsZone,
+		bopisStrip,
 	};
 };
 

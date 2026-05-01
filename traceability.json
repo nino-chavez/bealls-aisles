@@ -196,8 +196,8 @@
       "capability": "Refinement chat tag-intent extraction (alongside persona-vector update)",
       "layer": "engine",
       "hypotheses": ["H1"],
-      "status": "planned",
-      "phase": "3-prep",
+      "status": "demonstrated",
+      "phase": "3",
       "stories": [],
       "adrs": ["008-tag-as-retrieval-signal"],
       "companion": []
@@ -207,11 +207,30 @@
       "capability": "Tag-overlap product neighborhood query",
       "layer": "engine",
       "hypotheses": ["H1"],
-      "status": "planned",
-      "phase": "3-prep",
+      "status": "demonstrated",
+      "phase": "3",
       "stories": [],
       "adrs": ["008-tag-as-retrieval-signal"],
       "companion": []
+    },
+    {
+      "id": "PRD-ENG-020",
+      "capability": "P0 marketing / capture / service block set (composition-taxonomy Appendix A)",
+      "layer": "engine",
+      "hypotheses": ["H1", "H2"],
+      "status": "demonstrated",
+      "phase": "3",
+      "stories": [],
+      "adrs": ["006-surface-typed-schemas", "007-section-authoring-model"],
+      "companion": [],
+      "blocks": [
+        "event-countdown",
+        "brand-spotlight",
+        "trend-shop",
+        "email-capture-inline",
+        "service-callouts-grid",
+        "locator-strip"
+      ]
     },
     {
       "id": "PRD-FND-001",

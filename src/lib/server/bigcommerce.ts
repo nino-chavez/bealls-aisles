@@ -264,6 +264,36 @@ export async function getProductByPath(path: string): Promise<BCProduct | null> 
 	return data.site.route.node;
 }
 
+/**
+ * Bulk-fetch products by BC entityId. Used by tag-overlap retrieval
+ * (PRD-ENG-019) to resolve neighborhood entityIds to full product data
+ * in one round-trip rather than N parallel `getProductByEntityId` calls.
+ *
+ * BC's storefront `site.products` field accepts an `entityIds: [Int!]`
+ * filter. Empty input returns []; missing entityIds are silently
+ * dropped by BC (no error).
+ */
+export async function getProductsByEntityIds(entityIds: number[]): Promise<BCProduct[]> {
+	if (entityIds.length === 0) return [];
+	interface ProductsByIdsResponse {
+		site: { products: { edges: Array<{ node: BCProduct }> } };
+	}
+	const data = await query<ProductsByIdsResponse>(`
+		query GetProductsByEntityIds($ids: [Int!]!) {
+			site {
+				products(entityIds: $ids, first: 50) {
+					edges {
+						node {
+							${PRODUCT_FRAGMENT}
+						}
+					}
+				}
+			}
+		}
+	`, { ids: entityIds });
+	return data.site.products.edges.map((e) => e.node);
+}
+
 export async function getProductByEntityId(entityId: number): Promise<BCProduct | null> {
 	interface SingleProductResponse {
 		site: { product: BCProduct | null };

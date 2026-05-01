@@ -1,7 +1,7 @@
 # BRD Open Questions
 
-**Version**: 0.4.0
-**Last Updated**: 2026-04-30
+**Version**: 0.4.1
+**Last Updated**: 2026-05-01
 
 Open items that block or shape stories in [`BRD.md`](BRD.md). Resolved items move to a "Resolved" section with the resolution + date. Add items as they surface — don't let them die in chat threads.
 
@@ -132,6 +132,23 @@ When the refinement chat returns no tag intents (NL is too generic, e.g., "show 
 **Affects:** [PRD-ENG-018](PRD.md), [PRD-ENG-010](PRD.md) (refinement chat).
 
 **Status:** open. Recommend persona-only fallback — tag intents are an additional signal, not a replacement. Lock in implementation Phase A.
+
+---
+
+### Q-013 — `PDPLayoutSchema` keep vs. remove (schema-vs-wiring divergence)
+
+`PDPLayoutSchema` exists in [`src/lib/schema/layouts/pdp.ts`](../../src/lib/schema/layouts/pdp.ts) per [ADR-006](../architecture/decisions/006-surface-typed-schemas.md) (surface-typed schemas). However, no live route invokes `/api/layout` for PDP — PDP renders foundation primitives (gallery, title, ATC, variants, etc.) plus tag-overlap aggregate zones (`pdp.cross-sell`, `pdp.related`, `pdp.recently-viewed`) per [ADR-008](../architecture/decisions/008-tag-as-retrieval-signal.md) Phase B. The schema is exercised only synthetically (perf measurements, type-checking).
+
+**Surfaced by:** 2026-05-01 perf gap-fill — PDP synthetic measurements (6.7–8.3s cold, well under threshold) revealed the missing live wiring.
+
+Options:
+- **(a) Keep schema as future capability** — surface-typed schema demonstrates the typing contract for future PDP AI composition (e.g., editorial overlays, AI-authored cross-sell narratives). No active runtime cost.
+- **(b) Remove schema, replace with documentation** — delete `PDPLayoutSchema`; document PDP composition shape in [`docs/architecture/foundation/section-authoring.md`](../architecture/foundation/section-authoring.md) only. Reduces surface area but loses the future-capability hook.
+- **(c) Wire a thin live path** — invoke `/api/layout?surface=pdp` for AI-composed PDP zones (`pdp.below-description`, `pdp.editorial-block`) while foundation continues to render the scaffold. Closes the divergence at the cost of added latency on PDP load.
+
+**Affects:** [PRD-ENG-013](PRD.md) (surface-typed schemas — current status semantics), [PRD-ENG-014](PRD.md) (PDP composition — defines whether AI composition is in PDP scope), traceability for `src/lib/schema/layouts/pdp.ts`.
+
+**Status:** open. Recommend **(a) keep** for the duration of the experiment — removing schema closes a future capability door for marginal cleanup gain. Decision can be revisited if/when the experiment exits to product (per [`../strategic/exit-criteria.md`](../strategic/exit-criteria.md)) and the PDP AI composition question becomes load-bearing.
 
 ---
 

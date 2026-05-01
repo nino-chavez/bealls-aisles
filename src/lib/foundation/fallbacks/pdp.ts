@@ -7,12 +7,13 @@
  *
  * - pdp.below-description: Hidden by default (no fallback registered).
  * - pdp.related: Hidden as a fallback; +page.server populates via engineOutput
- *   from the BC same-category fetch. TODO PRD-ENG-019: swap in tag-overlap
- *   query when ADR-008 Phase B lands.
- * - pdp.cross-sell: same — Hidden default, populated by page-load.
- *   TODO PRD-ENG-019.
- * - pdp.recently-viewed: behavioral; Hidden until shopper has 3+ viewed
- *   products in session per spec §3.3.
+ *   from the tag-overlap neighborhood query (ADR-008 Phase B / PRD-ENG-019),
+ *   minOverlap=3 for tighter pairing.
+ * - pdp.cross-sell: same — Hidden default; +page.server populates from the
+ *   tag-overlap neighborhood query, minOverlap=2.
+ * - pdp.recently-viewed: behavioral; +page.server populates from tag-overlap
+ *   as a cold-start substitute (ADR-008 §"Cold-start safe") until
+ *   session-tracked viewed products land with PRD-FND-018.
  * - pdp.below-recs: BOPIS picker placeholder pointing at /locator. Storefront
  *   brands always render the placeholder until a real ZIP-aware fetch lands
  *   in Phase 6 (locator surface, PRD-FND-019).

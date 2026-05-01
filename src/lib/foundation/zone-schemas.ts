@@ -26,8 +26,16 @@ import {
 	BeallsBucksCalloutSection,
 	ForYouRowSection,
 	BOPISPickerSection,
+	BOPISStripSection,
 	LastChanceUpsellRowSection,
 	AssuranceStripCheckoutSection,
+	// P0 marketing/capture/service additions (PRD-ENG-020).
+	EventCountdownSection,
+	BrandSpotlightSection,
+	TrendShopSection,
+	EmailCaptureInlineSection,
+	ServiceCalloutsGridSection,
+	LocatorStripSection,
 	// PDP scaffold blocks (description-tabs, reviews-summary, reviews-list, plus
 	// the Slice 1 scaffold) are NOT zone-targeted per ADR-007 §3.3 — they're
 	// part of the fixed PDP scaffold and rendered directly by +page.svelte.
@@ -43,8 +51,6 @@ function stubBlock<C extends string>(component: C) {
 	});
 }
 
-const BoPISStripStub = stubBlock('bopis-strip');
-const BrandSpotlightStub = stubBlock('brand-spotlight');
 const EditorialArticleTeaserStub = stubBlock('editorial-article-teaser');
 const EmptyStateRescueStub = stubBlock('empty-state-rescue');
 const PaginationStub = stubBlock('pagination');
@@ -75,13 +81,36 @@ const ReviewsToWriteRowStub = stubBlock('reviews-to-write-row');
 export const ZoneSchemas = {
 	// Home
 	'home.hero': z.union([EditorialHeroSection, LifestylePriceHeroSection, EditorialHeaderSection]),
-	'home.featured-row': z.union([ProductGridSection, ProductCarouselSection, EditorialHeaderSection]),
-	'home.editorial-strip': z.union([EditorialArticleTeaserStub, BrandSpotlightStub]),
-	'home.brand-spotlight': BrandSpotlightStub,
-	'home.below-fold': z.union([CategoryTileGridSection, PromoStripSection, BoPISStripStub]),
+	'home.featured-row': z.union([
+		ProductGridSection,
+		ProductCarouselSection,
+		EditorialHeaderSection,
+		EventCountdownSection,
+		BrandSpotlightSection,
+		TrendShopSection,
+	]),
+	'home.editorial-strip': z.union([EditorialArticleTeaserStub, BrandSpotlightSection]),
+	'home.brand-spotlight': BrandSpotlightSection,
+	'home.below-fold': z.union([
+		CategoryTileGridSection,
+		PromoStripSection,
+		BOPISStripSection,
+		EmailCaptureInlineSection,
+		ServiceCalloutsGridSection,
+		LocatorStripSection,
+	]),
 
 	// PLP
-	'plp.banner': z.union([PromoStripSection, CouponStripSection, EditorialHeaderSection]),
+	'plp.banner': z.union([
+		PromoStripSection,
+		CouponStripSection,
+		EditorialHeaderSection,
+		EventCountdownSection,
+		BrandSpotlightSection,
+		EmailCaptureInlineSection,
+		ServiceCalloutsGridSection,
+		LocatorStripSection,
+	]),
 	'plp.editorial-header': z.union([EditorialHeroSection, EditorialHeaderSection]),
 	'plp.between-thirds': z.union([EditorialArticleTeaserStub, PromoStripSection]),
 	'plp.below-grid': z.union([CategoryTileGridSection, PaginationStub]),
@@ -91,7 +120,7 @@ export const ZoneSchemas = {
 	// stock-signal, add-to-cart-bar, description-tabs, reviews-summary, reviews-list)
 	// are NOT zone-targeted per ADR-007 §3.3; rendered directly by +page.svelte.
 	// Zones below are insertion points the engine/admin can compose into.
-	'pdp.below-description': z.union([BrandSpotlightStub, EditorialArticleTeaserStub, ComparisonTableStub]),
+	'pdp.below-description': z.union([BrandSpotlightSection, EditorialArticleTeaserStub, ComparisonTableStub]),
 	'pdp.related': ProductCarouselSection,
 	'pdp.cross-sell': z.union([CompleteTheLookStub, ProductCarouselSection]),
 	'pdp.recently-viewed': z.union([ProductCarouselSection, RecentlyViewedRowStub]),
@@ -115,7 +144,7 @@ export const ZoneSchemas = {
 	'search.zero-results-rescue': z.union([CategoryTileGridSection, PopularSearchesRowStub, ProductCarouselSection]),
 
 	// Account
-	'account.welcome': AccountWelcomeCardStub,
+	'account.welcome': z.union([AccountWelcomeCardStub, EmailCaptureInlineSection, ServiceCalloutsGridSection]),
 	'account.dashboard-pick': z.union([
 		OrderHistoryListStub,
 		WishlistGridStub,

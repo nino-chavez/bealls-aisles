@@ -63,6 +63,10 @@
 
 	async function loadUpsells() {
 		try {
+			// PRD-ENG-019: pass the cart's line-item entityIds so the layout
+			// API can source upsell candidates from their tag-overlap
+			// neighborhood (rather than brand-wide popular products).
+			const cartItemEntityIds = items.map((i) => i.productEntityId).filter((n): n is number => Number.isFinite(n));
 			const res = await fetch('/api/layout', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -70,6 +74,7 @@
 					surface: 'cart',
 					categorySlug: 'cart',
 					persona,
+					cartItemEntityIds,
 				}),
 			});
 			if (!res.ok) {

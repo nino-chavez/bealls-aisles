@@ -35,16 +35,10 @@
 		{/if}
 	</div>
 
-	<form
-		class="mt-4 flex max-w-sm gap-2"
-		onsubmit={(e) => {
-			e.preventDefault();
-			// Lookup is a foundation-side stub until the locator surface ships in Phase 6.
-			// PRD-FND-019 (locator surface) — TODO: wire to real /locator/search endpoint.
-		}}
-	>
+	<form method="GET" action="/store-locator" class="mt-4 flex max-w-sm gap-2">
 		<input
 			type="text"
+			name="zip"
 			inputmode="numeric"
 			pattern="[0-9]{5}"
 			placeholder="ZIP code"
@@ -100,7 +94,7 @@
 	{:else}
 		<p class="mt-4 text-sm text-surface-muted-fg">
 			Enter a ZIP code to find a nearby store.
-			<a href="/locator" class="text-primary hover:underline">View all locations</a>
+			<a href="/store-locator" class="text-primary hover:underline">View all locations</a>
 		</p>
 	{/if}
 </section>

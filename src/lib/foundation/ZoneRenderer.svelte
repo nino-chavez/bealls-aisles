@@ -27,6 +27,13 @@
 	import BOPISPicker from '$lib/components/layouts/sections/BOPISPicker.svelte';
 	import LastChanceUpsellRow from '$lib/components/layouts/sections/LastChanceUpsellRow.svelte';
 	import AssuranceStripCheckout from '$lib/components/layouts/sections/AssuranceStripCheckout.svelte';
+	import EventCountdown from '$lib/components/layouts/sections/EventCountdown.svelte';
+	import BrandSpotlight from '$lib/components/layouts/sections/BrandSpotlight.svelte';
+	import TrendShop from '$lib/components/layouts/sections/TrendShop.svelte';
+	import EmailCaptureInline from '$lib/components/layouts/sections/EmailCaptureInline.svelte';
+	import ServiceCalloutsGrid from '$lib/components/layouts/sections/ServiceCalloutsGrid.svelte';
+	import LocatorStrip from '$lib/components/layouts/sections/LocatorStrip.svelte';
+	import BOPISStrip from '$lib/components/layouts/sections/BOPISStrip.svelte';
 
 	let {
 		resolution,
@@ -160,6 +167,64 @@
 		<AssuranceStripCheckout
 			items={item.props.items as Array<{ icon: string; label: string; body?: string }>}
 			variant={item.props.variant as 'first-time' | 'returning' | 'loyalty-known'}
+		/>
+	{:else if item.component === 'event-countdown'}
+		<EventCountdown
+			eyebrow={item.props.eyebrow as string | undefined}
+			headline={item.props.headline as string}
+			body={item.props.body as string | undefined}
+			endsAt={item.props.endsAt as string}
+			ctaLabel={item.props.ctaLabel as string | undefined}
+			ctaHref={item.props.ctaHref as string | undefined}
+		/>
+	{:else if item.component === 'brand-spotlight'}
+		<BrandSpotlight
+			brandName={item.props.brandName as string}
+			eyebrow={item.props.eyebrow as string | undefined}
+			headline={item.props.headline as string}
+			body={item.props.body as string}
+			image={item.props.image as string}
+			ctaLabel={item.props.ctaLabel as string | undefined}
+			ctaHref={item.props.ctaHref as string | undefined}
+		/>
+	{:else if item.component === 'trend-shop'}
+		<TrendShop
+			sectionLabel={item.props.sectionLabel as string | undefined}
+			headline={item.props.headline as string}
+			image={item.props.image as string}
+			ctaLabel={item.props.ctaLabel as string}
+			ctaHref={item.props.ctaHref as string}
+		/>
+	{:else if item.component === 'email-capture-inline'}
+		<EmailCaptureInline
+			eyebrow={item.props.eyebrow as string | undefined}
+			headline={item.props.headline as string}
+			body={item.props.body as string | undefined}
+			offerCopy={item.props.offerCopy as string | undefined}
+			ctaLabel={item.props.ctaLabel as string}
+			privacyNote={item.props.privacyNote as string | undefined}
+		/>
+	{:else if item.component === 'service-callouts-grid'}
+		<ServiceCalloutsGrid
+			columns={item.props.columns as 3 | 4}
+			callouts={item.props.callouts as Array<{ icon: string; label: string; body?: string }>}
+		/>
+	{:else if item.component === 'locator-strip'}
+		<LocatorStrip
+			eyebrow={item.props.eyebrow as string | undefined}
+			headline={item.props.headline as string}
+			body={item.props.body as string | undefined}
+			ctaLabel={item.props.ctaLabel as string}
+			ctaHref={item.props.ctaHref as string}
+		/>
+	{:else if item.component === 'bopis-strip'}
+		<BOPISStrip
+			storeName={item.props.storeName as string}
+			distanceMi={item.props.distanceMi as number}
+			readyByLabel={item.props.readyByLabel as string}
+			productName={item.props.productName as string | undefined}
+			ctaLabel={item.props.ctaLabel as string | undefined}
+			ctaHref={item.props.ctaHref as string | undefined}
 		/>
 	{/if}
 {/each}

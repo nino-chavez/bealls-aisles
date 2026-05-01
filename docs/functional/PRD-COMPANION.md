@@ -1,7 +1,7 @@
 # PRD Companion — Design-time Decisions with Rationale
 
-**Version**: 0.4.0
-**Last Updated**: 2026-04-30
+**Version**: 0.4.1
+**Last Updated**: 2026-05-01
 
 A companion to [`PRD.md`](PRD.md) that captures the **why** behind each capability that is non-obvious or load-bearing. Format: trace ID → capability → decision → alternatives considered → rationale → reversibility cost.
 
@@ -40,6 +40,8 @@ ADRs in [`../architecture/decisions/`](../architecture/decisions/) capture **run
   - Surface + persona schemas (matrix: 6 surfaces × 4 personas = 24 schemas) — over-specified; persona is a runtime input, not a schema discriminator.
 - **Rationale:** the composition latitude principle (NORTH-STAR §3.1, STRATEGY §6) requires that each surface enforces appropriate latitude. The single schema cannot do this — it allows all blocks on all surfaces. Surface-typed schemas are the architectural unlock that makes the V invariant per-surface meaningful.
 - **Reversibility cost:** moderate-high. After Phase 3 ships, schema split is deeply assumed by every prompt and renderer. Reverting requires reconciling 6 latitude rules into one; not impossible but expensive.
+
+**Wiring caveat (added 2026-05-01):** Five of six schemas are exercised by live routes (`/api/layout` invoked by home, PLP, cart, checkout, empty/error surfaces). `PDPLayoutSchema` is not — PDP renders foundation primitives plus tag-overlap aggregate zones per [ADR-008](../architecture/decisions/008-tag-as-retrieval-signal.md) Phase B. The schema demonstrates the typing pattern and is exercised in synthetic perf measurements + type-checks, but no production route invokes AI composition on PDP. This is a known divergence between schema capability and live wiring; resolution path is tracked in [BRD Q-013](BRD-OPEN-QUESTIONS.md#q-013--pdplayoutschema-keep-vs-remove-schema-vs-wiring-divergence). Recommendation is **keep as future capability** — removal closes a door for marginal cleanup gain.
 
 ### PRD-ADM-003 — Decisions Inspector as the primary admin daily-driver
 

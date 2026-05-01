@@ -84,11 +84,12 @@ The full enumeration. **All IDs in this section are stable contracts**; once pub
 | `pdp.related` | `ProductCarouselSchema` | singleton | ✓ | ✓ | BC native "related products" query |
 | `pdp.cross-sell` | `CompleteTheLookSchema \| ProductCarouselSchema` | singleton | ✓ (gatherer/gifter favored) | ✓ | Hidden |
 | `pdp.recently-viewed` | `RecentlyViewedRowSchema` | singleton | ✓ | ✗ | Foundation always renders if shopper has 3+ viewed products in session; otherwise hidden |
-| `pdp.below-recs` | `BoPISStripSchema \| BucksEarnRowSchema` | singleton | ✓ (hunter favored) | ✓ | Brand `bopis-strip` if BOPIS-enabled brand and shopper has zip context |
+| `pdp.below-recs` | `BOPISPickerSchema \| BucksEarnRowSchema` | singleton | ✓ (hunter favored) | ✓ | `BOPISPickerSchema` (full ZIP-input + nearby-stores list — links to `/store-locator`) |
 
 **Notes:**
 - PDP scaffold blocks (gallery, title, variants, ATC, description, reviews) are NOT zones — they are mandatory scaffold per `PDPLayoutSchema` (ADR-006). Zones are only the insertion points where composition is allowed.
 - `pdp.recently-viewed` is admin-authoring-disabled — it's a behavioral surface, not editorial. Merchants can disable it via brand config but cannot author its content.
+- **BOPIS proximity strip** (`bopis-strip`, PRD-ENG-017) is **not zone-targeted on PDP** — it is rendered directly by `+page.svelte` after the AddToCartBar when the shopper ZIP geocodes to a pickup-ready store within 30 mi. The strip is request-data driven (proximity is not a personalization decision), so the engine does not compose into it on PDP. The same `bopis-strip` block IS AI-composable on `home.below-fold` for engine-driven proximity messaging in brand voice.
 
 ### 3.4 Cart (`cart.*`)
 

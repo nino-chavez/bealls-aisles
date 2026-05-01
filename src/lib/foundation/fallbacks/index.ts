@@ -14,6 +14,7 @@
 
 import type { ZoneId } from '../zones';
 import { homeFallbacks } from './home';
+import { plpFallbacks } from './plp';
 import { pdpFallbacks } from './pdp';
 import { cartFallbacks } from './cart';
 import { checkoutFallbacks } from './checkout';
@@ -41,6 +42,7 @@ const HIDDEN: ZoneFallback = () => null;
  */
 const FALLBACKS: Partial<Record<ZoneId, ZoneFallback>> = {
 	...homeFallbacks,
+	...plpFallbacks,
 	...pdpFallbacks,
 	...cartFallbacks,
 	...checkoutFallbacks,

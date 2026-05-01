@@ -6,8 +6,15 @@
  * raw BC data becomes the product shape that layout generation consumes.
  */
 
-import { getCategories, getProductsByCategory, getProducts, customFieldsToRecord, type BCProduct } from './bigcommerce';
-import { getEnrichmentByEntityIds } from './enrichment/query';
+import {
+	getCategories,
+	getProductsByCategory,
+	getProducts,
+	getProductsByEntityIds,
+	customFieldsToRecord,
+	type BCProduct,
+} from './bigcommerce';
+import { getEnrichmentByEntityIds, getProductsByTagOverlap, type TagOverlapOpts, type TagOverlapResult } from './enrichment/query';
 import { rankByTagAndPersona } from './tag-rerank';
 import { getBrand, getBrandMode } from '$lib/brand/config';
 import type { Product } from '$lib/types';
@@ -21,6 +28,17 @@ export const CATEGORY_MAP: Record<string, { bcName: string; displayName: string 
 export interface EnrichedProduct extends Product {
 	personaFit: { gatherer: number; hunter: number; researcher: number; gifter: number } | null;
 	semanticTags: string[];
+}
+
+/**
+ * Tag-overlap product — `EnrichedProduct` plus the explainability fields
+ * surfaced by the neighborhood query. `sharedTags` and `overlapScore` are
+ * the contract from ADR-008 §"Decisions Inspector explainability sharpens"
+ * — the Inspector renders "shown because tags X, Y, Z overlap" verbatim.
+ */
+export interface TagOverlapProduct extends EnrichedProduct {
+	overlapScore: number;
+	sharedTags: string[];
 }
 
 /**
@@ -106,6 +124,107 @@ export async function loadHomeProducts(
 	return { products: ranked, categoryName: 'Home' };
 }
 
+
+/**
+ * Resolve a tag-overlap neighborhood to fully-hydrated products (PRD-ENG-019).
+ *
+ * Calls `getProductsByTagOverlap` for the seed, then bulk-fetches BC product
+ * data for the matching entityIds. Returns ordered (highest Jaccard first)
+ * products with `overlapScore` + `sharedTags` exposed for the Decisions
+ * Inspector — the explainability commitment from ADR-008.
+ *
+ * Cold-start safe: a seed with zero tags or fewer than `minOverlap` matches
+ * returns whatever the neighborhood yields (possibly empty), never throws.
+ */
+export async function loadProductsByTagOverlap(
+	seedEntityId: number,
+	opts: TagOverlapOpts = {},
+): Promise<TagOverlapProduct[]> {
+	const brandId = getBrand().id;
+	const matches: TagOverlapResult[] = await getProductsByTagOverlap(brandId, seedEntityId, opts);
+	if (matches.length === 0) return [];
+
+	// Bulk-fetch BC product data for the matched entityIds in one round-trip.
+	// BC silently drops missing IDs, so a stale enrichment row that no longer
+	// has a corresponding BC product simply doesn't appear in the result.
+	const bcProducts = await getProductsByEntityIds(matches.map((m) => m.bcEntityId));
+	const bcByEntity = new Map(bcProducts.map((p) => [p.entityId, p]));
+
+	const out: TagOverlapProduct[] = [];
+	for (const m of matches) {
+		const bc = bcByEntity.get(m.bcEntityId);
+		if (!bc) continue;
+		const transformed = transformProduct(bc);
+		out.push({
+			...transformed,
+			personaFit: m.personaFit,
+			semanticTags: m.semanticTags,
+			overlapScore: m.overlapScore,
+			sharedTags: m.sharedTags,
+		});
+	}
+	return out;
+}
+
+/**
+ * Aggregate tag-overlap neighborhoods across multiple seeds (cart upsell —
+ * PRD-ENG-019). For each seed, fetch the neighborhood; combine, dedupe by
+ * entityId (keeping the highest overlapScore), drop seeds themselves and
+ * any explicitly excluded entityIds, and return ordered.
+ *
+ * Used by `cart.cross-sell` / `last-chance-upsell-row`: each cart line
+ * item is a seed; the union of their neighborhoods is the candidate set
+ * for the AI composer.
+ */
+export async function loadProductsByTagOverlapAggregate(
+	seedEntityIds: number[],
+	opts: TagOverlapOpts = {},
+): Promise<TagOverlapProduct[]> {
+	if (seedEntityIds.length === 0) return [];
+	const brandId = getBrand().id;
+	const exclude = new Set([...(opts.excludeEntityIds ?? []), ...seedEntityIds]);
+
+	const perSeed = await Promise.all(
+		seedEntityIds.map((id) =>
+			getProductsByTagOverlap(brandId, id, {
+				minOverlap: opts.minOverlap ?? 2,
+				limit: opts.limit ?? 8,
+				excludeEntityIds: [...exclude],
+			}),
+		),
+	);
+
+	// Dedupe across seeds: keep the highest overlapScore per candidate.
+	const merged = new Map<number, TagOverlapResult>();
+	for (const list of perSeed) {
+		for (const m of list) {
+			const prior = merged.get(m.bcEntityId);
+			if (!prior || m.overlapScore > prior.overlapScore) merged.set(m.bcEntityId, m);
+		}
+	}
+	const ranked = [...merged.values()]
+		.sort((a, b) => b.overlapScore - a.overlapScore)
+		.slice(0, opts.limit ?? 8);
+	if (ranked.length === 0) return [];
+
+	const bcProducts = await getProductsByEntityIds(ranked.map((m) => m.bcEntityId));
+	const bcByEntity = new Map(bcProducts.map((p) => [p.entityId, p]));
+
+	const out: TagOverlapProduct[] = [];
+	for (const m of ranked) {
+		const bc = bcByEntity.get(m.bcEntityId);
+		if (!bc) continue;
+		const transformed = transformProduct(bc);
+		out.push({
+			...transformed,
+			personaFit: m.personaFit,
+			semanticTags: m.semanticTags,
+			overlapScore: m.overlapScore,
+			sharedTags: m.sharedTags,
+		});
+	}
+	return out;
+}
 
 /** Transform a BC product into the shape our layout components expect */
 function transformProduct(p: BCProduct): Product {

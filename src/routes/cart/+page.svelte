@@ -47,10 +47,13 @@
 
 	async function loadUpsells() {
 		try {
+			// PRD-ENG-019: cart line-item entityIds drive the tag-overlap
+			// neighborhood that becomes the upsell candidate pool.
+			const cartItemEntityIds = items.map((i) => i.productEntityId).filter((n): n is number => Number.isFinite(n));
 			const res = await fetch('/api/layout', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ surface: 'cart', categorySlug: 'cart', persona }),
+				body: JSON.stringify({ surface: 'cart', categorySlug: 'cart', persona, cartItemEntityIds }),
 			});
 			if (!res.ok) return;
 			const d = await res.json();

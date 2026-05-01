@@ -391,8 +391,9 @@ export const PromoCodeEntrySection = z.object({
 /**
  * last-chance-upsell-row — engine-composed cart/checkout block.
  * AI emits ProductRef[]; the foundation resolves refs to Product
- * objects via the products payload from /api/layout. TODO PRD-ENG-019:
- * swap persona-fit ranking for tag-overlap when ADR-008 Phase B lands.
+ * objects via the products payload from /api/layout. Candidate set
+ * is the tag-overlap neighborhood of the cart's line items
+ * (ADR-008 Phase B / PRD-ENG-019); the AI selects 3 + writes the title.
  */
 export const LastChanceUpsellRowSection = z.object({
 	component: z.literal('last-chance-upsell-row'),
@@ -416,6 +417,129 @@ export const AssuranceStripCheckoutSection = z.object({
 			body: z.string().optional().describe('Optional 1-line elaboration'),
 		})).min(2).max(4).describe('Assurance items (3 ideal)'),
 		variant: z.enum(['first-time', 'returning', 'loyalty-known']).describe('Inferred shopper signal'),
+	}),
+});
+
+// ─── P0 marketing / capture / service blocks (composition-taxonomy §3 P0 set) ──
+
+/**
+ * event-countdown — time-bound event with countdown.
+ * Renderer hides itself once `endsAt` is past; treat as merchandising
+ * urgency lever (Hunter, Gatherer biases per taxonomy §3.1).
+ */
+export const EventCountdownSection = z.object({
+	component: z.literal('event-countdown'),
+	props: z.object({
+		eyebrow: z.string().optional().describe('Optional small label, e.g. "MEMORIAL DAY WEEKEND"'),
+		headline: z.string().describe('Event headline, e.g. "Up to 70% off — Fri thru Mon"'),
+		body: z.string().optional().describe('Optional 1-line elaboration'),
+		endsAt: z.string().describe('Event end timestamp in ISO 8601 (e.g. "2026-05-26T23:59:59-05:00")'),
+		ctaLabel: z.string().optional().describe('CTA button label, e.g. "Shop the Event"'),
+		ctaHref: z.string().optional().describe('CTA destination'),
+	}),
+});
+
+/**
+ * brand-spotlight — featured-brand callout with image, story, CTA.
+ * Visually distinct from editorial-hero (frames a brand story, not the
+ * site's hero). Per taxonomy §3.1.
+ */
+export const BrandSpotlightSection = z.object({
+	component: z.literal('brand-spotlight'),
+	props: z.object({
+		brandName: z.string().describe('Featured brand display name, e.g. "Reel Legends"'),
+		eyebrow: z.string().optional().describe('Optional small label, e.g. "FEATURED BRAND"'),
+		headline: z.string().describe('Editorial headline framing the brand story'),
+		body: z.string().describe('1-3 sentences about the brand'),
+		image: z.string().describe('Brand spotlight image URL'),
+		ctaLabel: z.string().optional().describe('CTA label, e.g. "Shop Reel Legends"'),
+		ctaHref: z.string().optional().describe('CTA destination'),
+	}),
+});
+
+/**
+ * trend-shop — themed seasonal collection card ("The Vacation Shop").
+ * Single themed destination, distinct from category-tile-grid (nav).
+ */
+export const TrendShopSection = z.object({
+	component: z.literal('trend-shop'),
+	props: z.object({
+		sectionLabel: z.string().optional().describe('Optional eyebrow above the card, e.g. "SHOP THE TREND"'),
+		headline: z.string().describe('Theme headline, e.g. "The Vacation Shop"'),
+		image: z.string().describe('Landscape collection image URL'),
+		ctaLabel: z.string().describe('CTA label, e.g. "Shop Vacation"'),
+		ctaHref: z.string().describe('CTA destination'),
+	}),
+});
+
+/**
+ * email-capture-inline — inline signup with offer reveal.
+ * Submit handler posts to `/api/email-signup` (stub; logs to console
+ * pending future CRM integration).
+ */
+export const EmailCaptureInlineSection = z.object({
+	component: z.literal('email-capture-inline'),
+	props: z.object({
+		eyebrow: z.string().optional().describe('Optional small label, e.g. "JOIN US"'),
+		headline: z.string().describe('Capture headline, e.g. "Sign up for emails"'),
+		body: z.string().optional().describe('Optional 1-2 sentence value prop'),
+		offerCopy: z.string().optional().describe('Offer revealed on success, e.g. "Use code WELCOME10 — $10 off your first order"'),
+		ctaLabel: z.string().describe('CTA button label, e.g. "Sign Up"'),
+		privacyNote: z.string().optional().describe('Optional small-print privacy note'),
+	}),
+});
+
+const ServiceCallout = z.object({
+	icon: z.string().describe('Single emoji or short glyph, e.g. "🚚"'),
+	label: z.string().describe('Short label, e.g. "Free shipping over $99"'),
+	body: z.string().optional().describe('Optional 1-line elaboration'),
+});
+
+/**
+ * service-callouts-grid — cluster of icon callouts (shipping/returns/BOPIS/rewards).
+ * Service trust strip; works as foundation fallback below the fold.
+ */
+export const ServiceCalloutsGridSection = z.object({
+	component: z.literal('service-callouts-grid'),
+	props: z.object({
+		columns: z.union([z.literal(3), z.literal(4)]).describe('Number of callouts per row'),
+		callouts: z.array(ServiceCallout).min(3).max(4).describe('Service callouts in display order'),
+	}),
+});
+
+/**
+ * locator-strip — "Visit your nearest store" thin horizontal strip.
+ * Renders on home/PLP/empty surfaces. CTA points at /store-locator (PRD-FND-014).
+ */
+export const LocatorStripSection = z.object({
+	component: z.literal('locator-strip'),
+	props: z.object({
+		eyebrow: z.string().optional().describe('Optional small label, e.g. "FIND A STORE"'),
+		headline: z.string().describe('Strip headline, e.g. "Visit your nearest Bealls"'),
+		body: z.string().optional().describe('Optional 1-line elaboration'),
+		ctaLabel: z.string().describe('CTA label, e.g. "Find a Store"'),
+		ctaHref: z.string().describe('CTA destination, e.g. "/store-locator"'),
+	}),
+});
+
+/**
+ * bopis-strip — proximity-aware "Free pickup at [Store] · Ready in 2 hours" strip.
+ * Per PRD-ENG-017: foundation-rendered on PDP when shopper ZIP resolves to
+ * a pickup-ready store within 30 miles. Distinct from BOPISPickerSection
+ * (the larger ZIP+list selector for `pdp.below-recs`).
+ *
+ * The block is also AI-composable on home.below-fold for content-mode brands
+ * to drive in-store engagement; in that path props come from the engine.
+ */
+export const BOPISStripSection = z.object({
+	component: z.literal('bopis-strip'),
+	props: z.object({
+		storeName: z.string().describe('Nearest pickup-ready store, e.g. "Bealls Sarasota"'),
+		distanceMi: z.number().nonnegative().describe('Distance in miles from shopper ZIP'),
+		readyByLabel: z.string().describe('Pickup readiness, e.g. "Ready in 2 hours"'),
+		productName: z.string().optional().describe('Product context, e.g. "this Tommy Bahama dress"'),
+		ctaLabel: z.string().optional().describe('CTA label, defaults to "Check availability"'),
+		ctaHref: z.string().optional().describe('CTA destination, defaults to "/store-locator"'),
 	}),
 });
 
@@ -454,6 +578,13 @@ export const StorefrontBlocks = [
 	PromoCodeEntrySection,
 	LastChanceUpsellRowSection,
 	AssuranceStripCheckoutSection,
+	EventCountdownSection,
+	BrandSpotlightSection,
+	TrendShopSection,
+	EmailCaptureInlineSection,
+	ServiceCalloutsGridSection,
+	LocatorStripSection,
+	BOPISStripSection,
 ] as const;
 
 /**
