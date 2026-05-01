@@ -45,16 +45,22 @@
 			<button type="button" class="collapse" onclick={() => (collapsed = !collapsed)}>
 				{collapsed ? '▸' : '▾'}
 			</button>
-			<button type="button" class="hide" onclick={() => setDevMode(false)} title="Disable dev mode">
-				✕
-			</button>
 		</div>
 		{#if !collapsed}
 			<div class="body">
-				<div class="row">
-					<span class="label">Brand</span>
-					<span class="value">{brand.id}</span>
-				</div>
+				<button
+					type="button"
+					class="fresh-toggle"
+					class:on={true}
+					onclick={() => setDevMode(false)}
+					title="Disable dev mode (badges + toolbar hide)"
+				>
+					<span class="fresh-track"><span class="fresh-thumb"></span></span>
+					<span class="fresh-label">
+						<span class="fresh-title">Dev mode</span>
+						<span class="fresh-sub">badges visible · click to hide</span>
+					</span>
+				</button>
 
 				<button
 					type="button"
@@ -72,6 +78,11 @@
 						<span class="fresh-sub">{fresh ? 'caches bypassed (cold-start)' : 'caches active (warm)'}</span>
 					</span>
 				</button>
+
+				<div class="row">
+					<span class="label">Brand</span>
+					<span class="value">{brand.id}</span>
+				</div>
 
 				<div class="row">
 					<span class="label">Generations</span>
