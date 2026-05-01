@@ -41,6 +41,8 @@ The **acceptance** column describes what "we demonstrated this" looks like — w
 | **PRD-ENG-015** | Cart composition with last-chance upsell + free-shipping-meter | H1, H2 | planned (Phase 3) | Cart shows merchant-fixed scaffold (line items, summary, code entry, CTA) + AI-composed upsell row above CTA. Free-shipping-meter copy + threshold come from rules in admin. |
 | **PRD-ENG-016** | Checkout composition (very narrow — copy + upsell only) | H1 | planned (Phase 3) | Checkout uses BC Optimized One-Page; engine personalizes only assurance copy + last-chance upsell row + post-purchase recommendation. Cannot reorder steps or modify required fields. |
 | **PRD-ENG-017** | BOPIS strip composition with proximity awareness | H2, H3 | planned (Phase 6) | When shopper is in a zip code within 30 miles of a Bealls store, PDP surfaces a `bopis-strip` with "ready in 2 hours at [store]" copy. Proximity computed at request time. |
+| **PRD-ENG-018** | Refinement chat tag-intent extraction (alongside persona-vector update) | H1 | planned (Phase 3 prep) | Refinement chat input produces TWO outputs: persona-vector update (existing) AND tag-intent vector (new). Engine reads both when composing. Example: "warm and casual for lounging" → `{ persona: shift toward gatherer, tagIntents: [cozy, casual, warm, loungewear] }`. Per ADR-008. |
+| **PRD-ENG-019** | Tag-overlap product neighborhood query | H1 | planned (Phase 3 prep) | `getProductsByTagOverlap(productId, opts) → Product[]` returns ranked similar products by Jaccard tag overlap. Substrate for Phase 3 cross-sell zones (PDP also-bought, PDP recently-viewed, cart cross-sell). Cold-start safe; explainable per Decisions Inspector. Per ADR-008. |
 
 ### 1.2 Foundation layer (PRD-FND)
 

@@ -113,6 +113,28 @@ Options: (a) all fallbacks per-zone are functions that branch on `getBrand()` in
 
 ---
 
+### Q-011 — Tag vocabulary versioning
+
+[ADR-008](../architecture/decisions/008-tag-as-retrieval-signal.md) promotes semantic tags to a first-class retrieval signal. When the tag vocabulary changes between enrichment runs (new tags added, old tags deprecated, semantic shifts in tag meaning), do existing tag-overlap neighborhoods invalidate?
+
+Options: (a) implicit versioning per enrichment run with a freshness flag on the neighborhood query; (b) explicit `tagVocabulary@N` versioning with merchant-visible upgrades; (c) defer until first real divergence pressure.
+
+**Affects:** [PRD-ENG-018](PRD.md), [PRD-ENG-019](PRD.md), Phase 5 admin tag-management UI.
+
+**Status:** open. Recommend (a) for implementation Phase A/B; revisit if merchants surface divergence concerns. Not load-bearing for Phase 3 cross-sell zones to ship.
+
+---
+
+### Q-012 — Cold-start for tag intents
+
+When the refinement chat returns no tag intents (NL is too generic, e.g., "show me stuff"), does the engine fall back to persona-only ranking, or does it skip tag intents entirely?
+
+**Affects:** [PRD-ENG-018](PRD.md), [PRD-ENG-010](PRD.md) (refinement chat).
+
+**Status:** open. Recommend persona-only fallback — tag intents are an additional signal, not a replacement. Lock in implementation Phase A.
+
+---
+
 ## Resolved
 
 > _empty — items move here with resolution + date when settled._

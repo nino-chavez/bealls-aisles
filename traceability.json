@@ -10,7 +10,7 @@
     "H3": "BC-native packaging reaches merchants our current motion can't"
   },
   "next_ids": {
-    "ENG": 18,
+    "ENG": 20,
     "FND": 15,
     "ADM": 11,
     "XLAYER": 5
@@ -189,6 +189,28 @@
       "phase": 6,
       "stories": [],
       "adrs": [],
+      "companion": []
+    },
+    {
+      "id": "PRD-ENG-018",
+      "capability": "Refinement chat tag-intent extraction (alongside persona-vector update)",
+      "layer": "engine",
+      "hypotheses": ["H1"],
+      "status": "planned",
+      "phase": "3-prep",
+      "stories": [],
+      "adrs": ["008-tag-as-retrieval-signal"],
+      "companion": []
+    },
+    {
+      "id": "PRD-ENG-019",
+      "capability": "Tag-overlap product neighborhood query",
+      "layer": "engine",
+      "hypotheses": ["H1"],
+      "status": "planned",
+      "phase": "3-prep",
+      "stories": [],
+      "adrs": ["008-tag-as-retrieval-signal"],
       "companion": []
     },
     {
