@@ -167,6 +167,15 @@ export const LifestylePriceHeroSection = z.object({
 	}),
 });
 
+export const ForYouRowSection = z.object({
+	component: z.literal('for-you-row'),
+	props: z.object({
+		title: z.string().describe('Personalized title, e.g. "Picked for you" or "Based on your last visit"'),
+		reasoning: z.string().optional().describe('Optional 1-line context, e.g. "Because you browsed home decor"'),
+		products: z.array(ProductRef).min(3).describe('Persona-fit products in display order (4-6 ideal)'),
+	}),
+});
+
 // ─── Vocabulary unions ─────────────────────────────────────────────
 
 /**
@@ -186,6 +195,7 @@ export const StorefrontBlocks = [
 	EditorialHeroSection,
 	BeallsBucksCalloutSection,
 	LifestylePriceHeroSection,
+	ForYouRowSection,
 ] as const;
 
 /**
