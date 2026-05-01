@@ -9,6 +9,7 @@
 
 import { env } from '$env/dynamic/private';
 import type { Layout } from '$lib/schema/layout';
+import { isCachingDisabledGlobally } from './cache-flags';
 
 const LAYOUT_TTL_S = 60 * 60; // 1 hour
 
@@ -56,6 +57,7 @@ export function hashPicks(picksContext?: string): string | undefined {
  * Returns null on cache miss or any error.
  */
 export async function getCachedLayout(brandId: string, persona: string, categorySlug: string, picksHash?: string): Promise<Layout | null> {
+	if (isCachingDisabledGlobally()) return null;
 	const r = await getRedis();
 	if (!r) return null;
 
@@ -106,6 +108,7 @@ export interface SuggestionEntry {
 }
 
 export async function getCachedSuggestions(brandId: string, picksHash: string): Promise<SuggestionEntry[] | null> {
+	if (isCachingDisabledGlobally()) return null;
 	const r = await getRedis();
 	if (!r) return null;
 	try {

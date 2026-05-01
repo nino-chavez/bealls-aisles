@@ -32,6 +32,7 @@
  */
 
 import { getDb } from './db';
+import { isCachingDisabledGlobally } from './cache-flags';
 
 const TTL_MS = 60 * 1000;
 
@@ -66,8 +67,10 @@ export interface PersonaFitOverride {
 export async function getBrandVoiceOverride(brandId: string): Promise<BrandVoiceOverride | null> {
 	if (voiceTableMissing) return null;
 
-	const cached = voiceCache.get(brandId);
-	if (cached && cached.expiresAt > Date.now()) return cached.value;
+	if (!isCachingDisabledGlobally()) {
+		const cached = voiceCache.get(brandId);
+		if (cached && cached.expiresAt > Date.now()) return cached.value;
+	}
 
 	try {
 		const sql = getDb();
@@ -101,8 +104,10 @@ export async function getZoneContent(brandId: string, zoneId: string): Promise<u
 	if (zoneTableMissing) return null;
 
 	const key = `${brandId}|${zoneId}`;
-	const cached = zoneCache.get(key);
-	if (cached && cached.expiresAt > Date.now()) return cached.value;
+	if (!isCachingDisabledGlobally()) {
+		const cached = zoneCache.get(key);
+		if (cached && cached.expiresAt > Date.now()) return cached.value;
+	}
 
 	try {
 		const sql = getDb();
@@ -131,8 +136,10 @@ export async function getPersonaFitOverridesForBrand(
 ): Promise<Map<string, PersonaFitOverride>> {
 	if (personaFitTableMissing) return new Map();
 
-	const cached = personaFitCache.get(brandId);
-	if (cached && cached.expiresAt > Date.now()) return cached.value;
+	if (!isCachingDisabledGlobally()) {
+		const cached = personaFitCache.get(brandId);
+		if (cached && cached.expiresAt > Date.now()) return cached.value;
+	}
 
 	try {
 		const sql = getDb();

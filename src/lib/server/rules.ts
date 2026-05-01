@@ -13,6 +13,7 @@
  */
 
 import { getDb } from './db';
+import { isCachingDisabledGlobally } from './cache-flags';
 
 export interface MerchandisingRule {
 	id: number;
@@ -48,9 +49,11 @@ export async function getActiveRules(
 ): Promise<MerchandisingRule[]> {
 	const key = `${persona}|${categorySlug}`;
 	const now = Date.now();
-	const cached = rulesCache.get(key);
-	if (cached && now - cached.cachedAt < RULES_TTL_MS) {
-		return cached.value;
+	if (!isCachingDisabledGlobally()) {
+		const cached = rulesCache.get(key);
+		if (cached && now - cached.cachedAt < RULES_TTL_MS) {
+			return cached.value;
+		}
 	}
 
 	try {

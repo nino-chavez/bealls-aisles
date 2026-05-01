@@ -4,6 +4,7 @@
  */
 
 import { getDb } from '../db';
+import { isCachingDisabledGlobally } from '../cache-flags';
 import type { PersonaFitScores } from './types';
 import {
 	scoreTagOverlap,
@@ -67,8 +68,13 @@ export async function getEnrichmentByEntityIds(entityIds: number[]): Promise<Map
 	const now = Date.now();
 	const result = new Map<number, ProductEnrichment>();
 	const missing: number[] = [];
+	const bypass = isCachingDisabledGlobally();
 
 	for (const id of entityIds) {
+		if (bypass) {
+			missing.push(id);
+			continue;
+		}
 		const hit = enrichmentCache.get(id);
 		if (hit && now - hit.cachedAt < ENRICHMENT_CACHE_TTL_MS) {
 			result.set(id, hit.value);
@@ -146,7 +152,7 @@ export function _clearEnrichmentCache(): void {
  */
 export async function getBrandTagVocabulary(brandId: string, force = false): Promise<string[]> {
 	const cached = tagVocabularyCache.get(brandId);
-	if (!force && cached && Date.now() - cached.cachedAt < TAG_VOCAB_TTL_MS) {
+	if (!force && !isCachingDisabledGlobally() && cached && Date.now() - cached.cachedAt < TAG_VOCAB_TTL_MS) {
 		return cached.tags;
 	}
 
@@ -205,9 +211,11 @@ export async function getProductsByTagOverlap(
 		limit,
 		[...excludeEntityIds].sort((a, b) => a - b).join(','),
 	].join('|');
-	const cached = tagOverlapCache.get(cacheKey);
-	if (cached && Date.now() - cached.cachedAt < TAG_OVERLAP_TTL_MS) {
-		return cached.results;
+	if (!isCachingDisabledGlobally()) {
+		const cached = tagOverlapCache.get(cacheKey);
+		if (cached && Date.now() - cached.cachedAt < TAG_OVERLAP_TTL_MS) {
+			return cached.results;
+		}
 	}
 
 	try {
@@ -269,7 +277,9 @@ export async function getProductsByTagOverlap(
 		return results;
 	} catch (err) {
 		console.warn('[enrichment] Failed to compute tag-overlap neighborhood:', err);
-		return cached?.results ?? [];
+		// Best-effort fallback: return any prior cached neighborhood for this
+		// key (even expired) so a transient DB blip doesn't blank the page.
+		return tagOverlapCache.get(cacheKey)?.results ?? [];
 	}
 }
 

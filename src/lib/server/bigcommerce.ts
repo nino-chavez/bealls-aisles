@@ -345,8 +345,9 @@ async function fetchCategoriesUncached() {
 }
 
 export async function getCategories() {
+	const { isCachingDisabledGlobally } = await import('./cache-flags');
 	const now = Date.now();
-	if (categoriesCache && now - categoriesCache.cachedAt < CATEGORIES_TTL_MS) {
+	if (!isCachingDisabledGlobally() && categoriesCache && now - categoriesCache.cachedAt < CATEGORIES_TTL_MS) {
 		return categoriesCache.value;
 	}
 	const value = await fetchCategoriesUncached();

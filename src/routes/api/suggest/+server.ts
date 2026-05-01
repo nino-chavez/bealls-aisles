@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { loadCategoryProducts, CATEGORY_MAP } from '$lib/server/catalog';
 import { getBrand } from '$lib/brand/config';
 import { cacheSuggestions, getCachedSuggestions, hashPicks, type SuggestionEntry } from '$lib/server/cache';
+import { shouldBypassCache } from '$lib/server/cache-flags';
 
 const SuggestionSchema = z.object({
 	suggestions: z.array(z.object({
@@ -20,7 +21,8 @@ const SuggestionSchema = z.object({
  * Given a list of picked products, returns AI-inferred suggestions
  * for accessories, upsells, and cross-sells.
  */
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, url }) => {
+	const bypassCache = shouldBypassCache(url);
 	try {
 		const { picks } = await request.json();
 
@@ -40,7 +42,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			.sort()
 			.join(',');
 		const picksHash = hashPicks(picksKey);
-		if (picksHash) {
+		if (picksHash && !bypassCache) {
 			const cached = await getCachedSuggestions(brand.id, picksHash);
 			if (cached) return json({ suggestions: cached, cacheHit: true });
 		}

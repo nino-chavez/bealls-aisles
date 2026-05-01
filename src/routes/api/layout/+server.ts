@@ -40,11 +40,13 @@ import { getActiveRules, rulesToPromptContext } from '$lib/server/rules';
 import { layoutModel, gatewayProviderOptions } from '$lib/server/ai-model';
 import { getBrand, getBrandMode } from '$lib/brand/config';
 import { getBrandVoiceOverride } from '$lib/server/admin-overrides';
+import { shouldBypassCache } from '$lib/server/cache-flags';
 
-export const POST: RequestHandler = async ({ request, cookies }) => {
+export const POST: RequestHandler = async ({ request, cookies, url }) => {
 	const startTime = Date.now();
 
 	const sessionId = cookies.get('aisles_session') || undefined;
+	const bypassCache = shouldBypassCache(url);
 
 	try {
 		const {
@@ -102,7 +104,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		// caches independently and existing picks-only callers still hash
 		// to the same key.
 		const ph = composeCacheDiscriminator(picksContext, tagIntents, cartItemEntityIds);
-		const cached = await getCachedLayout(brandId, persona, cacheSlug, ph);
+		const cached = bypassCache ? null : await getCachedLayout(brandId, persona, cacheSlug, ph);
 		if (cached) {
 			const elapsed = Date.now() - startTime;
 
