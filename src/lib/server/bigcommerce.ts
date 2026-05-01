@@ -312,7 +312,19 @@ export async function getProductByEntityId(entityId: number): Promise<BCProduct 
 	return data.site.product;
 }
 
-export async function getCategories() {
+/**
+ * Per-process category tree cache. The brand's category tree is fetched by
+ * every page that resolves a category slug or builds nav, plus inside
+ * `/api/refine` and `/api/suggest`. BC has its own CDN caching but the
+ * round-trip still adds ~50–100ms; a process-local cache (Vercel Fluid
+ * Compute reuses lambdas) eliminates that for warm requests.
+ *
+ * 30 min TTL — categories change rarely (admin re-orgs).
+ */
+const CATEGORIES_TTL_MS = 1000 * 60 * 30;
+let categoriesCache: { value: Awaited<ReturnType<typeof fetchCategoriesUncached>>; cachedAt: number } | null = null;
+
+async function fetchCategoriesUncached() {
 	const data = await query<CategoriesResponse>(`
 		query GetCategories {
 			site {
@@ -329,8 +341,17 @@ export async function getCategories() {
 			}
 		}
 	`);
-
 	return data.site.categoryTree;
+}
+
+export async function getCategories() {
+	const now = Date.now();
+	if (categoriesCache && now - categoriesCache.cachedAt < CATEGORIES_TTL_MS) {
+		return categoriesCache.value;
+	}
+	const value = await fetchCategoriesUncached();
+	categoriesCache = { value, cachedAt: now };
+	return value;
 }
 
 // ─── Cart Operations ────────────────────────────────────────────────

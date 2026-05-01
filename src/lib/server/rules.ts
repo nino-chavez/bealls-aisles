@@ -24,6 +24,19 @@ export interface MerchandisingRule {
 }
 
 /**
+ * Per-(persona, category) rules cache. Called inside the `/api/layout`
+ * cache-miss path on every fresh generation. Rules churn slowly relative
+ * to layout TTL; 60s is short enough that a publish from the admin shows
+ * up on the next generation, long enough to absorb burst traffic.
+ *
+ * The rules check involves a NOW()-bounded query (starts_at/expires_at),
+ * so a long TTL would prevent seasonal rules from activating/expiring on
+ * time. 60s strikes the balance.
+ */
+const RULES_TTL_MS = 1000 * 60;
+const rulesCache = new Map<string, { value: MerchandisingRule[]; cachedAt: number }>();
+
+/**
  * Get active merchandising rules for the current persona + category.
  * Returns rules that match the given persona (or apply to all personas)
  * and the given category (or apply to all categories), and are within
@@ -33,6 +46,13 @@ export async function getActiveRules(
 	persona: string,
 	categorySlug: string,
 ): Promise<MerchandisingRule[]> {
+	const key = `${persona}|${categorySlug}`;
+	const now = Date.now();
+	const cached = rulesCache.get(key);
+	if (cached && now - cached.cachedAt < RULES_TTL_MS) {
+		return cached.value;
+	}
+
 	try {
 		const sql = getDb();
 
@@ -47,7 +67,7 @@ export async function getActiveRules(
 			ORDER BY rule_type, created_at DESC
 		`;
 
-		return rows.map((r) => ({
+		const value: MerchandisingRule[] = rows.map((r) => ({
 			id: r.id as number,
 			ruleType: r.rule_type as MerchandisingRule['ruleType'],
 			persona: r.persona as string | null,
@@ -55,8 +75,13 @@ export async function getActiveRules(
 			productId: r.product_id as string | null,
 			config: (r.config as Record<string, unknown>) || {},
 		}));
+		rulesCache.set(key, { value, cachedAt: now });
+		return value;
 	} catch {
 		// Table might not exist yet (admin app not installed). Non-fatal.
+		// Memoize the empty result so we don't re-query a missing table on
+		// every generation.
+		rulesCache.set(key, { value: [], cachedAt: now });
 		return [];
 	}
 }

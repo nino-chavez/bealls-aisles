@@ -39,11 +39,50 @@ export interface ProductEnrichment {
 }
 
 /**
+ * Per-entityId enrichment cache. Same call sites (category load, home load,
+ * PDP load) repeatedly request overlapping entityIds; caching at the entity
+ * granularity (not the call granularity) absorbs the duplication.
+ *
+ * 10 min TTL — enrichment changes only on offline runs (`enrich.ts`), so
+ * a window of "slightly stale enrichment" is fine. The layout cache
+ * invalidator (`invalidateLayoutCache`) is the right place to also clear
+ * this cache when enrichment runs; for the experimental artifact a TTL
+ * is sufficient.
+ */
+const ENRICHMENT_CACHE_TTL_MS = 1000 * 60 * 10;
+
+const enrichmentCache = new Map<number, { value: ProductEnrichment; cachedAt: number }>();
+let enrichmentMissCache = new Map<number, number>(); // entityId → cachedAt; null result memoized too
+
+/**
  * Fetch enrichment data for a list of BC entity IDs.
  * Returns a Map for O(1) lookup when merging with product data.
+ *
+ * Cached per-entityId in process; only entities not in cache (or expired)
+ * trigger a Postgres query, scoped to those missing IDs.
  */
 export async function getEnrichmentByEntityIds(entityIds: number[]): Promise<Map<number, ProductEnrichment>> {
 	if (entityIds.length === 0) return new Map();
+
+	const now = Date.now();
+	const result = new Map<number, ProductEnrichment>();
+	const missing: number[] = [];
+
+	for (const id of entityIds) {
+		const hit = enrichmentCache.get(id);
+		if (hit && now - hit.cachedAt < ENRICHMENT_CACHE_TTL_MS) {
+			result.set(id, hit.value);
+			continue;
+		}
+		const missAt = enrichmentMissCache.get(id);
+		if (missAt && now - missAt < ENRICHMENT_CACHE_TTL_MS) {
+			// Memoized "no enrichment row" — skip refetch.
+			continue;
+		}
+		missing.push(id);
+	}
+
+	if (missing.length === 0) return result;
 
 	try {
 		const sql = getDb();
@@ -53,13 +92,14 @@ export async function getEnrichmentByEntityIds(entityIds: number[]): Promise<Map
 				fit_gatherer, fit_hunter, fit_researcher, fit_gifter,
 				semantic_tags, compatible_with, price_tier, style, material
 			FROM enriched_products
-			WHERE bc_entity_id = ANY(${entityIds})
+			WHERE bc_entity_id = ANY(${missing})
 		`;
 
-		const map = new Map<number, ProductEnrichment>();
+		const fetched = new Set<number>();
 		for (const row of rows) {
-			map.set(row.bc_entity_id as number, {
-				bcEntityId: row.bc_entity_id as number,
+			const id = row.bc_entity_id as number;
+			const enrichment: ProductEnrichment = {
+				bcEntityId: id,
 				personaFit: {
 					gatherer: row.fit_gatherer as number,
 					hunter: row.fit_hunter as number,
@@ -71,13 +111,26 @@ export async function getEnrichmentByEntityIds(entityIds: number[]): Promise<Map
 				priceTier: row.price_tier as string | null,
 				style: row.style as string | null,
 				material: row.material as string | null,
-			});
+			};
+			result.set(id, enrichment);
+			enrichmentCache.set(id, { value: enrichment, cachedAt: now });
+			fetched.add(id);
 		}
-		return map;
+		// Memoize negative results so we don't re-query missing rows.
+		for (const id of missing) {
+			if (!fetched.has(id)) enrichmentMissCache.set(id, now);
+		}
+		return result;
 	} catch (err) {
 		console.warn('[enrichment] Failed to fetch enrichment data:', err);
-		return new Map();
+		return result;
 	}
+}
+
+/** Test seam — clears both hit and miss caches. */
+export function _clearEnrichmentCache(): void {
+	enrichmentCache.clear();
+	enrichmentMissCache = new Map();
 }
 
 /**
