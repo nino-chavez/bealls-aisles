@@ -346,6 +346,10 @@ export interface CartResponse {
 			salePrice: { value: number; currencyCode: string };
 			listPrice: { value: number; currencyCode: string };
 			imageUrl: string;
+			/** BC product path, e.g. "/women-s-floral-print-top/" — used by cart UI to link back to the PDP. */
+			url?: string;
+			/** Slug derived from url for `/product/[slug]` routing. */
+			productSlug?: string;
 		}>;
 	};
 }
@@ -381,6 +385,7 @@ export async function createCart(productEntityId: number, quantity = 1): Promise
 								salePrice { value currencyCode }
 								listPrice { value currencyCode }
 								imageUrl
+								url
 							}
 						}
 					}
@@ -389,7 +394,9 @@ export async function createCart(productEntityId: number, quantity = 1): Promise
 		}
 	`, { productId: productEntityId, quantity });
 
-	return { cart: data.cart.createCart.cart, sessionCookie };
+	const cart = data.cart.createCart.cart;
+	if (cart) decorateCartSlugs(cart);
+	return { cart, sessionCookie };
 }
 
 export async function addToCart(
@@ -418,6 +425,7 @@ export async function addToCart(
 								salePrice { value currencyCode }
 								listPrice { value currencyCode }
 								imageUrl
+								url
 							}
 						}
 					}
@@ -426,7 +434,9 @@ export async function addToCart(
 		}
 	`, { cartId: cartEntityId, productId: productEntityId, quantity }, { sessionCookie });
 
-	return { cart: data.cart.addCartLineItems.cart, sessionCookie: nextCookie ?? sessionCookie ?? null };
+	const cart = data.cart.addCartLineItems.cart;
+	if (cart) decorateCartSlugs(cart);
+	return { cart, sessionCookie: nextCookie ?? sessionCookie ?? null };
 }
 
 export async function updateCartLineItem(
@@ -457,6 +467,7 @@ export async function updateCartLineItem(
 								salePrice { value currencyCode }
 								listPrice { value currencyCode }
 								imageUrl
+								url
 							}
 						}
 					}
@@ -465,7 +476,9 @@ export async function updateCartLineItem(
 		}
 	`, { cartId: cartEntityId, lineItemId: lineItemEntityId, productId: productEntityId, quantity }, { sessionCookie });
 
-	return { cart: data.cart.updateCartLineItem.cart, sessionCookie: nextCookie ?? sessionCookie ?? null };
+	const cart = data.cart.updateCartLineItem.cart;
+	if (cart) decorateCartSlugs(cart);
+	return { cart, sessionCookie: nextCookie ?? sessionCookie ?? null };
 }
 
 export async function deleteCartLineItem(
@@ -493,6 +506,7 @@ export async function deleteCartLineItem(
 								salePrice { value currencyCode }
 								listPrice { value currencyCode }
 								imageUrl
+								url
 							}
 						}
 					}
@@ -501,7 +515,9 @@ export async function deleteCartLineItem(
 		}
 	`, { cartId: cartEntityId, lineItemId: lineItemEntityId }, { sessionCookie });
 
-	return { cart: data.cart.deleteCartLineItem.cart, sessionCookie: nextCookie ?? sessionCookie ?? null };
+	const cart = data.cart.deleteCartLineItem.cart;
+	if (cart) decorateCartSlugs(cart);
+	return { cart, sessionCookie: nextCookie ?? sessionCookie ?? null };
 }
 
 /**
@@ -565,6 +581,7 @@ export async function getCart(cartEntityId: string, sessionCookie?: string): Pro
 							salePrice { value currencyCode }
 							listPrice { value currencyCode }
 							imageUrl
+							url
 						}
 					}
 				}
@@ -572,7 +589,18 @@ export async function getCart(cartEntityId: string, sessionCookie?: string): Pro
 		}
 	`, { cartId: cartEntityId }, { sessionCookie });
 
-	return data.site.cart;
+	const cart = data.site.cart;
+	if (cart) decorateCartSlugs(cart);
+	return cart;
+}
+
+/** BC's `url` field comes back as `/{slug}/`; expose `productSlug` so cart UI can link back to /product/{slug}. */
+function decorateCartSlugs(cart: CartResponse): void {
+	for (const item of cart.lineItems.physicalItems) {
+		if (item.url) {
+			item.productSlug = item.url.replace(/^\/+|\/+$/g, '');
+		}
+	}
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
