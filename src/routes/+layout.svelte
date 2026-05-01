@@ -7,6 +7,7 @@
 	import Footer from '$lib/components/Footer.svelte';
 	import CartDrawer from '$lib/components/CartDrawer.svelte';
 	import PicksTray from '$lib/components/PicksTray.svelte';
+	import DevToolbar from '$lib/components/dev/DevToolbar.svelte';
 	import { pickCount } from '$lib/stores/picks.svelte';
 	import { initEmitter, destroyEmitter, getEmitter } from '$lib/signals/emitter';
 	import { getBrand } from '$lib/brand/config';
@@ -165,4 +166,5 @@
 			categories={brandCategories}
 		/>
 	{/if}
+	<DevToolbar />
 </div>

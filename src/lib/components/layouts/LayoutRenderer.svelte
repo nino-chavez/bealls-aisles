@@ -19,8 +19,11 @@
 	import EmailCaptureInline from './sections/EmailCaptureInline.svelte';
 	import ServiceCalloutsGrid from './sections/ServiceCalloutsGrid.svelte';
 	import LocatorStrip from './sections/LocatorStrip.svelte';
+	import DevZoneBadge from '$lib/components/dev/DevZoneBadge.svelte';
 
 	let { layout, products }: { layout: Layout; products: Product[] } = $props();
+	const persona = $derived((layout as { persona?: string }).persona);
+	const reasoning = $derived((layout as { reasoning?: string }).reasoning);
 
 	/** Resolve a product ID to the full product object */
 	function resolveProduct(productId: string): Product | undefined {
@@ -35,7 +38,14 @@
 	}
 </script>
 
-{#each layout.sections as section}
+{#each layout.sections as section, idx}
+<DevZoneBadge
+	zoneId={section.component}
+	source="engine"
+	layer="engine"
+	{persona}
+	reasoning={idx === 0 ? reasoning : undefined}
+>
 	{#if section.component === 'editorial-header' && section.props?.eyebrow}
 		<EditorialHeader
 			eyebrow={section.props.eyebrow}
@@ -180,4 +190,5 @@
 			ctaHref={section.props.ctaHref}
 		/>
 	{/if}
+</DevZoneBadge>
 {/each}

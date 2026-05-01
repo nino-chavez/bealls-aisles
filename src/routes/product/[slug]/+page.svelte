@@ -13,6 +13,7 @@
 	import BOPISStrip from '$lib/components/layouts/sections/BOPISStrip.svelte';
 	import AILoadingInline from '$lib/components/AILoadingInline.svelte';
 	import ZoneRenderer from '$lib/foundation/ZoneRenderer.svelte';
+	import DevZoneBadge from '$lib/components/dev/DevZoneBadge.svelte';
 
 	let { data }: { data: PageData } = $props();
 	let product = $derived(data.product);
@@ -113,14 +114,16 @@
 			<!-- PRD-ENG-017 — proximity-aware BOPIS strip. Renders only when shopper
 			     ZIP geocodes to a pickup-ready store within 30 mi. -->
 			{#if data.bopisStrip}
-				<BOPISStrip
-					storeName={data.bopisStrip.storeName}
-					distanceMi={data.bopisStrip.distanceMi}
-					readyByLabel={data.bopisStrip.readyByLabel}
-					productName={data.bopisStrip.productName}
-					ctaLabel={data.bopisStrip.ctaLabel}
-					ctaHref={data.bopisStrip.ctaHref}
-				/>
+				<DevZoneBadge zoneId="pdp.bopis-strip" source="foundation" layer="foundation">
+					<BOPISStrip
+						storeName={data.bopisStrip.storeName}
+						distanceMi={data.bopisStrip.distanceMi}
+						readyByLabel={data.bopisStrip.readyByLabel}
+						productName={data.bopisStrip.productName}
+						ctaLabel={data.bopisStrip.ctaLabel}
+						ctaHref={data.bopisStrip.ctaHref}
+					/>
+				</DevZoneBadge>
 			{/if}
 
 			<button
@@ -141,25 +144,27 @@
 					</div>
 				</div>
 			{:else if pairings.length > 0}
-				<div class="border-t border-surface-border pt-6">
-					<h3 class="font-display text-lg">Pairs well with</h3>
-					<ul class="mt-3 space-y-2">
-						{#each pairings as pairing}
-							<li>
-								<a
-									href="/product/{pairing.id}"
-									class="flex items-center justify-between rounded-sm border border-surface-border px-4 py-3 transition-colors hover:bg-surface-muted"
-								>
-									<div>
-										<span class="text-sm font-medium">{pairing.name}</span>
-										<span class="ml-2 text-xs text-surface-muted-fg">{pairing.reason}</span>
-									</div>
-									<span class="text-sm font-medium">${pairing.price.toLocaleString()}</span>
-								</a>
-							</li>
-						{/each}
-					</ul>
-				</div>
+				<DevZoneBadge zoneId="pdp.pairings (api/suggest)" source="engine" layer="engine">
+					<div class="border-t border-surface-border pt-6">
+						<h3 class="font-display text-lg">Pairs well with</h3>
+						<ul class="mt-3 space-y-2">
+							{#each pairings as pairing}
+								<li>
+									<a
+										href="/product/{pairing.id}"
+										class="flex items-center justify-between rounded-sm border border-surface-border px-4 py-3 transition-colors hover:bg-surface-muted"
+									>
+										<div>
+											<span class="text-sm font-medium">{pairing.name}</span>
+											<span class="ml-2 text-xs text-surface-muted-fg">{pairing.reason}</span>
+										</div>
+										<span class="text-sm font-medium">${pairing.price.toLocaleString()}</span>
+									</a>
+								</li>
+							{/each}
+						</ul>
+					</div>
+				</DevZoneBadge>
 			{/if}
 		</div>
 	</div>

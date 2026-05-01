@@ -8,10 +8,11 @@ import { logZoneRetrieval } from '$lib/server/zone-retrieval-log';
 import { getStoresForBrand } from '$lib/server/locator/stores';
 import { getBOPISContext } from '$lib/server/locator/proximity';
 
-export const load: PageServerLoad = async ({ params, url, parent }) => {
+export const load: PageServerLoad = async ({ params, url, parent, cookies }) => {
 	const slug = params.slug;
 	const { devMode } = await parent();
 	const persona = url.searchParams.get('intent') || 'gatherer';
+	const sessionId = cookies.get('aisles_session') || undefined;
 	const brand = getBrand();
 
 	// Fetch the product by its URL path
@@ -118,6 +119,8 @@ export const load: PageServerLoad = async ({ params, url, parent }) => {
 	logZoneRetrieval({
 		surface: 'pdp',
 		seedEntityId: bcProduct.entityId,
+		sessionId,
+		brandId: brand.id,
 		zones: {
 			'pdp.cross-sell': crossSellMatches.map((p) => ({
 				productId: p.id,

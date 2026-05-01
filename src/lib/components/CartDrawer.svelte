@@ -6,6 +6,7 @@
 	import PromoCodeEntry from '$lib/components/layouts/sections/PromoCodeEntry.svelte';
 	import LastChanceUpsellRow from '$lib/components/layouts/sections/LastChanceUpsellRow.svelte';
 	import AILoadingInline from '$lib/components/AILoadingInline.svelte';
+	import DevZoneBadge from '$lib/components/dev/DevZoneBadge.svelte';
 	import type { CartLineItem } from '$lib/components/layouts/sections/CartLineItems.svelte';
 	import type { Product } from '$lib/types';
 	import { getBrand } from '$lib/brand/config';
@@ -174,9 +175,11 @@
 							<AILoadingInline label="Selecting pieces that pair with your cart" size="small" />
 						</div>
 					{:else if upsellProducts.length > 0}
-						<div class="mt-6 border-t border-surface-border pt-6">
-							<LastChanceUpsellRow title={upsellTitle} products={upsellProducts} />
-						</div>
+						<DevZoneBadge zoneId="cart.above-checkout-cta" source="engine" layer="engine" {persona}>
+							<div class="mt-6 border-t border-surface-border pt-6">
+								<LastChanceUpsellRow title={upsellTitle} products={upsellProducts} />
+							</div>
+						</DevZoneBadge>
 					{/if}
 
 					<!-- Foundation: promo-code-entry (cart state). -->

@@ -2,6 +2,7 @@
 	import { getPickItems, removePick, clearPicks, totalPrice, pickCount } from '$lib/stores/picks.svelte';
 	import EmptyRescue from '$lib/components/EmptyRescue.svelte';
 	import AILoadingInline from '$lib/components/AILoadingInline.svelte';
+	import DevZoneBadge from '$lib/components/dev/DevZoneBadge.svelte';
 
 	let {
 		open = false,
@@ -138,26 +139,28 @@
 							<AILoadingInline label="Building suggestions from your picks" size="small" />
 						</div>
 					{:else if suggestions.length > 0}
-						<div class="mt-4 border-t border-surface-border pt-4">
-							<p class="text-xs font-medium uppercase tracking-wider text-surface-muted-fg">Suggested for you</p>
-							<ul class="mt-2 space-y-2">
-								{#each suggestions as suggestion}
-									<li>
-										<a
-											href="/product/{suggestion.id}"
-											onclick={onclose}
-											class="flex items-center justify-between rounded-sm border border-surface-border px-3 py-2 text-sm transition-colors hover:bg-surface-muted"
-										>
-											<div>
-												<span class="font-medium">{suggestion.name}</span>
-												<span class="ml-2 text-xs text-surface-muted-fg">{suggestion.reason}</span>
-											</div>
-											<span class="text-xs font-medium">${suggestion.price.toLocaleString()}</span>
-										</a>
-									</li>
-								{/each}
-							</ul>
-						</div>
+						<DevZoneBadge zoneId="picks.suggestions (api/suggest)" source="engine" layer="engine">
+							<div class="mt-4 border-t border-surface-border pt-4">
+								<p class="text-xs font-medium uppercase tracking-wider text-surface-muted-fg">Suggested for you</p>
+								<ul class="mt-2 space-y-2">
+									{#each suggestions as suggestion}
+										<li>
+											<a
+												href="/product/{suggestion.id}"
+												onclick={onclose}
+												class="flex items-center justify-between rounded-sm border border-surface-border px-3 py-2 text-sm transition-colors hover:bg-surface-muted"
+											>
+												<div>
+													<span class="font-medium">{suggestion.name}</span>
+													<span class="ml-2 text-xs text-surface-muted-fg">{suggestion.reason}</span>
+												</div>
+												<span class="text-xs font-medium">${suggestion.price.toLocaleString()}</span>
+											</a>
+										</li>
+									{/each}
+								</ul>
+							</div>
+						</DevZoneBadge>
 					{/if}
 				{/if}
 			</div>

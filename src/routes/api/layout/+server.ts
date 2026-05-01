@@ -112,6 +112,9 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 				cacheHit: true,
 				generationTimeMs: elapsed,
 				sessionId,
+				brandId,
+				surface,
+				personaDistribution: probabilities,
 			}).catch(() => {});
 
 			// Empty/rescue + cart + checkout surfaces need products inline so
@@ -160,6 +163,8 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 			logZoneRetrieval({
 				surface: 'cart',
 				seedEntityIds: cartItemEntityIds,
+				sessionId,
+				brandId,
 				zones: {
 					'cart.above-checkout-cta': overlapPool.map((p) => ({
 						productId: p.id,
@@ -218,6 +223,9 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 			outputTokens: usage?.outputTokens,
 			model,
 			sessionId,
+			brandId,
+			surface,
+			personaDistribution: probabilities,
 		}).catch(() => {});
 
 		return json({

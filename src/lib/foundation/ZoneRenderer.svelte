@@ -34,6 +34,7 @@
 	import ServiceCalloutsGrid from '$lib/components/layouts/sections/ServiceCalloutsGrid.svelte';
 	import LocatorStrip from '$lib/components/layouts/sections/LocatorStrip.svelte';
 	import BOPISStrip from '$lib/components/layouts/sections/BOPISStrip.svelte';
+	import DevZoneBadge from '$lib/components/dev/DevZoneBadge.svelte';
 
 	let {
 		resolution,
@@ -66,6 +67,11 @@
 </script>
 
 {#each items as item (item.component + JSON.stringify(item.props).slice(0, 32))}
+<DevZoneBadge
+	zoneId={resolution.zoneId ?? item.component}
+	source={resolution.source}
+	layer={resolution.source === 'engine' ? 'engine' : resolution.source === 'admin' ? 'admin' : 'foundation'}
+>
 	{#if item.component === 'editorial-header'}
 		<EditorialHeader
 			eyebrow={item.props.eyebrow as string}
@@ -227,4 +233,5 @@
 			ctaHref={item.props.ctaHref as string | undefined}
 		/>
 	{/if}
+</DevZoneBadge>
 {/each}
