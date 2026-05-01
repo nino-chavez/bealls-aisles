@@ -9,7 +9,14 @@
 	 */
 
 	import { onMount } from 'svelte';
-	import { initDevMode, isDevMode, setDevMode, getTraces } from '$lib/stores/dev-mode.svelte';
+	import {
+		initDevMode,
+		isDevMode,
+		setDevMode,
+		getTraces,
+		isFreshMode,
+		toggleFreshMode,
+	} from '$lib/stores/dev-mode.svelte';
 	import { getBrand } from '$lib/brand/config';
 
 	let mounted = $state(false);
@@ -22,6 +29,7 @@
 
 	const brand = getBrand();
 	const active = $derived(mounted && isDevMode());
+	const fresh = $derived(mounted && isFreshMode());
 	const traces = $derived(mounted ? getTraces() : []);
 	const recentLatency = $derived(
 		traces.length > 0 ? Math.round(traces.reduce((s, t) => s + t.generationMs, 0) / traces.length) : null,
@@ -47,6 +55,24 @@
 					<span class="label">Brand</span>
 					<span class="value">{brand.id}</span>
 				</div>
+
+				<button
+					type="button"
+					class="fresh-toggle"
+					class:on={fresh}
+					onclick={() => {
+						toggleFreshMode();
+						// Force a navigation so SSR loads see the new cookie state.
+						window.location.reload();
+					}}
+				>
+					<span class="fresh-track"><span class="fresh-thumb"></span></span>
+					<span class="fresh-label">
+						<span class="fresh-title">Fresh mode</span>
+						<span class="fresh-sub">{fresh ? 'caches bypassed (cold-start)' : 'caches active (warm)'}</span>
+					</span>
+				</button>
+
 				<div class="row">
 					<span class="label">Generations</span>
 					<span class="value">{traces.length}</span>
@@ -180,4 +206,77 @@
 	.swatch-admin { background: #2563eb; }
 	.swatch-fallback { background: #6b7280; }
 	.swatch-foundation { background: #047857; }
+
+	.fresh-toggle {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		width: 100%;
+		margin-top: 4px;
+		padding: 6px 4px;
+		background: transparent;
+		border: 1px solid #27272a;
+		border-radius: 4px;
+		color: inherit;
+		font-family: inherit;
+		font-size: 11px;
+		cursor: pointer;
+		text-align: left;
+	}
+
+	.fresh-toggle:hover {
+		border-color: #3f3f46;
+	}
+
+	.fresh-toggle.on {
+		border-color: #dc2626;
+		background: rgba(220, 38, 38, 0.08);
+	}
+
+	.fresh-track {
+		position: relative;
+		width: 22px;
+		height: 12px;
+		border-radius: 999px;
+		background: #3f3f46;
+		flex-shrink: 0;
+		transition: background-color 0.15s ease;
+	}
+
+	.fresh-toggle.on .fresh-track {
+		background: #dc2626;
+	}
+
+	.fresh-thumb {
+		position: absolute;
+		top: 1px;
+		left: 1px;
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		background: #f4f4f5;
+		transition: transform 0.15s ease;
+	}
+
+	.fresh-toggle.on .fresh-thumb {
+		transform: translateX(10px);
+	}
+
+	.fresh-label {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-width: 0;
+		gap: 1px;
+	}
+
+	.fresh-title {
+		font-weight: 600;
+		color: #f4f4f5;
+	}
+
+	.fresh-sub {
+		font-size: 10px;
+		color: #a1a1aa;
+	}
 </style>

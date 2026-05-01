@@ -21,8 +21,8 @@ const SuggestionSchema = z.object({
  * Given a list of picked products, returns AI-inferred suggestions
  * for accessories, upsells, and cross-sells.
  */
-export const POST: RequestHandler = async ({ request, url }) => {
-	const bypassCache = shouldBypassCache(url);
+export const POST: RequestHandler = async ({ request, url, cookies }) => {
+	const bypassCache = shouldBypassCache({ url, cookies });
 	try {
 		const { picks } = await request.json();
 

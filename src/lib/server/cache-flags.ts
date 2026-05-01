@@ -39,11 +39,22 @@ export function isCachingDisabledGlobally(): boolean {
 }
 
 /**
- * Per-request bypass check — call from API handlers that read URL
- * params. Combines the global env flag with the optional URL param.
+ * Per-request bypass check — combines:
+ *
+ *   - global env flag (AISLES_NO_CACHE)
+ *   - per-request URL param (?fresh=1)
+ *   - session cookie (aisles_fresh=1) — set by the dev overlay's "fresh"
+ *     toggle so a demoer can flip cache-bypass on/off live without
+ *     editing URLs or env vars
  */
-export function shouldBypassCache(url: URL | { searchParams: URLSearchParams }): boolean {
+export function shouldBypassCache(input: {
+	url?: URL | { searchParams: URLSearchParams };
+	cookies?: { get: (name: string) => string | undefined };
+}): boolean {
 	if (isCachingDisabledGlobally()) return true;
-	const param = url.searchParams.get('fresh');
-	return param === '1' || param === 'true';
+	const param = input.url?.searchParams.get('fresh');
+	if (param === '1' || param === 'true') return true;
+	const cookie = input.cookies?.get('aisles_fresh');
+	if (cookie === '1' || cookie === 'true') return true;
+	return false;
 }

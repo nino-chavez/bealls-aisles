@@ -46,7 +46,7 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 	const startTime = Date.now();
 
 	const sessionId = cookies.get('aisles_session') || undefined;
-	const bypassCache = shouldBypassCache(url);
+	const bypassCache = shouldBypassCache({ url, cookies });
 
 	try {
 		const {
