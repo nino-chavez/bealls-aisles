@@ -82,7 +82,33 @@ console.log('\nCascade precedence: engine > admin > fallback');
 {
 	const r = resolveZone({ zoneId: 'home.hero', brandId: 'haven' });
 	assert('fallback fires when neither engine nor admin', r.source === 'fallback');
-	assert('Phase 2 Session A fallback is null (Hidden)', r.content === null);
+	assert('home.hero fallback returns brand-aware editorial-header content',
+		!!r.content && (r.content as { component?: string }).component === 'editorial-header');
+}
+
+{
+	// Zones without a registered fallback resolve to null (Hidden) — sanity
+	// check that the cascade still produces "fallback" + null when nothing
+	// is registered. home.editorial-strip is intentionally left Hidden.
+	const r = resolveZone({ zoneId: 'home.editorial-strip', brandId: 'haven' });
+	assert('zones with no registered fallback resolve to source=fallback, content=null',
+		r.source === 'fallback' && r.content === null);
+}
+
+{
+	// Brand awareness — Haven and Volt should produce different copy.
+	const haven = resolveZone({ zoneId: 'home.hero', brandId: 'haven' });
+	const volt = resolveZone({ zoneId: 'home.hero', brandId: 'volt' });
+	const havenHeadline = (haven.content as { props: { headline: string } }).props.headline;
+	const voltHeadline = (volt.content as { props: { headline: string } }).props.headline;
+	assert('home.hero fallback differs by brand (brand-aware)', havenHeadline !== voltHeadline);
+}
+
+{
+	// Unknown brand should not crash — fallback returns null defensively.
+	const r = resolveZone({ zoneId: 'home.hero', brandId: 'not-a-brand' });
+	assert('unknown brandId resolves to source=fallback, content=null',
+		r.source === 'fallback' && r.content === null);
 }
 
 // ─── Schema validation rejects invalid content; cascade continues ──

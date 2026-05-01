@@ -3,6 +3,7 @@ import { getBrand, getBrandMode } from '$lib/brand/config';
 import { infer } from '$lib/signals/inference';
 import { createStoreFromRequest } from '$lib/signals/request';
 import { loadHomeProducts } from '$lib/server/catalog';
+import { resolveZone } from '$lib/foundation/resolve-zone';
 
 export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	const brand = getBrand();
@@ -13,8 +14,16 @@ export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	const inferenceContext = store.toInferenceContext();
 	const inference = infer(inferenceContext);
 
-	// Load homepage products via the same loader the AI uses, sorted by persona-fit
-	const { products: homeProducts } = await loadHomeProducts(inference.primary, 30);
+	// Load homepage products via the same loader the AI uses, sorted by persona-fit.
+	// Resilient to BC degradation — falls through to empty list (page renders chrome
+	// + zones; AI body skips when products are absent).
+	let homeProducts: Awaited<ReturnType<typeof loadHomeProducts>>['products'] = [];
+	try {
+		const result = await loadHomeProducts(inference.primary, 30);
+		homeProducts = result.products;
+	} catch (err) {
+		console.warn('Home: loadHomeProducts failed, rendering with empty catalog', err);
+	}
 
 	// Pick featured products (first 4 from different price ranges) — used as static fallback only
 	const featured = homeProducts.length >= 4
@@ -35,6 +44,11 @@ export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	cookies.set('aisles_persona', inference.primary, { path: '/', maxAge: 60 * 60 * 24 * 30 });
 	cookies.set('aisles_visits', String(visitCount), { path: '/', maxAge: 60 * 60 * 24 * 30 });
 
+	// Phase 2 vertical slice — resolve home.hero through the zone system.
+	// Engine wiring (Phase 3) will pass engineOutput here; for now the
+	// resolver falls through to the brand-aware static fallback.
+	const heroZone = resolveZone({ zoneId: 'home.hero', brandId: brand.id });
+
 	return {
 		featured,
 		homeProducts,
@@ -51,5 +65,6 @@ export const load: PageServerLoad = async ({ url, cookies, request }) => {
 		confidence: inference.confidence,
 		probabilities: inference.probabilities,
 		sessionId: cookies.get('aisles_session') || null,
+		heroZone,
 	};
 };

@@ -3,6 +3,7 @@
 	import type { Layout } from '$lib/schema/layout';
 	import LayoutRenderer from '$lib/components/layouts/LayoutRenderer.svelte';
 	import LayoutBuildingState from '$lib/components/LayoutBuildingState.svelte';
+	import ZoneRenderer from '$lib/foundation/ZoneRenderer.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -87,6 +88,11 @@
 		</div>
 	</div>
 </section>
+
+<!-- home.hero zone — resolves through the foundation cascade (engine → admin → static fallback) -->
+<div class="mx-auto max-w-7xl px-6 pt-16 lg:pt-20">
+	<ZoneRenderer resolution={data.heroZone} products={data.homeProducts} />
+</div>
 
 <!-- AI-generated body OR static fallback -->
 <div class="mx-auto max-w-7xl px-6 py-16 lg:py-20">

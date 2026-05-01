@@ -13,6 +13,7 @@
  */
 
 import type { ZoneId } from '../zones';
+import { homeFallbacks } from './home';
 
 /**
  * A fallback may return either content (typed loosely here — the resolver
@@ -32,10 +33,12 @@ export type ZoneFallback = (brandId: string) => unknown | null;
 const HIDDEN: ZoneFallback = () => null;
 
 /**
- * Fallback registry. Phase 2 Session A: empty (every zone resolves to
- * Hidden). Session B fills the home surface.
+ * Fallback registry. Session B wires home fallbacks; other surfaces remain
+ * Hidden until Phase 3+ specialization adds them.
  */
-const FALLBACKS: Partial<Record<ZoneId, ZoneFallback>> = {};
+const FALLBACKS: Partial<Record<ZoneId, ZoneFallback>> = {
+	...homeFallbacks,
+};
 
 /**
  * Resolve a static fallback for a zone family. Returns `null` (Hidden)
