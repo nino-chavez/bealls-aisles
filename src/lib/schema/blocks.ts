@@ -176,6 +176,76 @@ export const ForYouRowSection = z.object({
 	}),
 });
 
+// ─── PDP scaffold blocks (Phase 3) ─────────────────────────────────
+
+const ProductImage = z.object({
+	url: z.string().describe('Image URL (BC catalog or CDN)'),
+	alt: z.string().describe('Alt text — meaningful, not "product image"'),
+});
+
+export const ImageGallerySection = z.object({
+	component: z.literal('image-gallery'),
+	props: z.object({
+		images: z.array(ProductImage).min(1).describe('Gallery images in display order; first is the lead image'),
+		productName: z.string().describe('Product name — used for default alt fallback'),
+	}),
+});
+
+export const ProductTitleBlockSection = z.object({
+	component: z.literal('product-title-block'),
+	props: z.object({
+		productName: z.string().describe('Product name (h1)'),
+		brandLabel: z.string().optional().describe('Optional brand/collection label above the name'),
+		price: z.number().describe('Regular price in dollars'),
+		salePrice: z.number().optional().describe('Optional sale price; renders strike-through when present'),
+		rating: z.number().min(0).max(5).optional().describe('Average rating 0–5; renderer hides if absent'),
+		reviewCount: z.number().int().nonnegative().optional().describe('Review count for the rating link'),
+	}),
+});
+
+const VariantOption = z.object({
+	id: z.string().describe('Stable variant ID (used for selection state)'),
+	label: z.string().describe('Display label, e.g. "Medium" or "Walnut"'),
+	available: z.boolean().describe('Whether this variant is in stock and selectable'),
+	swatch: z.string().optional().describe('Optional swatch color or image URL for color-style variants'),
+});
+
+const VariantGroup = z.object({
+	name: z.string().describe('Variant axis name, e.g. "Size", "Color"'),
+	style: z.enum(['chip', 'swatch', 'dropdown']).describe('Visual treatment'),
+	options: z.array(VariantOption).min(1).describe('Variant options for this axis'),
+});
+
+export const VariantSelectorSection = z.object({
+	component: z.literal('variant-selector'),
+	props: z.object({
+		groups: z.array(VariantGroup).describe('Variant axes (size, color, etc.); empty array hides the block'),
+	}),
+});
+
+export const StockSignalSection = z.object({
+	component: z.literal('stock-signal'),
+	props: z.object({
+		level: z.enum(['plentiful', 'low', 'last-few', 'out']).describe('Inventory tier; renderer chooses copy + emphasis'),
+		message: z.string().describe('Copy to display, e.g. "Only 3 left at this price"'),
+		urgency: z.enum(['none', 'soft', 'hard']).describe('Visual emphasis; hard = primary accent'),
+	}),
+});
+
+export const AddToCartBarSection = z.object({
+	component: z.literal('add-to-cart-bar'),
+	props: z.object({
+		productEntityId: z.number().describe('BC product entity ID for the cart mutation'),
+		ctaLabel: z.string().describe('Primary CTA label, e.g. "Add to Cart" or "Add to Bag"'),
+		price: z.number().describe('Display price in dollars (post-variant, post-discount)'),
+		showQuantity: z.boolean().describe('Whether to show the quantity stepper'),
+		maxQuantity: z.number().int().min(1).optional().describe('Max selectable quantity (defaults to 10)'),
+		secondaryAction: z
+			.enum(['save-to-picks', 'find-in-store', 'none'])
+			.describe('Secondary action surfaced beside the ATC button'),
+	}),
+});
+
 // ─── Vocabulary unions ─────────────────────────────────────────────
 
 /**
@@ -196,6 +266,11 @@ export const StorefrontBlocks = [
 	BeallsBucksCalloutSection,
 	LifestylePriceHeroSection,
 	ForYouRowSection,
+	ImageGallerySection,
+	ProductTitleBlockSection,
+	VariantSelectorSection,
+	StockSignalSection,
+	AddToCartBarSection,
 ] as const;
 
 /**
