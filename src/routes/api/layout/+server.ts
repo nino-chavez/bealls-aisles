@@ -69,13 +69,14 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 				sessionId,
 			}).catch(() => {});
 
-			// Empty/rescue + cart surfaces need products inline so client-only
-			// consumers (EmptyRescue, CartDrawer — no +page.server.ts) can
-			// render upsell/rescue product blocks without a second roundtrip.
-			// Re-load popular products on cache hit — same set the cached
-			// layout was generated against.
+			// Empty/rescue + cart + checkout surfaces need products inline so
+			// client-only consumers (EmptyRescue, CartDrawer, checkout handoff
+			// page — no +page.server.ts in the inline-render case) can render
+			// upsell/rescue product blocks without a second roundtrip. Re-load
+			// popular products on cache hit — same set the cached layout was
+			// generated against.
 			let cachedProducts: Awaited<ReturnType<typeof loadHomeProducts>>['products'] = [];
-			if ((surface === 'empty' || surface === 'cart') && mode === 'storefront') {
+			if ((surface === 'empty' || surface === 'cart' || surface === 'checkout') && mode === 'storefront') {
 				const popular = await loadHomeProducts(persona);
 				cachedProducts = popular.products;
 			}
@@ -94,11 +95,11 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		}
 
 		// ─── Cache miss — generate via AI Gateway ──────────────────
-		// Empty/rescue + cart surfaces source from popular products
-		// (loadHomeProducts) — they're upsell/rescue contexts where we
-		// want a brand-wide candidate pool. Content-mode rescues run with
-		// no products at all (handled inside loadHomeProducts).
-		const useHomeProducts = surface === 'empty' || surface === 'cart' || categorySlug === 'home';
+		// Empty/rescue + cart + checkout surfaces source from popular
+		// products (loadHomeProducts) — they're upsell/rescue contexts
+		// where we want a brand-wide candidate pool. Content-mode rescues
+		// run with no products at all (handled inside loadHomeProducts).
+		const useHomeProducts = surface === 'empty' || surface === 'cart' || surface === 'checkout' || categorySlug === 'home';
 		const result = useHomeProducts
 			? await loadHomeProducts(persona)
 			: await loadCategoryProducts(categorySlug, persona);
@@ -150,10 +151,10 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 		return json({
 			layout,
-			// Inline products for empty/rescue + cart surfaces — see cache-hit
-			// branch above for rationale. PLP/PDP surfaces resolve products via
-			// their own +page.server.ts.
-			products: surface === 'empty' || surface === 'cart' ? products : undefined,
+			// Inline products for empty/rescue + cart + checkout surfaces — see
+			// cache-hit branch above for rationale. PLP/PDP surfaces resolve
+			// products via their own +page.server.ts.
+			products: surface === 'empty' || surface === 'cart' || surface === 'checkout' ? products : undefined,
 			meta: {
 				persona,
 				categoryName,

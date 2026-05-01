@@ -1,16 +1,20 @@
-import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { getCheckoutRedirectUrl } from '$lib/server/bigcommerce';
 import { getCachedCart, getSessionCookie } from '$lib/server/cart-store';
 
 /**
- * PRD-FND-010 — real checkout via BC Optimized One-Page handoff.
+ * /checkout — handoff page between cart CTA and BC Optimized Checkout.
  *
- * We mint a short-lived BC redirect URL via `cart.createCartRedirectUrls`,
- * then 302 the shopper into BC's hosted checkout with the cart contents
- * + auth context attached. If the mutation returns no URL (sandbox channel
- * without Optimized Checkout configured, expired cart, etc.), the page
- * renders a demo splash so the flow doesn't dead-end on a stack trace.
+ * Per ADR-006/-007 and FND-010: BC Optimized One-Page Checkout handles
+ * the actual purchase flow. This page is the *handoff UX* — it renders
+ * AI-composed assurance copy + last-chance upsell, then continues to
+ * BC's hosted checkout via the minted redirect URL.
+ *
+ * Phase 3 change: previous behavior auto-redirected when a checkoutUrl
+ * was available. We now render the handoff page first (sponsor demos
+ * need to see the AI-composed content) and put the BC redirect behind
+ * a "Proceed to checkout" CTA. Demo channels without Optimized Checkout
+ * still fall back to the demo-splash CTA.
  */
 export const load: PageServerLoad = async ({ cookies }) => {
 	const cartId = cookies.get('bc_cart_id');
@@ -27,18 +31,16 @@ export const load: PageServerLoad = async ({ cookies }) => {
 	const sessionCookie = getSessionCookie(cartId) ?? undefined;
 	const checkoutUrl = await getCheckoutRedirectUrl(cartId, sessionCookie);
 
-	if (checkoutUrl) {
-		throw redirect(302, checkoutUrl);
-	}
-
 	const itemCount = cached.cart.lineItems.physicalItems.reduce((sum, i) => sum + i.quantity, 0);
 	const subtotal = cached.cart.lineItems.physicalItems.reduce(
 		(sum, i) => sum + i.salePrice.value * i.quantity,
 		0,
 	);
+
 	return {
-		reason: 'demo-fallback' as const,
+		reason: (checkoutUrl ? 'handoff' : 'demo-fallback') as 'handoff' | 'demo-fallback',
 		itemCount,
 		subtotal,
+		checkoutUrl,
 	};
 };

@@ -26,6 +26,8 @@ import {
 	BeallsBucksCalloutSection,
 	ForYouRowSection,
 	BOPISPickerSection,
+	LastChanceUpsellRowSection,
+	AssuranceStripCheckoutSection,
 	// PDP scaffold blocks (description-tabs, reviews-summary, reviews-list, plus
 	// the Slice 1 scaffold) are NOT zone-targeted per ADR-007 §3.3 — they're
 	// part of the fixed PDP scaffold and rendered directly by +page.svelte.
@@ -50,9 +52,7 @@ const ComparisonTableStub = stubBlock('comparison-table');
 const CompleteTheLookStub = stubBlock('complete-the-look');
 const RecentlyViewedRowStub = stubBlock('recently-viewed');
 const BucksEarnRowStub = stubBlock('bucks-earn-row');
-const LastChanceUpsellRowStub = stubBlock('last-chance-upsell-row');
 const AlsoBoughtCarouselStub = stubBlock('also-bought-carousel');
-const AssuranceStripCheckoutStub = stubBlock('assurance-strip-checkout');
 const PopularSearchesRowStub = stubBlock('popular-searches-row');
 const AccountWelcomeCardStub = stubBlock('account-welcome-card');
 const OrderHistoryListStub = stubBlock('order-history-list');
@@ -97,14 +97,18 @@ export const ZoneSchemas = {
 	'pdp.recently-viewed': z.union([ProductCarouselSection, RecentlyViewedRowStub]),
 	'pdp.below-recs': z.union([BOPISPickerSection, BucksEarnRowStub]),
 
-	// Cart
-	'cart.above-checkout-cta': z.union([LastChanceUpsellRowStub, CouponStripSection]),
+	// Cart — Phase 3 specialization (PRD-ENG-015, ADR-007 §3.4).
+	// `cart.above-checkout-cta` is the single AI-composed cart zone.
+	// Foundation renders line items / summary / meter / promo entry / CTA
+	// directly from cart state; they are NOT zone-targeted.
+	'cart.above-checkout-cta': z.union([LastChanceUpsellRowSection, CouponStripSection]),
 	'cart.below-fold': z.union([AlsoBoughtCarouselStub, RecentlyViewedRowStub, BeallsBucksCalloutSection]),
 	'cart.empty-state': EmptyStateRescueStub,
 
-	// Checkout
-	'checkout.assurance-strip': AssuranceStripCheckoutStub,
-	'checkout.last-chance-upsell': LastChanceUpsellRowStub,
+	// Checkout — Phase 3 specialization (PRD-ENG-016, ADR-007 §3.5).
+	// Both zones are AI-composed; BC handoff itself is foundation logic.
+	'checkout.assurance-strip': AssuranceStripCheckoutSection,
+	'checkout.last-chance-upsell': LastChanceUpsellRowSection,
 
 	// Search
 	'search.empty-state': EmptyStateRescueStub,

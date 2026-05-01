@@ -317,6 +317,108 @@ export const BOPISPickerSection = z.object({
 	}),
 });
 
+// ─── Cart + checkout blocks (Phase 3) ───────────────────────────────
+
+const CartLineItem = z.object({
+	entityId: z.string().describe('BC line item entity ID'),
+	productEntityId: z.number().int().describe('BC product entity ID'),
+	productSlug: z.string().optional().describe('Slug for the product detail link'),
+	name: z.string().describe('Product display name'),
+	quantity: z.number().int().min(1).describe('Line item quantity'),
+	salePrice: z.object({ value: z.number() }).describe('Per-unit sale price (display)'),
+	listPrice: z.object({ value: z.number() }).describe('Per-unit list price (display)'),
+	imageUrl: z.string().describe('Product image URL'),
+});
+
+/**
+ * cart-line-items — foundation primitive. Items come from cart state,
+ * not AI composition. Schema exists so the block round-trips through
+ * the layout shape if the AI ever needs to reference it (e.g. order
+ * review pages); the engine should NOT compose this in cart.
+ */
+export const CartLineItemsSection = z.object({
+	component: z.literal('cart-line-items'),
+	props: z.object({
+		items: z.array(CartLineItem).describe('Cart line items from cart state'),
+		readonly: z.boolean().optional().describe('Hide qty stepper + remove (e.g. order review)'),
+	}),
+});
+
+/**
+ * cart-summary — foundation primitive. Subtotal/shipping/tax/total
+ * computed from cart state. Like cart-line-items, the schema is here
+ * for round-trip; engine should not emit it.
+ */
+export const CartSummarySection = z.object({
+	component: z.literal('cart-summary'),
+	props: z.object({
+		subtotal: z.number().describe('Cart subtotal in display currency'),
+		shipping: z.number().nullable().optional().describe('Shipping cost; null = "Calculated at checkout"'),
+		tax: z.number().nullable().optional().describe('Tax amount; null = "Calculated at checkout"'),
+		total: z.number().describe('Cart total in display currency'),
+	}),
+});
+
+/**
+ * free-shipping-meter — foundation primitive. Threshold from
+ * brand.config.ts:incentives.freeShippingThresholdMinor (converted
+ * to dollars by the parent).
+ */
+export const FreeShippingMeterSection = z.object({
+	component: z.literal('free-shipping-meter'),
+	props: z.object({
+		current: z.number().describe('Cart subtotal in display currency'),
+		threshold: z.number().describe('Threshold for free shipping in display currency'),
+	}),
+});
+
+/**
+ * promo-code-entry — foundation primitive. Local input UI; codes
+ * are honored at BC Optimized Checkout (FND-010 handoff), not
+ * applied client-side here.
+ */
+export const PromoCodeEntrySection = z.object({
+	component: z.literal('promo-code-entry'),
+	props: z.object({
+		appliedCodes: z.array(z.object({
+			code: z.string().describe('Coupon code'),
+			label: z.string().describe('Display label, e.g. "Applied at checkout"'),
+			value: z.number().describe('Discount value (0 if applied at handoff)'),
+		})).optional().describe('Already-applied codes'),
+	}),
+});
+
+/**
+ * last-chance-upsell-row — engine-composed cart/checkout block.
+ * AI emits ProductRef[]; the foundation resolves refs to Product
+ * objects via the products payload from /api/layout. TODO PRD-ENG-019:
+ * swap persona-fit ranking for tag-overlap when ADR-008 Phase B lands.
+ */
+export const LastChanceUpsellRowSection = z.object({
+	component: z.literal('last-chance-upsell-row'),
+	props: z.object({
+		title: z.string().describe('Section title, e.g. "Last chance — pair these with your order"'),
+		products: z.array(ProductRef).min(1).max(6).describe('Upsell products in display order (3 ideal)'),
+	}),
+});
+
+/**
+ * assurance-strip-checkout — engine-composed checkout block. AI selects
+ * the variant by inferred shopper signal (first-time vs returning vs
+ * loyalty-known) and emits matching items copy.
+ */
+export const AssuranceStripCheckoutSection = z.object({
+	component: z.literal('assurance-strip-checkout'),
+	props: z.object({
+		items: z.array(z.object({
+			icon: z.string().describe('Single emoji or short glyph, e.g. "🔒"'),
+			label: z.string().describe('Short label, e.g. "Secure checkout"'),
+			body: z.string().optional().describe('Optional 1-line elaboration'),
+		})).min(2).max(4).describe('Assurance items (3 ideal)'),
+		variant: z.enum(['first-time', 'returning', 'loyalty-known']).describe('Inferred shopper signal'),
+	}),
+});
+
 // ─── Vocabulary unions ─────────────────────────────────────────────
 
 /**
@@ -346,6 +448,12 @@ export const StorefrontBlocks = [
 	ReviewsSummarySection,
 	ReviewsListSection,
 	BOPISPickerSection,
+	CartLineItemsSection,
+	CartSummarySection,
+	FreeShippingMeterSection,
+	PromoCodeEntrySection,
+	LastChanceUpsellRowSection,
+	AssuranceStripCheckoutSection,
 ] as const;
 
 /**

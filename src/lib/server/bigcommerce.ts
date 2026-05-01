@@ -399,6 +399,81 @@ export async function addToCart(
 	return { cart: data.cart.addCartLineItems.cart, sessionCookie: nextCookie ?? sessionCookie ?? null };
 }
 
+export async function updateCartLineItem(
+	cartEntityId: string,
+	lineItemEntityId: string,
+	productEntityId: number,
+	quantity: number,
+	sessionCookie?: string,
+): Promise<CartMutationResult> {
+	interface UpdateLineItemResponse { cart: { updateCartLineItem: { cart: CartResponse } } }
+
+	const { data, sessionCookie: nextCookie } = await rawQuery<UpdateLineItemResponse>(`
+		mutation UpdateLineItem($cartId: String!, $lineItemId: String!, $productId: Int!, $quantity: Int!) {
+			cart {
+				updateCartLineItem(input: {
+					cartEntityId: $cartId,
+					lineItemEntityId: $lineItemId,
+					data: { lineItem: { productEntityId: $productId, quantity: $quantity } }
+				}) {
+					cart {
+						entityId
+						lineItems {
+							physicalItems {
+								entityId
+								productEntityId
+								name
+								quantity
+								salePrice { value currencyCode }
+								listPrice { value currencyCode }
+								imageUrl
+							}
+						}
+					}
+				}
+			}
+		}
+	`, { cartId: cartEntityId, lineItemId: lineItemEntityId, productId: productEntityId, quantity }, { sessionCookie });
+
+	return { cart: data.cart.updateCartLineItem.cart, sessionCookie: nextCookie ?? sessionCookie ?? null };
+}
+
+export async function deleteCartLineItem(
+	cartEntityId: string,
+	lineItemEntityId: string,
+	sessionCookie?: string,
+): Promise<{ cart: CartResponse | null; sessionCookie: string | null }> {
+	interface DeleteLineItemResponse { cart: { deleteCartLineItem: { cart: CartResponse | null } } }
+
+	const { data, sessionCookie: nextCookie } = await rawQuery<DeleteLineItemResponse>(`
+		mutation DeleteLineItem($cartId: String!, $lineItemId: String!) {
+			cart {
+				deleteCartLineItem(input: {
+					cartEntityId: $cartId,
+					lineItemEntityId: $lineItemId
+				}) {
+					cart {
+						entityId
+						lineItems {
+							physicalItems {
+								entityId
+								productEntityId
+								name
+								quantity
+								salePrice { value currencyCode }
+								listPrice { value currencyCode }
+								imageUrl
+							}
+						}
+					}
+				}
+			}
+		}
+	`, { cartId: cartEntityId, lineItemId: lineItemEntityId }, { sessionCookie });
+
+	return { cart: data.cart.deleteCartLineItem.cart, sessionCookie: nextCookie ?? sessionCookie ?? null };
+}
+
 /**
  * Generate a BC Optimized Checkout redirect URL for a cart. BC's mutation
  * returns a short-lived signed URL that hands the shopper into BC's

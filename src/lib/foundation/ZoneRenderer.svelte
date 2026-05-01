@@ -25,6 +25,8 @@
 	import ReviewsSummary from '$lib/components/layouts/sections/ReviewsSummary.svelte';
 	import ReviewsList from '$lib/components/layouts/sections/ReviewsList.svelte';
 	import BOPISPicker from '$lib/components/layouts/sections/BOPISPicker.svelte';
+	import LastChanceUpsellRow from '$lib/components/layouts/sections/LastChanceUpsellRow.svelte';
+	import AssuranceStripCheckout from '$lib/components/layouts/sections/AssuranceStripCheckout.svelte';
 
 	let {
 		resolution,
@@ -145,6 +147,19 @@
 				readyByLabel?: string;
 			}>}
 			productName={item.props.productName as string | undefined}
+		/>
+	{:else if item.component === 'last-chance-upsell-row'}
+		{@const upsellProducts = resolveProducts((item.props.products as Array<{ productId: string }>) ?? [])}
+		{#if upsellProducts.length > 0}
+			<LastChanceUpsellRow
+				title={item.props.title as string}
+				products={upsellProducts}
+			/>
+		{/if}
+	{:else if item.component === 'assurance-strip-checkout'}
+		<AssuranceStripCheckout
+			items={item.props.items as Array<{ icon: string; label: string; body?: string }>}
+			variant={item.props.variant as 'first-time' | 'returning' | 'loyalty-known'}
 		/>
 	{/if}
 {/each}

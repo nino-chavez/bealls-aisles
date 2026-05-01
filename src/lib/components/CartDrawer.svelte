@@ -1,5 +1,13 @@
 <script lang="ts">
 	import EmptyRescue from '$lib/components/EmptyRescue.svelte';
+	import CartLineItems from '$lib/components/layouts/sections/CartLineItems.svelte';
+	import CartSummary from '$lib/components/layouts/sections/CartSummary.svelte';
+	import FreeShippingMeter from '$lib/components/layouts/sections/FreeShippingMeter.svelte';
+	import PromoCodeEntry from '$lib/components/layouts/sections/PromoCodeEntry.svelte';
+	import LastChanceUpsellRow from '$lib/components/layouts/sections/LastChanceUpsellRow.svelte';
+	import type { CartLineItem } from '$lib/components/layouts/sections/CartLineItems.svelte';
+	import type { Product } from '$lib/types';
+	import { getBrand } from '$lib/brand/config';
 
 	let {
 		open = false,
@@ -13,30 +21,17 @@
 		categories?: Array<{ slug: string; name: string }>;
 	} = $props();
 
-	interface CartItem {
-		entityId: string;
-		productEntityId: number;
-		name: string;
-		quantity: number;
-		salePrice: { value: number };
-		listPrice: { value: number };
-		imageUrl: string;
-	}
-
-	interface UpsellProduct {
-		id: string;
-		entityId: number;
-		name: string;
-		price: number;
-		image?: string;
-		imageAlt?: string;
-	}
-
-	let items = $state<CartItem[]>([]);
-	let upsells = $state<UpsellProduct[]>([]);
+	let items = $state<CartLineItem[]>([]);
+	let upsellProducts = $state<Product[]>([]);
+	let upsellTitle = $state('You might also like');
 	let isLoading = $state(false);
-	let total = $derived(items.reduce((sum, item) => sum + item.salePrice.value * item.quantity, 0));
+	let subtotal = $derived(items.reduce((sum, item) => sum + item.salePrice.value * item.quantity, 0));
 	let itemCount = $derived(items.reduce((sum, item) => sum + item.quantity, 0));
+
+	const brand = getBrand();
+	const freeShippingThreshold = brand.incentives?.freeShippingThresholdMinor != null
+		? brand.incentives.freeShippingThresholdMinor / 100
+		: null;
 
 	$effect(() => {
 		if (open) {
@@ -55,15 +50,14 @@
 		} finally {
 			isLoading = false;
 		}
-		// Fetch surface=cart upsells in parallel — cart line items come
-		// from cart state (foundation primitive); upsells come from the
-		// engine via /api/layout. Cache key + observability tag the
-		// surface as 'cart' even though the schema is currently a stub
-		// (ADR-006). PRD-ENG-015 specializes the schema later.
+		// Foundation/engine separation: line items + summary + meter come from
+		// cart state. Upsell row comes from /api/layout?surface=cart through
+		// the engine. The schema today emits `last-chance-upsell-row` as the
+		// only AI-composable cart block (per CartLayoutSchema specialization).
 		if (items.length > 0) {
 			loadUpsells();
 		} else {
-			upsells = [];
+			upsellProducts = [];
 		}
 	}
 
@@ -79,28 +73,27 @@
 				}),
 			});
 			if (!res.ok) {
-				upsells = [];
+				upsellProducts = [];
 				return;
 			}
 			const data = await res.json();
 			const sections = data?.layout?.sections ?? [];
-			// Pick the first product-grid / product-carousel for upsell row.
-			const productSection = sections.find((s: { component: string }) =>
-				s.component === 'product-grid' || s.component === 'product-carousel'
-			);
-			const productRefs: Array<{ productId: string }> = productSection?.props?.products ?? [];
-			const candidates: UpsellProduct[] = data?.products ?? [];
-			// Refs use slug-style productId; candidates carry id (slug) +
-			// entityId. Dedupe by entityId so we don't pitch what's in cart.
-			const inCart = new Set(items.map((i) => i.productEntityId));
-			const resolved: UpsellProduct[] = [];
-			for (const ref of productRefs) {
-				const p = candidates.find((c) => c.id === ref.productId);
-				if (p && !inCart.has(p.entityId)) resolved.push(p);
+			const upsellSection = sections.find((s: { component: string }) => s.component === 'last-chance-upsell-row');
+			if (!upsellSection) {
+				upsellProducts = [];
+				return;
 			}
-			upsells = resolved.slice(0, 3);
+			upsellTitle = (upsellSection.props?.title as string) ?? upsellTitle;
+			const productRefs: Array<{ productId: string }> = upsellSection.props?.products ?? [];
+			const candidates: Product[] = data?.products ?? [];
+			// Dedupe against in-cart entityIds — don't pitch what's already there.
+			const inCart = new Set(items.map((i) => i.productEntityId));
+			upsellProducts = productRefs
+				.map((ref) => candidates.find((c) => c.id === ref.productId || String(c.entityId) === ref.productId))
+				.filter((p): p is Product => !!p && !inCart.has(p.entityId))
+				.slice(0, 3);
 		} catch {
-			upsells = [];
+			upsellProducts = [];
 		}
 	}
 </script>
@@ -125,7 +118,7 @@
 				</button>
 			</div>
 
-			<!-- Items -->
+			<!-- Body -->
 			<div class="flex-1 overflow-y-auto px-6 py-4">
 				{#if isLoading}
 					<div class="animate-pulse space-y-4">
@@ -155,82 +148,52 @@
 						/>
 					</div>
 				{:else}
-					<ul class="divide-y divide-surface-border">
-						{#each items as item}
-							<li class="flex gap-4 py-4">
-								{#if item.imageUrl}
-									<img src={item.imageUrl} alt={item.name} class="h-20 w-20 rounded-sm object-cover" />
-								{:else}
-									<div class="h-20 w-20 rounded-sm bg-surface-muted"></div>
-								{/if}
-								<div class="flex flex-1 flex-col">
-									<h3 class="text-sm font-medium">{item.name}</h3>
-									<p class="mt-1 text-xs text-surface-muted-fg">Qty: {item.quantity}</p>
-									<div class="mt-auto">
-										{#if item.salePrice.value !== item.listPrice.value}
-											<span class="text-sm font-medium text-primary">${item.salePrice.value.toLocaleString()}</span>
-											<span class="ml-1 text-xs text-surface-muted-fg line-through">${item.listPrice.value.toLocaleString()}</span>
-										{:else}
-											<span class="text-sm font-medium">${item.salePrice.value.toLocaleString()}</span>
-										{/if}
-									</div>
-								</div>
-							</li>
-						{/each}
-					</ul>
+					<!-- Foundation: cart-line-items block (cart state). -->
+					<CartLineItems {items} />
 
-					<!-- AI-composed upsells (engine layer; surface=cart). -->
-					{#if upsells.length > 0}
-						<div class="mt-6 border-t border-surface-border pt-6">
-							<h3 class="text-xs font-semibold uppercase tracking-wider text-surface-muted-fg">
-								You might also like
-							</h3>
-							<ul class="mt-3 space-y-3">
-								{#each upsells as p}
-									<li>
-										<a
-											href={`/product/${p.id}`}
-											onclick={onclose}
-											class="flex gap-3 hover:opacity-80"
-										>
-											{#if p.image}
-												<img src={p.image} alt={p.imageAlt ?? p.name} class="h-16 w-16 rounded-sm object-cover" />
-											{:else}
-												<div class="h-16 w-16 rounded-sm bg-surface-muted"></div>
-											{/if}
-											<div class="flex flex-1 flex-col">
-												<span class="text-sm">{p.name}</span>
-												<span class="mt-auto text-sm font-medium">${p.price.toLocaleString()}</span>
-											</div>
-										</a>
-									</li>
-								{/each}
-							</ul>
+					<!-- Foundation: free-shipping-meter (cart state + brand threshold). -->
+					{#if freeShippingThreshold !== null}
+						<div class="mt-6">
+							<FreeShippingMeter current={subtotal} threshold={freeShippingThreshold} />
 						</div>
 					{/if}
+
+					<!-- Engine: AI-composed upsell row above checkout CTA. -->
+					{#if upsellProducts.length > 0}
+						<div class="mt-6 border-t border-surface-border pt-6">
+							<LastChanceUpsellRow title={upsellTitle} products={upsellProducts} />
+						</div>
+					{/if}
+
+					<!-- Foundation: promo-code-entry (cart state). -->
+					<div class="mt-6 border-t border-surface-border pt-6">
+						<PromoCodeEntry />
+					</div>
 				{/if}
 			</div>
 
 			<!-- Footer -->
 			{#if items.length > 0}
 				<div class="border-t border-surface-border px-6 py-4">
-					<div class="flex items-center justify-between">
-						<span class="text-sm text-surface-muted-fg">Subtotal</span>
-						<span class="text-lg font-medium">${total.toLocaleString()}</span>
-					</div>
-					<p class="mt-1 text-xs text-surface-muted-fg">Shipping and taxes calculated at checkout</p>
+					<!-- Foundation: cart-summary (cart state). -->
+					<CartSummary
+						{subtotal}
+						total={subtotal}
+						showEstimateNote={false}
+					/>
 					<a
 						href="/checkout"
 						class="mt-4 block w-full rounded-sm bg-surface-fg py-3 text-center text-sm font-semibold text-surface-bg transition-opacity hover:opacity-85"
 					>
 						Checkout
 					</a>
-					<button
+					<a
+						href="/cart"
 						onclick={onclose}
 						class="mt-2 block w-full py-2 text-center text-sm text-surface-muted-fg hover:text-surface-fg"
 					>
-						Continue shopping
-					</button>
+						View full cart
+					</a>
 				</div>
 			{/if}
 		</div>

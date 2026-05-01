@@ -359,5 +359,117 @@ const pdpProductCarousel = {
 	assert('pdp.below-recs accepts bopis-picker from engine', r.source === 'engine');
 }
 
+// ─── Phase 3 cart specialization ───────────────────────────────────
+
+console.log('\nCart specialization (Phase 3)');
+
+const lastChanceUpsellRow = {
+	component: 'last-chance-upsell-row',
+	props: {
+		title: 'Last chance — pair these with your order',
+		products: [
+			{ productId: 'p1', role: 'compact' },
+			{ productId: 'p2', role: 'compact' },
+			{ productId: 'p3', role: 'compact' },
+		],
+	},
+};
+
+{
+	const r = resolveZone({
+		zoneId: 'cart.above-checkout-cta',
+		brandId: 'bealls',
+		engineOutput: { zones: { 'cart.above-checkout-cta': lastChanceUpsellRow } },
+	});
+	assert('cart.above-checkout-cta accepts last-chance-upsell-row from engine', r.source === 'engine');
+}
+
+{
+	// Coupon-strip is the other valid block at cart.above-checkout-cta per ADR-007.
+	const couponStrip = {
+		component: 'coupon-strip',
+		props: {
+			eyebrow: 'OFFER',
+			headline: 'Get $10 off when you spend $80+',
+			ctaLabel: 'Get Code',
+		},
+	};
+	const r = resolveZone({
+		zoneId: 'cart.above-checkout-cta',
+		brandId: 'bealls',
+		engineOutput: { zones: { 'cart.above-checkout-cta': couponStrip } },
+	});
+	assert('cart.above-checkout-cta accepts coupon-strip alternative', r.source === 'engine');
+}
+
+{
+	// Reject content from a block not in the cart.above-checkout-cta union.
+	const r = resolveZone({
+		zoneId: 'cart.above-checkout-cta',
+		brandId: 'bealls',
+		engineOutput: { zones: { 'cart.above-checkout-cta': {
+			component: 'editorial-hero',
+			props: { image: 'x', headline: 'Spring 2026', textPosition: 'center' },
+		} } },
+	});
+	assert('cart.above-checkout-cta rejects out-of-vocabulary block (editorial-hero)', r.source === 'fallback');
+}
+
+{
+	const r = resolveZone({ zoneId: 'cart.above-checkout-cta', brandId: 'bealls' });
+	assert(
+		'cart.above-checkout-cta has Hidden default fallback',
+		r.source === 'fallback' && r.content === null,
+	);
+}
+
+// ─── Phase 3 checkout specialization ───────────────────────────────
+
+console.log('\nCheckout specialization (Phase 3)');
+
+const assuranceStrip = {
+	component: 'assurance-strip-checkout',
+	props: {
+		variant: 'first-time',
+		items: [
+			{ icon: '🔒', label: 'Secure checkout', body: 'PCI-compliant.' },
+			{ icon: '↩︎', label: 'Easy returns', body: 'Within 60 days.' },
+			{ icon: '🚚', label: 'Free shipping', body: 'On qualifying orders.' },
+		],
+	},
+};
+
+{
+	const r = resolveZone({
+		zoneId: 'checkout.assurance-strip',
+		brandId: 'bealls',
+		engineOutput: { zones: { 'checkout.assurance-strip': assuranceStrip } },
+	});
+	assert('checkout.assurance-strip accepts engine variant', r.source === 'engine');
+}
+
+{
+	const r = resolveZone({ zoneId: 'checkout.assurance-strip', brandId: 'bealls' });
+	const c = r.content as { component?: string; props?: { variant?: string; items?: unknown[] } } | null;
+	assert(
+		'checkout.assurance-strip falls back to brand-default trust strip',
+		r.source === 'fallback'
+			&& !!c
+			&& c.component === 'assurance-strip-checkout'
+			&& c.props?.variant === 'first-time'
+			&& Array.isArray(c.props?.items)
+			&& (c.props?.items?.length ?? 0) >= 3,
+	);
+}
+
+{
+	const r = resolveZone({
+		zoneId: 'checkout.last-chance-upsell',
+		brandId: 'bealls',
+		engineOutput: { zones: { 'checkout.last-chance-upsell': lastChanceUpsellRow } },
+	});
+	assert('checkout.last-chance-upsell accepts last-chance-upsell-row from engine', r.source === 'engine');
+}
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 if (failed > 0) throw new Error(`${failed} test(s) failed`);

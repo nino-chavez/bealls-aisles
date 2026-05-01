@@ -1,6 +1,12 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { createCart, addToCart, getCart } from '$lib/server/bigcommerce';
+import {
+	createCart,
+	addToCart,
+	getCart,
+	updateCartLineItem,
+	deleteCartLineItem,
+} from '$lib/server/bigcommerce';
 import { cacheCart, getCachedCart, getSessionCookie, evictCart } from '$lib/server/cart-store';
 
 /** POST /api/cart — Add item to cart (foundation primitive). */
@@ -49,6 +55,57 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 			{ error: 'Cart operation failed', message: err instanceof Error ? err.message : 'Unknown error' },
 			{ status: 500 }
 		);
+	}
+};
+
+/** PATCH /api/cart — Update line item quantity (qty = 0 → remove). */
+export const PATCH: RequestHandler = async ({ request, cookies }) => {
+	try {
+		const { lineItemEntityId, productEntityId, quantity } = await request.json();
+
+		if (!lineItemEntityId || typeof quantity !== 'number') {
+			return json({ error: 'Missing lineItemEntityId or quantity' }, { status: 400 });
+		}
+
+		const cartId = cookies.get('bc_cart_id');
+		if (!cartId) {
+			return json({ error: 'No cart' }, { status: 404 });
+		}
+
+		const sessionCookie = getSessionCookie(cartId) ?? undefined;
+
+		// qty=0 removes the line; otherwise update. We need productEntityId for
+		// updates — read from the cached cart if the client didn't supply it.
+		let productId = productEntityId as number | undefined;
+		if (quantity > 0 && !productId) {
+			const cached = getCachedCart(cartId);
+			productId = cached?.cart.lineItems.physicalItems.find((i) => i.entityId === lineItemEntityId)?.productEntityId;
+			if (!productId) {
+				return json({ error: 'Line item not found in cached cart' }, { status: 404 });
+			}
+		}
+
+		try {
+			const result = quantity === 0
+				? await deleteCartLineItem(cartId, lineItemEntityId, sessionCookie)
+				: await updateCartLineItem(cartId, lineItemEntityId, productId!, quantity, sessionCookie);
+
+			if (result.cart) {
+				cacheCart(result.cart, result.sessionCookie ?? sessionCookie ?? null);
+				const itemCount = result.cart.lineItems.physicalItems.reduce((sum, i) => sum + i.quantity, 0);
+				return json({ cart: result.cart, itemCount });
+			}
+			// BC returns null cart when last line removed.
+			evictCart(cartId);
+			cookies.delete('bc_cart_id', { path: '/' });
+			return json({ cart: null, itemCount: 0 });
+		} catch (err) {
+			console.warn('[cart] line-item mutation failed:', err instanceof Error ? err.message : err);
+			return json({ error: 'Cart update failed' }, { status: 500 });
+		}
+	} catch (err) {
+		console.error('Cart PATCH failed:', err);
+		return json({ error: 'Cart operation failed' }, { status: 500 });
 	}
 };
 

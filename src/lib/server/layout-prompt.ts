@@ -199,6 +199,28 @@ const EMPTY_REASON_FRAMING_CONTENT: Record<EmptyReason, string> = {
 	'empty-wishlist': `RESCUE CONTEXT (content mode): No wishlist in content mode. Render an editorial-header explaining the brand is in-store only + a category-tile-grid + a store-locator promo-strip.`,
 };
 
+/**
+ * Cart surface framing — narrow latitude per ADR-006 + ADR-007 §3.4.
+ *
+ * The cart's mandatory scaffold (line items, summary, free-shipping meter,
+ * promo entry, checkout CTA) is foundation-rendered. The AI's only job is
+ * to compose a `last-chance-upsell-row` block above the checkout CTA,
+ * choosing 3 products from the candidate set that pair well with what the
+ * shopper has signaled (persona-fit ranking today; tag-overlap when
+ * PRD-ENG-019 lands).
+ */
+const CART_FRAMING = `CART CONTEXT: The shopper is reviewing their cart and you ONLY compose the upsell row that appears above the checkout CTA. The cart's line items, subtotal, free-shipping meter, promo-code entry, and Checkout button are all foundation-rendered from cart state — DO NOT emit those. Your sole job is one \`last-chance-upsell-row\` section: pick 3 products from the candidate set that pair well with the persona, write a short title ("Last chance — pair these with your order" or persona-aware variant), and stop. If no qualifying products exist, return an empty \`sections\` array. Skip everything else — no editorial-hero, no promo-strip, no category tiles, nothing else is valid here.`;
+
+/**
+ * Checkout surface framing — narrowest latitude per ADR-006 + ADR-007 §3.5.
+ *
+ * BC Optimized Checkout (FND-010) handles the actual checkout flow. This
+ * surface is the *handoff page* between cart CTA and BC redirect. The AI
+ * emits at most two blocks: an `assurance-strip-checkout` (variant by
+ * inferred shopper signal) and an optional `last-chance-upsell-row`.
+ */
+const CHECKOUT_FRAMING = `CHECKOUT HANDOFF CONTEXT: The shopper is between cart and BC Optimized Checkout. The redirect to BC's hosted checkout is foundation-rendered — DO NOT compose any payment, shipping, billing, or place-order UI. Compose at most two blocks: (1) an \`assurance-strip-checkout\` with the right \`variant\` for this shopper (\`first-time\` if no signals of prior visits — most demos; \`returning\` if signals suggest a repeat shopper; \`loyalty-known\` if a tier is known) and 3 \`items\` whose copy matches the variant — first-time leans safety/return language, returning leans speed/welcome-back, loyalty-known leans tier benefits. (2) Optionally, one \`last-chance-upsell-row\` with 3 small-add products that pair with the cart. If you have nothing for the upsell, omit it. Stop there.`;
+
 export function buildLayoutPrompt(
 	persona: string,
 	categoryName: string,
@@ -269,27 +291,36 @@ VALID IMAGES:
 
 	const isHome = categoryName === 'Home';
 	const isEmpty = options?.surface === 'empty';
+	const isCart = options?.surface === 'cart';
+	const isCheckout = options?.surface === 'checkout';
 	const reason = options?.reason;
 	const surfaceLabel = isEmpty
 		? `${reason ?? 'rescue'} rescue page`
-		: isHome
-			? 'homepage'
-			: `${categoryName} ${modeLabel}`;
+		: isCart
+			? 'cart upsell row'
+			: isCheckout
+				? 'checkout handoff page'
+				: isHome
+					? 'homepage'
+					: `${categoryName} ${modeLabel}`;
 	const emptyFraming = isEmpty && reason
 		? `\n${(mode === 'content' ? EMPTY_REASON_FRAMING_CONTENT : EMPTY_REASON_FRAMING)[reason]}\n`
 		: '';
 	const homeGuidance = isEmpty
 		? emptyFraming
-		: isHome
-			? `\nHOMEPAGE CONTEXT: This is the brand's landing page — the shopper's first impression. The products span all categories, pre-sorted to show the strongest persona-fit first. Use a richer mix of components than a category page: an editorial-hero or hero-product to anchor, a category-tile-grid to surface the brand's range, a product-carousel for featured picks, and persona-appropriate promo (price-rail for Hunter, coupon-strip for Gifter, bealls-bucks-callout for any known shopper). DO NOT use category-header on the homepage — that's for category pages only.\n`
-			: '';
+		: isCart
+			? `\n${CART_FRAMING}\n`
+			: isCheckout
+				? `\n${CHECKOUT_FRAMING}\n`
+				: isHome
+					? `\nHOMEPAGE CONTEXT: This is the brand's landing page — the shopper's first impression. The products span all categories, pre-sorted to show the strongest persona-fit first. Use a richer mix of components than a category page: an editorial-hero or hero-product to anchor, a category-tile-grid to surface the brand's range, a product-carousel for featured picks, and persona-appropriate promo (price-rail for Hunter, coupon-strip for Gifter, bealls-bucks-callout for any known shopper). DO NOT use category-header on the homepage — that's for category pages only.\n`
+					: '';
 
-	// Empty/rescue surfaces source from the home loader, which yields
-	// `categoryName: "Home"`. Emitting `CATEGORY: Home` alongside the rescue
-	// framing makes the AI confabulate "we didn't find 'Home' in our catalog"
-	// on empty-search. Skip the category line entirely for rescues — the
-	// rescue framing carries the surface context.
-	const categoryLine = isEmpty ? '' : `\nCATEGORY: ${categoryName}`;
+	// Empty/rescue + cart + checkout surfaces source from the home loader,
+	// which yields `categoryName: "Home"`. Emitting `CATEGORY: Home` alongside
+	// the surface framing makes the AI confabulate. Skip the category line for
+	// these surfaces — the surface framing carries the context.
+	const categoryLine = isEmpty || isCart || isCheckout ? '' : `\nCATEGORY: ${categoryName}`;
 
 	return `${modeRole}
 
