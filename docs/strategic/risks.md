@@ -1,9 +1,11 @@
-# Strategic Risks & Fallback Paths
+# Experimental Risks & Watch-list
 
-**Version**: 0.3.0
+**Version**: 0.4.0
 **Last Updated**: 2026-04-30
 
-Per the Atelier convention, risks live separate from spec. Each entry names a load-bearing strategic bet, the failure mode, the trigger signal, and the fallback path.
+Per the Atelier convention, risks live separate from spec. Each entry names a risk to the experiment producing useful learnings — the bet, the failure mode, the trigger signal, and the fallback path.
+
+> **v0.4.0 reframe note:** earlier versions framed these as strategic risks to a product launch. v0.4.0 reframes as risks to the experiment producing **actionable learnings for our internal teams**. RISK-03 (demo→product gap) is removed because there is no productization commitment yet — it is replaced by RISK-07 (vanity demo, no team adoption) and RISK-08 (Bealls-specific overfitting).
 
 ## Format
 
@@ -34,14 +36,6 @@ Owner: <who watches this>
 - **Fallback path:** extension hook in admin to add surface schemas without engine change — would require a typed-schema authoring UI in admin (~3 weeks human work). Avoid by deciding scope in Task #44 PRD.
 - **Owner:** engine + admin layers
 
-### RISK-03: Demo→product gap
-
-- **Bet:** Bealls demo features translate to commerce.com merchant pitch.
-- **Failure mode:** features that demo well to leadership don't sell to merchants. Common pattern: AI personalization demos beautifully but merchants want control, predictability, and clarity over magic.
-- **Trigger signal:** post-demo merchant conversations don't progress to scoping calls; merchants ask "can we turn the AI off?" within first 10 minutes of every meeting.
-- **Fallback path:** pivot to 2–3 additional reference merchant engagements in different verticals before V1 commit. Reduces Bealls-shaped overfitting. Cost: ~2 weeks of reference-merchant research per additional engagement. Research finished 2026-04-30; conversations with leadership about additional merchants are open.
-- **Owner:** product leadership
-
 ### RISK-04: Merchant authoring complexity
 
 - **Bet:** merchandisers can author rules and operate the admin without engineering support.
@@ -58,13 +52,29 @@ Owner: <who watches this>
 - **Fallback path:** double down on differentiation, not capability count. Two structural advantages remain: (1) BC-native composition (Bloomreach's Discovery is BC-native, but their composition layer would be Discovery + a new product, not native), (2) merchant explainability (Bloomreach's Engagement is generic CDP UX with no Decisions Inspector equivalent). Lead pitches with the Inspector and the "Aisles tells you why" line. Cost: ~0 if shipped on schedule; ~6 months of repositioning if Bloomreach launches first.
 - **Owner:** product leadership + engine + admin
 
-### RISK-06: Merchants reject "AI built something we didn't approve" (NEW, surfaced 2026-04-30)
+### RISK-06: Merchants reject "AI built something we didn't approve"
 
-- **Bet:** Decisions Inspector + preview-before-publish + rule-bound generation overcomes merchant resistance to generative composition.
-- **Failure mode:** merchants view generative composition as control loss. The pattern is observable across Adobe AI Assistant, Klaviyo K:AI, and Optimizely Opal — all chose to make humans faster at authoring variants rather than generate variants. This may reflect a structural merchant preference, not a capability gap.
-- **Trigger signal:** discovery interviews show 60%+ of mid-market BC merchants want "AI helps me author" over "AI authors and I review"; demo audiences ask "can we approve every layout before it goes live" within first 5 minutes; sales cycles stall on "we need to see the layout before it ships."
-- **Fallback path:** if resistance is structural, Aisles' positioning shifts from "generate" to "compose with strict merchant approval." A narrower wedge but still defensible — the V invariant + typed schemas are still differentiated against insertion-rule platforms. The composition step becomes "AI proposes, merchant approves, publishes" rather than "AI composes live." Cost: workflow rebuild in admin (~3 weeks), no engine architecture change since the schema-typed output already supports preview/approve flows.
-- **Owner:** product leadership + admin
+- **Bet:** the Decisions Inspector + preview-before-publish + rule-bound generation lets merchants engage with generative composition rather than reject it outright.
+- **Failure mode:** merchants view generative composition as control loss regardless of inspector. The pattern is observable across Adobe AI Assistant, Klaviyo K:AI, and Optimizely Opal — all chose to make humans faster at authoring variants rather than generate variants. This may reflect a structural merchant preference, not a capability gap.
+- **Trigger signal:** customer success conversations show 60%+ of mid-market BC merchants want "AI helps me author" over "AI authors and I review"; demo audiences ask "can we approve every layout before it goes live" within first 5 minutes.
+- **Learning if hypothesis fails:** Hypothesis 1 (generative composition is production-viable) is invalid for the merchant audience. Reframe future capability work toward variant-authoring AI (the Adobe/Klaviyo/Optimizely pattern). The V invariant + typed schemas remain useful patterns for engineering, just not for merchant-facing generative composition.
+- **Owner:** customer success teams (lead) + product (consume learnings)
+
+### RISK-07: Vanity demo — no team adoption
+
+- **Bet:** structured walk-throughs per audience produce actionable lessons our teams take back into roadmap, production code, and merchant conversations.
+- **Failure mode:** the artifact gets shown to teams who say "neat" but extract no actionable lessons. The experiment produces no learning. Possible causes: walk-throughs are too generic; teams don't have time to engage; the artifact is too far from their daily concerns.
+- **Trigger signal:** ≤2 of the per-audience artifacts (capability list / architecture review / merchant transcripts) materialize within 60 days of artifact stabilization; no pull-requests or roadmap items cite the experiment as a source.
+- **Fallback path:** structured walk-through cadence — embed a short demo + Q&A in each audience's existing forum (product reviews, eng all-hands, CS pre-sales sync). Provide audience-specific "what to bring back" templates (referenced in `STRATEGY.md` §2.1–2.3). Convert the artifact to a self-serve walk-through (recorded videos, click-through paths) if synchronous walk-throughs don't scale.
+- **Owner:** project lead
+
+### RISK-08: Bealls-specific overfitting
+
+- **Bet:** lessons surfaced from the Bealls artifact generalize to commerce.com's broader merchant base.
+- **Failure mode:** all observable patterns are Bealls-specific (off-price + family-of-brands + BOPIS + content-mode HC). The experiment's hypotheses look validated, but the validations don't extend.
+- **Trigger signal:** customer success teams report that Bealls patterns don't recur in conversations with other merchants; engineering teams find that the multi-brand / mode-aware patterns require Bealls-specific configuration.
+- **Fallback path:** add a second example merchant artifact (different vertical, different operational model). Cost: ~2 weeks of fresh engagement research + ~3 weeks of artifact build per additional merchant. Best candidates: a single-brand DTC merchant (tests "is family-of-brands incidental?") and a B2B-leaning merchant (tests "are persona models retail-shaped?").
+- **Owner:** product teams (decide whether to add merchant) + customer success (surface candidates)
 
 ---
 

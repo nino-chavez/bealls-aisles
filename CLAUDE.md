@@ -6,9 +6,17 @@ This file shapes how AI agents (Claude Code, others) operate in this repository.
 
 ## Project framing
 
-Aisles is a **three-layer commercial product** for commerce.com. It is no longer a demo — it is an application prototype targeted at commerce.com product leadership for sellable merchant features. **Bealls** (and family — Bealls Florida + Home Centric) is the example merchant.
+Aisles is a **three-layer possibility prototype** — an experiment that unlocks the art of the possible for commerce.com internal teams. It is **not** a product being sold to merchants. It is an artifact our internal teams react to and extract capabilities from.
 
-The three layers:
+Three internal audiences, three different value extractions from the same artifact:
+
+1. **Product teams** — "what merchant-facing capabilities does this surface that we should adopt?"
+2. **Engineering teams** — "what architectural patterns and tech bets are validated? what's worth copying?"
+3. **Customer success teams** — "what new merchant conversations does this enable? what objections does it expose?"
+
+**Bealls** (Bealls + Bealls Florida + Home Centric) is the example merchant. Real merchant properties (off-price, family-of-brands, BOPIS, content-mode HC) ground the artifact concretely. The engagement produces the artifact our teams react to — it is not a merchant deal.
+
+The three architectural layers (vectors of possibility, not sellable SKUs):
 
 1. **Aisles engine** — AI composition (block catalog, prompts, schemas, latitude rules)
 2. **Ecomm app foundation** — table-stakes commerce primitives (catalog, cart, checkout, account, search, locator)

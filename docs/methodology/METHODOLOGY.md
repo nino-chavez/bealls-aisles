@@ -38,9 +38,11 @@ Conflating the layers is the failure mode this repo is shaped to avoid. PRs that
 
 ## Stakeholders & audience
 
-Primary audience for strategic and functional docs: **commerce.com product leadership**, who use this work to demo sellable merchant features. Lead with merchant value and competitive positioning before technical depth.
+Primary audience for strategic and functional docs: **commerce.com internal teams — product, engineering, customer success.** Aisles is a possibility-prototype experiment, not a productization commitment. Each audience extracts different value from the same artifact (see NORTH-STAR §1).
 
-Example merchant: **Bealls** (and family — Bealls Florida + Home Centric). Concrete, real, off-price retail with BOPIS, family-of-brands cross-banner nav, Bealls Bucks loyalty, comparable-value pricing, and a content-only sister brand. Use Bealls properties to ground every example.
+Lead docs with **what each audience learns**, not with merchant value or competitive positioning. Productization conversations come later if the experiment surfaces evidence to support them.
+
+Example merchant artifact: **Bealls** (and family — Bealls Florida + Home Centric). Concrete, real, off-price retail with BOPIS, family-of-brands cross-banner nav, Bealls Bucks loyalty, comparable-value pricing, and a content-only sister brand. Bealls grounds the artifact concretely; the engagement produces what our teams react to. Use Bealls properties to ground every example, but watch for Bealls-specific overfitting (RISK-08).
 
 ---
 

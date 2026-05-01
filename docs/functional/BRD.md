@@ -1,30 +1,39 @@
-# Aisles — Business Requirements / User Stories
+# Aisles — Internal-team Reactions / Walk-through Stories
 
-> **Status: stub.** Authored by Task #44.
->
-> Every story binds to a PRD trace ID. Stories are grouped by persona — both shopper personas (Hunter / Gatherer / Researcher / Gifter) and merchant personas (merchandiser / brand manager / growth lead / engineer).
+> **v0.4.0 reframe note:** this doc was previously titled "Business Requirements / User Stories" and structured around merchant personas. Per the experimental framing pivot (2026-04-30), it is reframed around **internal-team reactions to artifact walk-throughs** — the stories are about commerce.com product/eng/CS teams interacting with the Bealls artifact, not about hypothetical merchant users.
+
+**Status: stub.** Authored by Task #44.
+
+Every story binds to a PRD capability trace ID. Stories are grouped by audience — three internal audiences (product / engineering / customer success), plus a "merchant-facing" group that captures stories *as Bealls would experience them* (since Bealls is the example merchant, their reactions are observable too).
 
 ## Story format
 
 ```
 ID: STORY-001
 Trace IDs: [PRD-ENG-003, PRD-ADM-001]
-Persona: Merchant — Merchandiser
-Story: As a merchandiser, I want to author a coupon rule
-       and see which AI-composed surfaces will surface it,
-       so I can predict campaign reach without a/b testing.
-Acceptance: Coupon rule UI in admin shows preview cards for
-            home / PLP / PDP / cart with the rule applied.
+Audience: Engineering — reviewing the V invariant
+Story: As an engineer evaluating Aisles' schema-typed AI output, I want to
+       see how the schema validation cascade (Zod → structured output →
+       fallback) handles malformed model responses, so I can decide
+       whether the V invariant pattern is worth adopting in production
+       services that emit structured AI output.
+Acceptance: Walk-through includes a deliberate schema-violation injection;
+            artifact shows the fallback cascade engaging; engineer can
+            extract the validation pattern as production-grade.
 ```
 
-## Stories — Shopper personas
+## Stories — Product teams
 
-> _to be authored._
+> _to be authored. Examples to expect: "As a product manager evaluating the block catalog, I want to..."; "As a roadmap planner reviewing persona inference, I want to..."_
 
-## Stories — Merchant personas
+## Stories — Engineering teams
 
-> _to be authored. Lead with merchandiser, then brand manager, then growth lead, then engineering ops._
+> _to be authored. Examples to expect: "As an engineer evaluating multi-tenancy patterns..."; "As an engineer evaluating AI Gateway routing..."_
 
-## Stories — Cross-persona / system
+## Stories — Customer success teams
 
-> _to be authored. Examples: signal pipeline reliability, schema migration, observability incident response._
+> _to be authored. Examples to expect: "As a CS member walking a merchant through Bealls, I want to..."; "As a CS member reading merchant feedback on the Decisions Inspector..."_
+
+## Stories — Merchant (Bealls-as-observed)
+
+> _to be authored. These are not merchant user stories from speculative future Aisles customers — they are stories from Bealls' actual interactions with the artifact, captured by CS and engineering during the engagement._

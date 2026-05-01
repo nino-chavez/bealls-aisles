@@ -1,25 +1,36 @@
 # Aisles — North Star
 
-**Version**: 0.3.0
+**Version**: 0.4.0
 **Last Updated**: 2026-04-30
-**Audience**: commerce.com product leadership (primary) · product, design, engineering (secondary)
-**Example merchant**: Bealls (with family — Bealls Florida + Home Centric)
+**Audience**: commerce.com internal teams — product, engineering, customer success
+**Example merchant artifact**: Bealls (with family — Bealls Florida + Home Centric)
 
-> **Reframing note (2026-04-30):** v0.2.0 was a single-layer product vision focused on the AI personalization engine. v0.3.0 reframes Aisles as a three-layer commercial product (engine + ecomm foundation + admin control plane) targeted at commerce.com merchants, with Bealls as the example merchant. The engine-layer design philosophy from v0.2.0 (mission, fail-fast principle, feed model, streaming-platform lessons) is preserved verbatim in §3.1 ("Engine — design philosophy"). New material: §1 (what Aisles is), §2 (the three layers), §3.2 (foundation), §3.3 (admin), §4 (Bealls as example merchant), §6 (reference brands).
+> **Reframing notes:**
+> - **v0.4.0 (2026-04-30 PM):** repositioned from "commercial product for sellable merchant features" to **possibility-prototype experiment** for commerce.com internal teams. The architecture and engine-layer design philosophy are unchanged. What changed: audience (internal teams, not leadership-evaluating-a-product), goal (surface capabilities for our teams to adopt; expose merchant conversations for CS; validate tech patterns for engineering), and how strategic docs frame trade-offs (hypotheses tested + lessons surfaced, not bets/wedges/positioning).
+> - **v0.3.0 (2026-04-30 AM):** initial three-layer reframing. Preserved verbatim in §3.x.
+> - **v0.2.0 (2026-04-06):** single-layer engine-only vision. Preserved verbatim in §3.1.
 
 ---
 
 ## 1. What Aisles is
 
-**A three-layer commercial product for BigCommerce-native merchants who want AI-personalized commerce without being a data-engineering company.**
+**A possibility-prototype experiment that surfaces what's possible when an AI composition engine, a complete ecomm app foundation, and a merchant control plane are bundled into one BigCommerce-native artifact.**
 
-Aisles bundles three things that today's merchants assemble piecemeal across vendors:
+Aisles is not a product we are selling. It is an artifact our internal teams react to. Three audiences, three extractions from the same artifact:
+
+| Audience | Question this artifact answers |
+|---|---|
+| **Product** | What merchant-facing capabilities does this surface that we should adopt into our actual roadmap? |
+| **Engineering** | What architectural patterns and tech bets are validated or invalidated? What's worth copying into the production stack? |
+| **Customer success** | What new merchant conversations does this enable? What objections does it expose that we should be ready for? |
+
+The artifact bundles three things that today's merchants assemble piecemeal across vendors — but the bundling is a *demonstration*, not a productization commitment:
 
 1. **An AI composition engine** that reads shopper signals and generates page layouts in real time, surface by surface, with formal correctness guarantees.
 2. **A complete ecommerce app foundation** — catalog, cart, checkout, account, search, locator — that exists whether or not the engine is personalizing it.
 3. **A merchant control plane** (`aisles-admin`) that gives non-technical operators rule authoring, content authoring, A/B, and observability over the AI's behavior.
 
-The product is sellable to merchants because it is **complete**: a merchant turns it on and gets a working storefront, not a personalization layer they then need to integrate into a separate ecomm platform.
+**Why an experiment, not a product?** The original v0.3 framing pre-committed to commercial pillars (market wedge, BC-native moat, competitive positioning vs. Bloomreach) and required ship-or-don't-ship decisions our teams haven't been asked to make yet. The experimental framing surfaces possibilities first; commitment comes from teams seeing the artifact, not from leadership reading a strategy doc. If the experiment succeeds, the question "should we productize any of this" becomes a real, evidence-backed conversation — not a speculative one.
 
 ### Mission
 
@@ -461,7 +472,7 @@ Bealls Inc. operates three retail brands (Bealls, Bealls Florida, Home Centric) 
 | **Home Centric is content-only** | The storefront/content mode split is **real**, not synthetic. HC has no online catalog; its surfaces are editorial + locator. Forces the engine to support both modes from day one |
 | **Real BigCommerce merchant** | The BC-native architecture (channels, GraphQL Storefront, marketplace app) maps to actual commerce.com infrastructure, not theoretical |
 
-Bealls is not a one-off demo. The capabilities the engagement surfaces (multi-brand, BOPIS, loyalty, mode-aware composition, off-price pricing language) are general-purpose product features. **The engagement is the demo, but the features are the product.**
+Bealls is not a one-off demo. The capabilities the engagement surfaces (multi-brand, BOPIS, loyalty, mode-aware composition, off-price pricing language) are general-purpose patterns our internal teams can extract — into roadmap, into the production stack, into merchant conversations. **The engagement is the artifact our teams react to. The capabilities are what they take away from it.**
 
 For the engagement plan, deliverables, and current state, see [`docs/strategic/engagements/bealls.md`](engagements/bealls.md).
 
@@ -483,9 +494,9 @@ This is intentional positioning for the BC marketplace app: a merchant installs 
 
 ---
 
-## 7. Competitive positioning (summary)
+## 7. What the competitive landscape teaches us
 
-Detailed positioning, the comparison matrix across Dynamic Yield / Monetate / Bloomreach Discovery / Salesforce Personalization / Adobe Target / Algolia Recommend / Coveo / Klevu / Constructor.io, and the full discussion of competitive risk lives in [`STRATEGY.md`](STRATEGY.md). The headline positioning:
+This section was previously framed as "competitive positioning" — what wedge Aisles owns against incumbents. Under the experimental framing, it is reframed as **what our internal teams learn from incumbents about the shape of the possibility space**. Detailed comparison across Dynamic Yield / Monetate / Bloomreach Discovery / Salesforce Personalization / Adobe Target / Algolia Recommend / Coveo / Klevu / Constructor.io is in [`STRATEGY.md`](STRATEGY.md) and [`../research/engine/`](../research/engine/). The headlines:
 
 ### vs. Amazon's "Frequently Bought Together"
 
@@ -499,11 +510,17 @@ Existing personalization platforms for BC merchants are insertion-rule-based: "i
 
 Aisles infers intent continuously and uses that intent to drive **the entire layout** — the number of columns, the presence or absence of editorial copy, the sort order, the call-to-action pattern, the merchandising blocks. Layout-level personalization requires an AI that understands composition, not rules that swap products.
 
-### The defensible wedge
+### What's surprising in the landscape
 
-Per the engine-layer competitive research, **no incumbent generates whole ecomm surfaces as typed component trees.** Eleven of twelve surveyed personalization platforms top out at insert/rank/A-B. The "generative storefront" lane is empty — either a real opportunity or a market signal that merchants don't want it. Aisles' bet is the former, with the explicit hedge that **merchant override and explainability** (admin layer) prevent "the AI built something we didn't approve" from becoming the steel-man competitors use against generative composition.
+Three findings from the Stage 1 research that our teams should sit with:
 
-The combination of (a) schema-typed AI output (the V invariant), (b) BC-native architecture, and (c) merchant control plane with explainability is structurally hard to copy. The biggest competitive risk is Bloomreach, whose Loomi + Clarity + Discovery + Content + Engagement stack and Elite BigCommerce partnership compress this wedge if Clarity extends from chat to surface composition within the next 12 months.
+1. **The "generative storefront" lane is empty.** Eleven of twelve surveyed personalization platforms top out at insert/rank/A-B between variants. **No incumbent generates whole ecomm surfaces as typed component trees.** Read this two ways: (a) a real possibility space nobody has occupied, or (b) a market signal that merchants don't want surprise layouts. The experiment exists to surface which read is correct — observable when teams + merchants react to the Bealls artifact.
+
+2. **Incumbent AI investment has gone to feeding variant pipelines, not replacing them.** Adobe AI Assistant, Klaviyo K:AI, Optimizely Opal, Shopify Magic — all use AI to make humans faster at authoring variants. None generate variants directly. This is a **strategic stance**, not a capability gap. What our teams should ask: do our merchants want AI authoring, or do they want AI assistance? The artifact lets CS and product test this.
+
+3. **Schema-typed + generated combination is structurally rare.** Constructor and Algolia type their data; Bloomreach types its CMS; Shopify types its admin via Polaris. None combine typed schema *composition output* with AI generation. The V invariant (`∀I, ∀P, f(I, P) → S ∈ V` — every layout is an element of a finite typed schema) is what makes generative composition shippable. Engineering teams reviewing the artifact should evaluate whether this pattern is worth adopting in production codebases regardless of whether Aisles itself is productized.
+
+The biggest landscape risk to monitor (regardless of productization decisions): **Bloomreach**, whose Loomi + Clarity + Discovery + Content + Engagement stack and Elite BigCommerce partnership compress the possibility space if Clarity extends from chat turns to surface composition within the next 12 months.
 
 ---
 
