@@ -104,6 +104,13 @@
 					<div class="legend-row"><span class="swatch swatch-fallback"></span> Fallback · static</div>
 					<div class="legend-row"><span class="swatch swatch-foundation"></span> Foundation · primitive</div>
 				</div>
+
+				<div class="links">
+					<a href="/observe" target="_blank" rel="noopener" class="link-row">
+						<span>Observe dashboard</span>
+						<span aria-hidden="true">↗</span>
+					</a>
+				</div>
 			</div>
 		{/if}
 	</div>
@@ -289,5 +296,27 @@
 	.fresh-sub {
 		font-size: 10px;
 		color: #a1a1aa;
+	}
+
+	.links {
+		margin-top: 6px;
+		padding-top: 6px;
+		border-top: 1px solid #27272a;
+	}
+
+	.link-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 4px 4px;
+		font-size: 11px;
+		color: #d4d4d8;
+		text-decoration: none;
+		border-radius: 2px;
+	}
+
+	.link-row:hover {
+		color: #f4f4f5;
+		background: #27272a;
 	}
 </style>

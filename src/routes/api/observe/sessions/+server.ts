@@ -2,18 +2,12 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { listSessionIds, getSessionStore } from '$lib/signals/session';
 
-const OBSERVE_KEY = 'aisles-observe';
-
 /**
  * GET /api/observe/sessions
  * Returns active session IDs sorted by most recent event timestamp
  * so "watch latest" actually picks the freshest session.
  */
-export const GET: RequestHandler = async ({ url }) => {
-	if (url.searchParams.get('key') !== OBSERVE_KEY) {
-		return json({ error: 'Unauthorized' }, { status: 401 });
-	}
-
+export const GET: RequestHandler = async () => {
 	const ids = await listSessionIds();
 
 	const withActivity = await Promise.all(
