@@ -1,8 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { createCart, addToCart, getCart } from '$lib/server/bigcommerce';
+import { cacheCart, getCachedCart, getSessionCookie, evictCart } from '$lib/server/cart-store';
 
-/** POST /api/cart — Add item to cart */
+/** POST /api/cart — Add item to cart (foundation primitive). */
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	try {
 		const { productEntityId, quantity = 1 } = await request.json();
@@ -12,30 +13,36 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		}
 
 		const cartId = cookies.get('bc_cart_id');
-		let cart;
+		let result;
 
 		if (cartId) {
+			const sessionCookie = getSessionCookie(cartId) ?? undefined;
 			try {
-				cart = await addToCart(cartId, productEntityId, quantity);
-			} catch {
-				// Cart might have expired — create a new one
-				cart = await createCart(productEntityId, quantity);
+				result = await addToCart(cartId, productEntityId, quantity, sessionCookie);
+			} catch (err) {
+				console.warn('[cart] addToCart failed, creating new:', err instanceof Error ? err.message : err);
+				evictCart(cartId);
+				result = await createCart(productEntityId, quantity);
 			}
 		} else {
-			cart = await createCart(productEntityId, quantity);
+			result = await createCart(productEntityId, quantity);
 		}
 
-		// Store cart ID in cookie
-		cookies.set('bc_cart_id', cart.entityId, {
+		// Cache the payload AND the BC visitor session cookie. Subsequent
+		// addCartLineItems calls must replay the cookie or BC won't find
+		// the cart. site.cart(entityId) likewise returns null without it.
+		cacheCart(result.cart, result.sessionCookie);
+
+		cookies.set('bc_cart_id', result.cart.entityId, {
 			path: '/',
 			httpOnly: true,
 			sameSite: 'lax',
 			maxAge: 60 * 60 * 24 * 30, // 30 days
 		});
 
-		const itemCount = cart.lineItems.physicalItems.reduce((sum, item) => sum + item.quantity, 0);
+		const itemCount = result.cart.lineItems.physicalItems.reduce((sum, item) => sum + item.quantity, 0);
 
-		return json({ cart, itemCount });
+		return json({ cart: result.cart, itemCount });
 	} catch (err) {
 		console.error('Cart operation failed:', err);
 		return json(
@@ -45,12 +52,20 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	}
 };
 
-/** GET /api/cart — Get current cart */
+/** GET /api/cart — Get current cart (foundation primitive). */
 export const GET: RequestHandler = async ({ cookies }) => {
 	const cartId = cookies.get('bc_cart_id');
 
 	if (!cartId) {
 		return json({ cart: null, itemCount: 0 });
+	}
+
+	// Cache-first: BC site.cart returns null for headless-bearer carts, so
+	// we serve from the mutation-response cache when available.
+	const cached = getCachedCart(cartId);
+	if (cached) {
+		const itemCount = cached.cart.lineItems.physicalItems.reduce((sum, item) => sum + item.quantity, 0);
+		return json({ cart: cached.cart, itemCount });
 	}
 
 	try {
@@ -60,6 +75,7 @@ export const GET: RequestHandler = async ({ cookies }) => {
 			return json({ cart: null, itemCount: 0 });
 		}
 
+		cacheCart(cart, null);
 		const itemCount = cart.lineItems.physicalItems.reduce((sum, item) => sum + item.quantity, 0);
 		return json({ cart, itemCount });
 	} catch {

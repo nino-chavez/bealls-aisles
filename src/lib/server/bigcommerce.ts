@@ -36,18 +36,34 @@ interface GraphQLResponse<T> {
 }
 
 async function query<T>(gql: string, variables?: Record<string, unknown>): Promise<T> {
+	const { data } = await rawQuery<T>(gql, variables);
+	return data;
+}
+
+async function rawQuery<T>(
+	gql: string,
+	variables?: Record<string, unknown>,
+	opts: { sessionCookie?: string } = {},
+): Promise<{ data: T; sessionCookie: string | null }> {
 	const { url, token } = getGraphQLConfig();
 	// BC's Storefront GraphQL enforces an Origin check matching the token's
 	// allowed_cors_origins. Server-to-server fetches sometimes have an Origin
 	// implicitly added by the runtime; explicitly setting it to localhost
 	// (which is in every token's allowed list) is the most reliable bridge.
+	const headers: Record<string, string> = {
+		'Content-Type': 'application/json',
+		Authorization: `Bearer ${token}`,
+		Origin: 'http://localhost:5173',
+	};
+	// BC scopes cart mutations/queries to a visitor session. The session
+	// cookie comes back from cart.createCart and must be replayed on
+	// subsequent cart calls — otherwise BC returns "Cart does not exist".
+	if (opts.sessionCookie) {
+		headers.Cookie = opts.sessionCookie;
+	}
 	const res = await fetch(url, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`,
-			Origin: 'http://localhost:5173',
-		},
+		headers,
 		body: JSON.stringify({ query: gql, variables }),
 	});
 
@@ -62,7 +78,21 @@ async function query<T>(gql: string, variables?: Record<string, unknown>): Promi
 		throw new Error(json.errors[0].message);
 	}
 
-	return json.data;
+	return { data: json.data, sessionCookie: extractSessionCookie(res.headers) };
+}
+
+/**
+ * BC may return multiple Set-Cookie headers. Concatenate the relevant
+ * cart-session entries into a single Cookie header value for replay.
+ */
+function extractSessionCookie(headers: Headers): string | null {
+	const raw =
+		typeof (headers as unknown as { getSetCookie?: () => string[] }).getSetCookie === 'function'
+			? (headers as unknown as { getSetCookie: () => string[] }).getSetCookie()
+			: headers.get('set-cookie')?.split(/,(?=\s*[A-Za-z0-9_\-]+=)/) ?? [];
+	if (!raw.length) return null;
+	const parts = raw.map((c) => c.split(';')[0].trim()).filter(Boolean);
+	return parts.length ? parts.join('; ') : null;
 }
 
 // ─── Queries ────────────────────────────────────────────────────────
@@ -275,7 +305,7 @@ export async function getCategories() {
 
 // ─── Cart Operations ────────────────────────────────────────────────
 
-interface CartResponse {
+export interface CartResponse {
 	entityId: string;
 	lineItems: {
 		physicalItems: Array<{
@@ -290,10 +320,21 @@ interface CartResponse {
 	};
 }
 
-export async function createCart(productEntityId: number, quantity = 1): Promise<CartResponse> {
-	interface CreateCartResponse { cart: CartResponse; }
+/**
+ * Result of a cart mutation: the cart payload plus the BC visitor session
+ * cookie that scoped it. The cookie must be replayed on subsequent cart
+ * operations against the same cartEntityId — without it BC returns
+ * "Cart does not exist" because the new request has no session linkage.
+ */
+export interface CartMutationResult {
+	cart: CartResponse;
+	sessionCookie: string | null;
+}
 
-	const data = await query<CreateCartResponse>(`
+export async function createCart(productEntityId: number, quantity = 1): Promise<CartMutationResult> {
+	interface CreateCartResponse { cart: { createCart: { cart: CartResponse } } }
+
+	const { data, sessionCookie } = await rawQuery<CreateCartResponse>(`
 		mutation CreateCart($productId: Int!, $quantity: Int!) {
 			cart {
 				createCart(input: {
@@ -318,14 +359,18 @@ export async function createCart(productEntityId: number, quantity = 1): Promise
 		}
 	`, { productId: productEntityId, quantity });
 
-	// The nested structure from BC's mutation response
-	return (data as any).cart.createCart.cart;
+	return { cart: data.cart.createCart.cart, sessionCookie };
 }
 
-export async function addToCart(cartEntityId: string, productEntityId: number, quantity = 1): Promise<CartResponse> {
-	interface AddToCartResponse { cart: CartResponse; }
+export async function addToCart(
+	cartEntityId: string,
+	productEntityId: number,
+	quantity = 1,
+	sessionCookie?: string,
+): Promise<CartMutationResult> {
+	interface AddToCartResponse { cart: { addCartLineItems: { cart: CartResponse } } }
 
-	const data = await query<AddToCartResponse>(`
+	const { data, sessionCookie: nextCookie } = await rawQuery<AddToCartResponse>(`
 		mutation AddToCart($cartId: String!, $productId: Int!, $quantity: Int!) {
 			cart {
 				addCartLineItems(input: {
@@ -349,15 +394,59 @@ export async function addToCart(cartEntityId: string, productEntityId: number, q
 				}
 			}
 		}
-	`, { cartId: cartEntityId, productId: productEntityId, quantity });
+	`, { cartId: cartEntityId, productId: productEntityId, quantity }, { sessionCookie });
 
-	return (data as any).cart.addCartLineItems.cart;
+	return { cart: data.cart.addCartLineItems.cart, sessionCookie: nextCookie ?? sessionCookie ?? null };
 }
 
-export async function getCart(cartEntityId: string): Promise<CartResponse | null> {
+/**
+ * Generate a BC Optimized Checkout redirect URL for a cart. BC's mutation
+ * returns a short-lived signed URL that hands the shopper into BC's
+ * hosted checkout with the cart contents + customer context attached.
+ *
+ * Trace: PRD-FND-010 (real checkout via BC Optimized One-Page handoff).
+ */
+export async function getCheckoutRedirectUrl(
+	cartEntityId: string,
+	sessionCookie?: string,
+): Promise<string | null> {
+	interface RedirectUrlsResponse {
+		cart: {
+			createCartRedirectUrls: {
+				redirectUrls: {
+					redirectedCheckoutUrl?: string | null;
+					embeddedCheckoutUrl?: string | null;
+				} | null;
+			} | null;
+		};
+	}
+
+	try {
+		const { data } = await rawQuery<RedirectUrlsResponse>(`
+			mutation CartRedirectUrls($cartId: String!) {
+				cart {
+					createCartRedirectUrls(input: { cartEntityId: $cartId }) {
+						redirectUrls {
+							redirectedCheckoutUrl
+							embeddedCheckoutUrl
+						}
+					}
+				}
+			}
+		`, { cartId: cartEntityId }, { sessionCookie });
+
+		const urls = data.cart?.createCartRedirectUrls?.redirectUrls;
+		return urls?.redirectedCheckoutUrl ?? urls?.embeddedCheckoutUrl ?? null;
+	} catch (err) {
+		console.warn('getCheckoutRedirectUrl failed:', err instanceof Error ? err.message : err);
+		return null;
+	}
+}
+
+export async function getCart(cartEntityId: string, sessionCookie?: string): Promise<CartResponse | null> {
 	interface GetCartResponse { site: { cart: CartResponse | null } }
 
-	const data = await query<GetCartResponse>(`
+	const { data } = await rawQuery<GetCartResponse>(`
 		query GetCart($cartId: String!) {
 			site {
 				cart(entityId: $cartId) {
@@ -376,7 +465,7 @@ export async function getCart(cartEntityId: string): Promise<CartResponse | null
 				}
 			}
 		}
-	`, { cartId: cartEntityId });
+	`, { cartId: cartEntityId }, { sessionCookie });
 
 	return data.site.cart;
 }
