@@ -4,6 +4,10 @@
 	import VariantSelector from '$lib/components/layouts/sections/VariantSelector.svelte';
 	import StockSignal from '$lib/components/layouts/sections/StockSignal.svelte';
 	import AddToCartBar from '$lib/components/layouts/sections/AddToCartBar.svelte';
+	import DescriptionTabs from '$lib/components/layouts/sections/DescriptionTabs.svelte';
+	import ReviewsSummary from '$lib/components/layouts/sections/ReviewsSummary.svelte';
+	import ReviewsList from '$lib/components/layouts/sections/ReviewsList.svelte';
+	import BOPISPicker from '$lib/components/layouts/sections/BOPISPicker.svelte';
 
 	const galleryImages = [
 		{ url: 'https://picsum.photos/seed/p1/800/600', alt: 'Walnut coffee table — front view' },
@@ -36,11 +40,46 @@
 			],
 		},
 	];
+
+	const descriptionTabs = [
+		{
+			label: 'Description',
+			content:
+				'<p>Solid kiln-dried walnut with a waterfall edge. Hand-finished with a matte oil that highlights the grain without sealing the surface plastic.</p>',
+		},
+		{
+			label: 'Specs',
+			content:
+				'<table class="w-full border-collapse text-sm">' +
+				'<tr><th class="py-2 pr-6 text-left text-surface-muted-fg font-normal">Material</th><td class="py-2 font-medium">Solid walnut</td></tr>' +
+				'<tr><th class="py-2 pr-6 text-left text-surface-muted-fg font-normal">Finish</th><td class="py-2 font-medium">Matte oil</td></tr>' +
+				'<tr><th class="py-2 pr-6 text-left text-surface-muted-fg font-normal">Dimensions</th><td class="py-2 font-medium">48&quot;W × 24&quot;D × 16&quot;H</td></tr>' +
+				'</table>',
+		},
+		{
+			label: 'Shipping & returns',
+			content:
+				'<p>Free shipping on orders $99+. Standard delivery 3–5 business days.</p>' +
+				'<p>Free returns within 60 days, in store or by mail.</p>',
+		},
+	];
+
+	const reviews = [
+		{ id: 'r1', author: 'Margaret W.', date: '2026-04-22T00:00:00Z', rating: 5, title: 'Beautiful piece', body: 'Even better in person. The grain is gorgeous and it feels solid.', helpful: 8, verifiedPurchase: true },
+		{ id: 'r2', author: 'Jordan T.', date: '2026-04-15T00:00:00Z', rating: 4, title: 'Good for the price', body: 'Slight scratch on arrival but customer service replaced it quickly.', helpful: 3, verifiedPurchase: true },
+		{ id: 'r3', author: 'Anna L.', date: '2026-04-08T00:00:00Z', rating: 5, body: 'Exactly as pictured. Easy assembly.', helpful: 5, verifiedPurchase: true },
+	];
+
+	const stores = [
+		{ id: 's1', name: 'Bealls Sarasota', address: '123 Tamiami Trail, Sarasota FL', distanceMi: 1.4, hours: 'Open 10am–9pm', pickupReady: true, readyByLabel: 'Ready by 4pm today' },
+		{ id: 's2', name: 'Bealls Bradenton', address: '900 Cortez Rd W, Bradenton FL', distanceMi: 6.8, hours: 'Open 10am–9pm', pickupReady: true, readyByLabel: 'Ready by 6pm today' },
+		{ id: 's3', name: 'Bealls Venice', address: '500 US-41 Bypass S, Venice FL', distanceMi: 11.2, hours: 'Open 10am–8pm', pickupReady: false },
+	];
 </script>
 
 <div class="mx-auto max-w-7xl px-6 py-8">
 	<h1 class="font-display text-3xl">PDP scaffold — visual fixture</h1>
-	<p class="mt-2 text-surface-muted-fg">Phase 3 Slice 1 blocks rendered with stub data. Not for production.</p>
+	<p class="mt-2 text-surface-muted-fg">Phase 3 Slice 1 + 2 blocks rendered with stub data. Not for production.</p>
 
 	<div class="mt-12 grid gap-12 lg:grid-cols-2">
 		<ImageGallery images={galleryImages} productName="Walnut coffee table" />
@@ -59,10 +98,6 @@
 
 			<VariantSelector groups={variantGroups} />
 
-			<p class="text-sm leading-relaxed text-surface-muted-fg">
-				Solid kiln-dried walnut with a waterfall edge. Hand-finished with a matte oil that highlights the grain without sealing the surface plastic.
-			</p>
-
 			<AddToCartBar
 				productEntityId={9999}
 				ctaLabel="Add to Cart"
@@ -74,6 +109,24 @@
 				productCategory="living-room"
 			/>
 		</div>
+	</div>
+
+	<div class="mt-16">
+		<DescriptionTabs tabs={descriptionTabs} />
+	</div>
+
+	<div class="mt-12">
+		<ReviewsSummary
+			avgRating={4.6}
+			reviewCount={128}
+			histogram={[2, 4, 12, 38, 72]}
+			writeReviewHref="#write-review"
+		/>
+		<ReviewsList {reviews} />
+	</div>
+
+	<div class="mt-12">
+		<BOPISPicker zip="34229" {stores} productName="Walnut coffee table" />
 	</div>
 
 	<div class="mt-16 border-t border-surface-border pt-8">

@@ -25,6 +25,10 @@ import {
 	CouponStripSection,
 	BeallsBucksCalloutSection,
 	ForYouRowSection,
+	BOPISPickerSection,
+	// PDP scaffold blocks (description-tabs, reviews-summary, reviews-list, plus
+	// the Slice 1 scaffold) are NOT zone-targeted per ADR-007 §3.3 — they're
+	// part of the fixed PDP scaffold and rendered directly by +page.svelte.
 } from '$lib/schema/blocks';
 import type { ZoneId } from './zones';
 
@@ -83,12 +87,15 @@ export const ZoneSchemas = {
 	'plp.below-grid': z.union([CategoryTileGridSection, PaginationStub]),
 	'plp.empty-state': EmptyStateRescueStub,
 
-	// PDP
+	// PDP — scaffold blocks (image-gallery, product-title-block, variant-selector,
+	// stock-signal, add-to-cart-bar, description-tabs, reviews-summary, reviews-list)
+	// are NOT zone-targeted per ADR-007 §3.3; rendered directly by +page.svelte.
+	// Zones below are insertion points the engine/admin can compose into.
 	'pdp.below-description': z.union([BrandSpotlightStub, EditorialArticleTeaserStub, ComparisonTableStub]),
 	'pdp.related': ProductCarouselSection,
 	'pdp.cross-sell': z.union([CompleteTheLookStub, ProductCarouselSection]),
-	'pdp.recently-viewed': RecentlyViewedRowStub,
-	'pdp.below-recs': z.union([BoPISStripStub, BucksEarnRowStub]),
+	'pdp.recently-viewed': z.union([ProductCarouselSection, RecentlyViewedRowStub]),
+	'pdp.below-recs': z.union([BOPISPickerSection, BucksEarnRowStub]),
 
 	// Cart
 	'cart.above-checkout-cta': z.union([LastChanceUpsellRowStub, CouponStripSection]),

@@ -7,6 +7,9 @@
 	import VariantSelector from '$lib/components/layouts/sections/VariantSelector.svelte';
 	import StockSignal from '$lib/components/layouts/sections/StockSignal.svelte';
 	import AddToCartBar from '$lib/components/layouts/sections/AddToCartBar.svelte';
+	import DescriptionTabs from '$lib/components/layouts/sections/DescriptionTabs.svelte';
+	import ReviewsSummary from '$lib/components/layouts/sections/ReviewsSummary.svelte';
+	import ReviewsList from '$lib/components/layouts/sections/ReviewsList.svelte';
 	import ZoneRenderer from '$lib/foundation/ZoneRenderer.svelte';
 
 	let { data }: { data: PageData } = $props();
@@ -80,6 +83,8 @@
 				productName={product.name}
 				price={product.price}
 				salePrice={product.salePrice}
+				rating={data.reviewsSummary.avgRating || undefined}
+				reviewCount={data.reviewsSummary.reviewCount || undefined}
 			/>
 
 			{#if data.stockSignal}
@@ -92,28 +97,12 @@
 
 			<VariantSelector groups={data.variantGroups} />
 
-			<!-- Description (Slice 2 will refactor to description-tabs scaffold block) -->
-			<div class="leading-relaxed text-surface-muted-fg prose-sm">
-				{@html product.description}
-			</div>
-
-			{#if Object.keys(product.specs).length > 0}
-				<dl class="border-t border-surface-border pt-4">
-					{#each Object.entries(product.specs) as [key, value]}
-						<div class="flex justify-between border-b border-surface-border py-2.5">
-							<dt class="text-sm text-surface-muted-fg">{key}</dt>
-							<dd class="text-sm font-medium">{value}</dd>
-						</div>
-					{/each}
-				</dl>
-			{/if}
-
 			<AddToCartBar
 				productEntityId={product.entityId}
 				ctaLabel="Add to Cart"
 				price={product.salePrice ?? product.price}
 				showQuantity={true}
-				secondaryAction="none"
+				secondaryAction="find-in-store"
 				productId={product.id}
 				productName={product.name}
 				productCategory={product.category}
@@ -161,42 +150,44 @@
 		</div>
 	</div>
 
-	<!-- pdp.below-description zone — engine/admin/static cascade -->
+	<!-- Description tabs scaffold (Slice 2) -->
 	<div class="mt-16">
+		<DescriptionTabs tabs={data.descriptionTabs} />
+	</div>
+
+	<!-- pdp.below-description zone — engine/admin/static cascade -->
+	<div class="mt-12">
 		<ZoneRenderer resolution={data.belowDescriptionZone} products={relatedProducts} />
 	</div>
 
-	<!-- Related products (Slice 2 migrates to pdp.related zone) -->
-	{#if relatedProducts.length > 0}
-		<section class="mt-16 border-t border-surface-border pt-12">
-			<h2 class="text-2xl">You might also like</h2>
-			<div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-				{#each relatedProducts as related}
-					<a href="/product/{related.id}" class="group">
-						<div class="aspect-[4/3] overflow-hidden rounded-sm bg-surface-muted">
-							{#if related.image}
-								<img
-									src={related.image}
-									alt={related.imageAlt}
-									class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-									loading="lazy"
-								/>
-							{/if}
-						</div>
-						<div class="mt-3">
-							<h3 class="text-sm font-medium group-hover:text-primary transition-colors">{related.name}</h3>
-							<div class="mt-1">
-								{#if related.salePrice}
-									<span class="text-sm font-medium text-primary">${related.salePrice.toLocaleString()}</span>
-									<span class="ml-1 text-xs text-surface-muted-fg line-through">${related.price.toLocaleString()}</span>
-								{:else}
-									<span class="text-sm font-medium">${related.price.toLocaleString()}</span>
-								{/if}
-							</div>
-						</div>
-					</a>
-				{/each}
-			</div>
-		</section>
-	{/if}
+	<!-- Reviews scaffold (Slice 2) — synthetic data until reviews integration ships -->
+	<div class="mt-12">
+		<ReviewsSummary
+			avgRating={data.reviewsSummary.avgRating}
+			reviewCount={data.reviewsSummary.reviewCount}
+			histogram={data.reviewsSummary.histogram}
+			writeReviewHref={data.reviewsSummary.writeReviewHref}
+		/>
+		<ReviewsList reviews={data.reviewsList} />
+	</div>
+
+	<!-- pdp.cross-sell zone — populated from same-category fetch (TODO PRD-ENG-019: tag-overlap) -->
+	<div class="mt-16">
+		<ZoneRenderer resolution={data.crossSellZone} products={relatedProducts} />
+	</div>
+
+	<!-- pdp.related zone — populated from same-category fetch (TODO PRD-ENG-019: tag-overlap) -->
+	<div class="mt-12">
+		<ZoneRenderer resolution={data.relatedZone} products={relatedProducts} />
+	</div>
+
+	<!-- pdp.recently-viewed zone — Hidden until session has 3+ viewed products -->
+	<div class="mt-12">
+		<ZoneRenderer resolution={data.recentlyViewedZone} products={relatedProducts} />
+	</div>
+
+	<!-- pdp.below-recs zone — BOPIS picker scaffold (locator surface ships in Phase 6) -->
+	<div class="mt-12">
+		<ZoneRenderer resolution={data.belowRecsZone} />
+	</div>
 </div>

@@ -284,5 +284,80 @@ console.log('\nUnknown zone IDs');
 	assert('unknown zone ID throws', threw);
 }
 
+// ─── PDP Slice 2 — zones populated by Slice 2 ─────────────────────
+
+console.log('\nPDP Slice 2 zones');
+
+const pdpProductCarousel = {
+	component: 'product-carousel',
+	props: { title: 'You might also like', products: [
+		{ productId: 'p1', role: 'standard' },
+		{ productId: 'p2', role: 'standard' },
+		{ productId: 'p3', role: 'standard' },
+	] },
+};
+
+{
+	const r = resolveZone({
+		zoneId: 'pdp.related',
+		brandId: 'bealls',
+		engineOutput: { zones: { 'pdp.related': pdpProductCarousel } },
+	});
+	assert('pdp.related accepts product-carousel from engine', r.source === 'engine');
+}
+
+{
+	const r = resolveZone({
+		zoneId: 'pdp.cross-sell',
+		brandId: 'bealls',
+		engineOutput: { zones: { 'pdp.cross-sell': pdpProductCarousel } },
+	});
+	assert('pdp.cross-sell accepts product-carousel from engine', r.source === 'engine');
+}
+
+{
+	const r = resolveZone({
+		zoneId: 'pdp.recently-viewed',
+		brandId: 'bealls',
+		engineOutput: { zones: { 'pdp.recently-viewed': pdpProductCarousel } },
+	});
+	assert('pdp.recently-viewed accepts product-carousel from engine', r.source === 'engine');
+}
+
+{
+	const r = resolveZone({
+		zoneId: 'pdp.below-recs',
+		brandId: 'bealls',
+	});
+	const c = r.content as { component?: string; props?: { stores?: unknown[] } } | null;
+	assert(
+		'pdp.below-recs storefront fallback returns bopis-picker block',
+		r.source === 'fallback' && !!c && c.component === 'bopis-picker',
+	);
+	assert(
+		'pdp.below-recs storefront fallback has empty stores array (placeholder)',
+		!!c?.props && Array.isArray(c.props.stores) && c.props.stores.length === 0,
+	);
+}
+
+{
+	const bopisPickerEngine = {
+		component: 'bopis-picker',
+		props: {
+			zip: '34229',
+			stores: [
+				{ id: 's1', name: 'Bealls Sarasota', address: '123 Tamiami Trail', hours: 'Open 10am–9pm', pickupReady: true },
+			],
+			productName: 'Linen blouse',
+		},
+	};
+	const r = resolveZone({
+		zoneId: 'pdp.below-recs',
+		brandId: 'bealls',
+		engineOutput: { zones: { 'pdp.below-recs': bopisPickerEngine } },
+	});
+	assert('pdp.below-recs accepts bopis-picker from engine', r.source === 'engine');
+}
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 if (failed > 0) throw new Error(`${failed} test(s) failed`);

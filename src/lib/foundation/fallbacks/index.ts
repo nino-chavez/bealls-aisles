@@ -14,6 +14,7 @@
 
 import type { ZoneId } from '../zones';
 import { homeFallbacks } from './home';
+import { pdpFallbacks } from './pdp';
 
 /**
  * A fallback may return either content (typed loosely here — the resolver
@@ -38,6 +39,7 @@ const HIDDEN: ZoneFallback = () => null;
  */
 const FALLBACKS: Partial<Record<ZoneId, ZoneFallback>> = {
 	...homeFallbacks,
+	...pdpFallbacks,
 };
 
 /**

@@ -246,6 +246,77 @@ export const AddToCartBarSection = z.object({
 	}),
 });
 
+// PDP Slice 2 — description, reviews, BOPIS. Description and reviews are
+// scaffold blocks (not zone-targeted) per ADR-007 §3.3; BOPIS is a block
+// option for the `pdp.below-recs` zone. Schemas live alongside scaffold
+// blocks so the prompt taxonomy (when surface-typed PDP schemas land in
+// Phase 3) sees the same vocabulary.
+
+const DescriptionTab = z.object({
+	label: z.string().describe('Tab label, e.g. "Description", "Specs"'),
+	content: z.string().describe('Tab body — HTML or plain text'),
+});
+
+export const DescriptionTabsSection = z.object({
+	component: z.literal('description-tabs'),
+	props: z.object({
+		tabs: z.array(DescriptionTab).min(1).describe('Tabs in display order; first is selected by default'),
+		initialIndex: z.number().int().nonnegative().optional().describe('Optional initial-tab override'),
+	}),
+});
+
+export const ReviewsSummarySection = z.object({
+	component: z.literal('reviews-summary'),
+	props: z.object({
+		avgRating: z.number().min(0).max(5).describe('Average star rating, 0–5'),
+		reviewCount: z.number().int().nonnegative().describe('Total review count'),
+		histogram: z.array(z.number().int().nonnegative()).length(5).describe('Counts per star bucket: index 0 = 1-star, index 4 = 5-star'),
+		writeReviewHref: z.string().optional().describe('CTA destination for the "Write a review" affordance'),
+	}),
+});
+
+const Review = z.object({
+	id: z.string().describe('Stable review ID'),
+	author: z.string().describe('Reviewer display name'),
+	date: z.string().describe('ISO 8601 date string'),
+	rating: z.number().int().min(1).max(5).describe('Star rating, 1–5'),
+	title: z.string().optional().describe('Optional review headline'),
+	body: z.string().describe('Review body copy'),
+	helpful: z.number().int().nonnegative().optional().describe('Optional helpful-vote count'),
+	verifiedPurchase: z.boolean().optional().describe('Whether the reviewer is a verified buyer'),
+});
+
+export const ReviewsListSection = z.object({
+	component: z.literal('reviews-list'),
+	props: z.object({
+		reviews: z.array(Review).describe('Reviews in catalog order; component sorts client-side'),
+		filters: z
+			.object({
+				sort: z.enum(['recent', 'helpful', 'highest', 'lowest']).optional(),
+			})
+			.optional(),
+	}),
+});
+
+const BOPISStore = z.object({
+	id: z.string().describe('Stable store ID'),
+	name: z.string().describe('Store display name, e.g. "Bealls Sarasota"'),
+	address: z.string().describe('Single-line street address'),
+	distanceMi: z.number().nonnegative().optional().describe('Distance from shopper ZIP, in miles'),
+	hours: z.string().describe('Today\'s hours, e.g. "Open 10am–9pm"'),
+	pickupReady: z.boolean().describe('Whether this store has stock for pickup'),
+	readyByLabel: z.string().optional().describe('Optional "Ready by 4pm today" detail'),
+});
+
+export const BOPISPickerSection = z.object({
+	component: z.literal('bopis-picker'),
+	props: z.object({
+		zip: z.string().optional().describe('Shopper-provided ZIP code (5-digit US)'),
+		stores: z.array(BOPISStore).describe('Nearby stores; empty array shows search-only state'),
+		productName: z.string().optional().describe('Product name surfaced in the picker subtitle'),
+	}),
+});
+
 // ─── Vocabulary unions ─────────────────────────────────────────────
 
 /**
@@ -271,6 +342,10 @@ export const StorefrontBlocks = [
 	VariantSelectorSection,
 	StockSignalSection,
 	AddToCartBarSection,
+	DescriptionTabsSection,
+	ReviewsSummarySection,
+	ReviewsListSection,
+	BOPISPickerSection,
 ] as const;
 
 /**

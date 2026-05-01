@@ -21,6 +21,10 @@
 	import CategoryTileGrid from '$lib/components/layouts/sections/CategoryTileGrid.svelte';
 	import PromoStrip from '$lib/components/layouts/sections/PromoStrip.svelte';
 	import ProductCarousel from '$lib/components/layouts/sections/ProductCarousel.svelte';
+	import DescriptionTabs from '$lib/components/layouts/sections/DescriptionTabs.svelte';
+	import ReviewsSummary from '$lib/components/layouts/sections/ReviewsSummary.svelte';
+	import ReviewsList from '$lib/components/layouts/sections/ReviewsList.svelte';
+	import BOPISPicker from '$lib/components/layouts/sections/BOPISPicker.svelte';
 
 	let {
 		resolution,
@@ -102,5 +106,45 @@
 				showQuickAdd={item.props.showQuickAdd as boolean | undefined}
 			/>
 		{/if}
+	{:else if item.component === 'description-tabs'}
+		<DescriptionTabs
+			tabs={item.props.tabs as Array<{ label: string; content: string }>}
+			initialIndex={item.props.initialIndex as number | undefined}
+		/>
+	{:else if item.component === 'reviews-summary'}
+		<ReviewsSummary
+			avgRating={item.props.avgRating as number}
+			reviewCount={item.props.reviewCount as number}
+			histogram={item.props.histogram as number[]}
+			writeReviewHref={item.props.writeReviewHref as string | undefined}
+		/>
+	{:else if item.component === 'reviews-list'}
+		<ReviewsList
+			reviews={item.props.reviews as Array<{
+				id: string;
+				author: string;
+				date: string;
+				rating: number;
+				title?: string;
+				body: string;
+				helpful?: number;
+				verifiedPurchase?: boolean;
+			}>}
+			filters={item.props.filters as { sort?: 'recent' | 'helpful' | 'highest' | 'lowest' } | undefined}
+		/>
+	{:else if item.component === 'bopis-picker'}
+		<BOPISPicker
+			zip={item.props.zip as string | undefined}
+			stores={item.props.stores as Array<{
+				id: string;
+				name: string;
+				address: string;
+				distanceMi?: number;
+				hours: string;
+				pickupReady: boolean;
+				readyByLabel?: string;
+			}>}
+			productName={item.props.productName as string | undefined}
+		/>
 	{/if}
 {/each}
