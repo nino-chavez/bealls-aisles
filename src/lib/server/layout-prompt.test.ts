@@ -99,5 +99,45 @@ console.log('\nPrompt without probabilities omits the blend hint');
 	);
 }
 
+console.log('\nEmpty-surface rescue clamps the category line');
+{
+	// Empty/rescue surfaces source from the home loader (`categoryName: "Home"`).
+	// Without clamping, the prompt emits `CATEGORY: Home` alongside the rescue
+	// framing, and the AI confabulates "we didn't find 'Home' in our catalog"
+	// on empty-search.
+	const emptySearch = buildLayoutPrompt(
+		'hunter',
+		'Home',
+		products,
+		undefined,
+		undefined,
+		undefined,
+		{ surface: 'empty', reason: 'empty-search' },
+	);
+	const homepage = buildLayoutPrompt('hunter', 'Home', products);
+
+	assert(
+		'Empty-search prompt omits CATEGORY: Home line',
+		!emptySearch.includes('CATEGORY: Home'),
+		'empty-search prompt still leaks "CATEGORY: Home"',
+	);
+	assert(
+		'Empty-search prompt includes empty-search rescue framing',
+		emptySearch.includes('zero results'),
+		'empty-search rescue framing missing from prompt',
+	);
+	assert(
+		'Empty-search prompt labels the surface as a rescue, not homepage',
+		emptySearch.includes('empty-search rescue page')
+			&& !emptySearch.includes('landing on the homepage'),
+		'empty-search prompt still labels the surface as homepage',
+	);
+	assert(
+		'Homepage prompt still includes CATEGORY: Home (regression check)',
+		homepage.includes('CATEGORY: Home'),
+		'homepage prompt lost its CATEGORY line',
+	);
+}
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 if (failed > 0) throw new Error(`${failed} test(s) failed`);

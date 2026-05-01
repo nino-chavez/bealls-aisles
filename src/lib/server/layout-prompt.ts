@@ -284,6 +284,13 @@ VALID IMAGES:
 			? `\nHOMEPAGE CONTEXT: This is the brand's landing page — the shopper's first impression. The products span all categories, pre-sorted to show the strongest persona-fit first. Use a richer mix of components than a category page: an editorial-hero or hero-product to anchor, a category-tile-grid to surface the brand's range, a product-carousel for featured picks, and persona-appropriate promo (price-rail for Hunter, coupon-strip for Gifter, bealls-bucks-callout for any known shopper). DO NOT use category-header on the homepage — that's for category pages only.\n`
 			: '';
 
+	// Empty/rescue surfaces source from the home loader, which yields
+	// `categoryName: "Home"`. Emitting `CATEGORY: Home` alongside the rescue
+	// framing makes the AI confabulate "we didn't find 'Home' in our catalog"
+	// on empty-search. Skip the category line entirely for rescues — the
+	// rescue framing carries the surface context.
+	const categoryLine = isEmpty ? '' : `\nCATEGORY: ${categoryName}`;
+
 	return `${modeRole}
 
 VOICE: ${brand.prompt.voiceGuidance}
@@ -293,8 +300,7 @@ ${personaDef}
 ${probabilities ? `
 PROBABILITY VECTOR: gatherer ${Math.round(probabilities.gatherer * 100)}% | hunter ${Math.round(probabilities.hunter * 100)}% | researcher ${Math.round(probabilities.researcher * 100)}% | gifter ${Math.round(probabilities.gifter * 100)}%
 The primary persona is ${persona}, but blend in elements from secondary personas if their score is above 25%. For example, if researcher is 30% alongside a hunter primary, show specs alongside the dense grid.` : ''}
-
-CATEGORY: ${categoryName}${homeGuidance}
+${categoryLine}${homeGuidance}
 ${productsBlock}${picksContext || ''}${rulesContext || ''}${validHrefBlock}
 ${getComponentGuide(mode)}
 
