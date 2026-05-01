@@ -18,7 +18,8 @@ When canonical documents disagree, the precedence order is:
 8. `docs/architecture/decisions/` — append-only runtime architecture decision log (ADRs)
 9. `docs/functional/BRD-OPEN-QUESTIONS.md` — known open items
 10. `docs/strategic/risks.md` — load-bearing strategic bets and fallback paths
-11. `traceability.json` — trace-ID registry
+11. `docs/strategic/exit-criteria.md` — what ends the experiment; disposition options
+12. `traceability.json` — trace-ID registry
 
 If a change would alter canonical state, name which doc and why **before** modifying.
 

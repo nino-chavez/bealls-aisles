@@ -275,6 +275,7 @@ These questions have no leadership pre-commit attached. They are inputs for the 
 
 - [`NORTH-STAR.md`](NORTH-STAR.md) — what Aisles is
 - [`risks.md`](risks.md) — experimental risks and watch-list
+- [`exit-criteria.md`](exit-criteria.md) — what ends the experiment; disposition options
 - [`engagements/bealls.md`](engagements/bealls.md) — Bealls engagement plan (the artifact)
 - [`../architecture/engine/composition-taxonomy.md`](../architecture/engine/composition-taxonomy.md) — block × surface × latitude rules
 - [`../research/engine/competitive-survey.md`](../research/engine/competitive-survey.md) — full engine-layer competitive analysis

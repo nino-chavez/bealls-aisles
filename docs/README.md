@@ -16,7 +16,8 @@ This is the entry point. Read it first.
 | 8 | [architecture/decisions/](./architecture/decisions/) | ADRs (runtime architecture decisions) |
 | 9 | [functional/BRD-OPEN-QUESTIONS.md](./functional/BRD-OPEN-QUESTIONS.md) | Known open items |
 | 10 | [strategic/risks.md](./strategic/risks.md) | Load-bearing strategic bets and fallback paths |
-| 11 | [../traceability.json](../traceability.json) | Trace-ID registry |
+| 11 | [strategic/exit-criteria.md](./strategic/exit-criteria.md) | What ends the experiment; disposition options |
+| 12 | [../traceability.json](../traceability.json) | Trace-ID registry |
 
 ## By audience
 

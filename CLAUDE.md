@@ -40,7 +40,8 @@ When canonical documents disagree, this is the precedence order. If you would ch
 8. `docs/architecture/decisions/` (ADRs)
 9. `docs/functional/BRD-OPEN-QUESTIONS.md`
 10. `docs/strategic/risks.md`
-11. `traceability.json`
+11. `docs/strategic/exit-criteria.md`
+12. `traceability.json`
 
 ---
 
