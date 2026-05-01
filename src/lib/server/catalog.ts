@@ -16,6 +16,7 @@ import {
 } from './bigcommerce';
 import { getEnrichmentByEntityIds, getProductsByTagOverlap, type TagOverlapOpts, type TagOverlapResult } from './enrichment/query';
 import { rankByTagAndPersona } from './tag-rerank';
+import { getPersonaFitOverridesForBrand, type PersonaFitOverride } from './admin-overrides';
 import { getBrand, getBrandMode } from '$lib/brand/config';
 import type { Product } from '$lib/types';
 
@@ -28,6 +29,39 @@ export const CATEGORY_MAP: Record<string, { bcName: string; displayName: string 
 export interface EnrichedProduct extends Product {
 	personaFit: { gatherer: number; hunter: number; researcher: number; gifter: number } | null;
 	semanticTags: string[];
+}
+
+/**
+ * Apply admin-authored persona-fit overrides on top of enrichment-computed
+ * scores (PRD-ADM-006). For each product with an override, replace any
+ * provided persona scores; missing personas keep their enrichment value.
+ *
+ * Bulk-fetches the override map once per call so a 30-product grid pays
+ * one DB query instead of 30. The map has a 60s in-process cache.
+ */
+async function applyPersonaFitOverrides(products: EnrichedProduct[]): Promise<EnrichedProduct[]> {
+	const brandId = getBrand().id;
+	const overrides = await getPersonaFitOverridesForBrand(brandId);
+	if (overrides.size === 0) return products;
+	return products.map((p) => {
+		const override = overrides.get(p.id);
+		if (!override) return p;
+		const merged = mergePersonaFit(p.personaFit, override);
+		return { ...p, personaFit: merged };
+	});
+}
+
+function mergePersonaFit(
+	base: EnrichedProduct['personaFit'],
+	override: PersonaFitOverride,
+): EnrichedProduct['personaFit'] {
+	const baseScores = base ?? { gatherer: 0.5, hunter: 0.5, researcher: 0.5, gifter: 0.5 };
+	return {
+		gatherer: override.gatherer ?? baseScores.gatherer,
+		hunter: override.hunter ?? baseScores.hunter,
+		researcher: override.researcher ?? baseScores.researcher,
+		gifter: override.gifter ?? baseScores.gifter,
+	};
 }
 
 /**
@@ -80,7 +114,8 @@ export async function loadCategoryProducts(
 		};
 	});
 
-	const ranked = rankByTagAndPersona(enrichedProducts, persona, tagIntents);
+	const overridden = await applyPersonaFitOverrides(enrichedProducts);
+	const ranked = rankByTagAndPersona(overridden, persona, tagIntents);
 	return { products: ranked, categoryName: catConfig.displayName };
 }
 
@@ -120,7 +155,8 @@ export async function loadHomeProducts(
 		};
 	});
 
-	const ranked = rankByTagAndPersona(enrichedProducts, persona, tagIntents);
+	const overridden = await applyPersonaFitOverrides(enrichedProducts);
+	const ranked = rankByTagAndPersona(overridden, persona, tagIntents);
 	return { products: ranked, categoryName: 'Home' };
 }
 

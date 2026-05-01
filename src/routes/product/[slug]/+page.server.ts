@@ -2,7 +2,7 @@ import type { PageServerLoad } from './$types';
 import { getProductByPath, customFieldsToRecord, type BCProduct } from '$lib/server/bigcommerce';
 import { error } from '@sveltejs/kit';
 import { getBrand } from '$lib/brand/config';
-import { resolveZone } from '$lib/foundation/resolve-zone';
+import { resolveZoneAsync } from '$lib/foundation/resolve-zone';
 import { loadProductsByTagOverlap, type TagOverlapProduct } from '$lib/server/catalog';
 import { logZoneRetrieval } from '$lib/server/zone-retrieval-log';
 import { getStoresForBrand } from '$lib/server/locator/stores';
@@ -161,12 +161,15 @@ export const load: PageServerLoad = async ({ params, url, parent, cookies }) => 
 			}
 		: null;
 
-	const belowDescriptionZone = resolveZone({ zoneId: 'pdp.below-description', brandId: brand.id, engineOutput });
-	const relatedZone = resolveZone({ zoneId: 'pdp.related', brandId: brand.id, engineOutput });
-	const crossSellZone = resolveZone({ zoneId: 'pdp.cross-sell', brandId: brand.id, engineOutput });
-	const recentlyViewedZone = resolveZone({ zoneId: 'pdp.recently-viewed', brandId: brand.id, engineOutput });
+	const [belowDescriptionZone, relatedZone, crossSellZone, recentlyViewedZone, belowRecsBase] = await Promise.all([
+		resolveZoneAsync({ zoneId: 'pdp.below-description', brandId: brand.id, engineOutput }),
+		resolveZoneAsync({ zoneId: 'pdp.related', brandId: brand.id, engineOutput }),
+		resolveZoneAsync({ zoneId: 'pdp.cross-sell', brandId: brand.id, engineOutput }),
+		resolveZoneAsync({ zoneId: 'pdp.recently-viewed', brandId: brand.id, engineOutput }),
+		resolveZoneAsync({ zoneId: 'pdp.below-recs', brandId: brand.id, engineOutput }),
+	]);
 	const belowRecsZone = (() => {
-		const base = resolveZone({ zoneId: 'pdp.below-recs', brandId: brand.id, engineOutput });
+		const base = belowRecsBase;
 		// Surface the product name into the BOPIS placeholder fallback so the
 		// picker subtitle reads naturally without each fallback knowing the
 		// per-request product context.

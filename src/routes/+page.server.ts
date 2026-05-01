@@ -3,7 +3,7 @@ import { getBrand, getBrandMode } from '$lib/brand/config';
 import { infer } from '$lib/signals/inference';
 import { createStoreFromRequest } from '$lib/signals/request';
 import { loadHomeProducts } from '$lib/server/catalog';
-import { resolveZone } from '$lib/foundation/resolve-zone';
+import { resolveZoneAsync } from '$lib/foundation/resolve-zone';
 
 export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	const brand = getBrand();
@@ -47,7 +47,7 @@ export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	// Phase 2 vertical slice — resolve home.hero through the zone system.
 	// Engine wiring (Phase 3) will pass engineOutput here; for now the
 	// resolver falls through to the brand-aware static fallback.
-	const heroZone = resolveZone({ zoneId: 'home.hero', brandId: brand.id });
+	const heroZone = await resolveZoneAsync({ zoneId: 'home.hero', brandId: brand.id });
 
 	return {
 		featured,

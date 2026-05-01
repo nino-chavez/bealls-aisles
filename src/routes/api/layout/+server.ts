@@ -39,6 +39,7 @@ import { logZoneRetrieval } from '$lib/server/zone-retrieval-log';
 import { getActiveRules, rulesToPromptContext } from '$lib/server/rules';
 import { layoutModel, gatewayProviderOptions } from '$lib/server/ai-model';
 import { getBrand, getBrandMode } from '$lib/brand/config';
+import { getBrandVoiceOverride } from '$lib/server/admin-overrides';
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	const startTime = Date.now();
@@ -188,7 +189,13 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		const rules = await getActiveRules(persona, categorySlug);
 		const rulesContext = rulesToPromptContext(rules);
 
-		const prompt = buildLayoutPrompt(persona, categoryName, products, picksContext, rulesContext, probabilities, { surface, reason, tagIntents });
+		// PRD-ADM-005: voice editor round-trip. When a brand manager has authored
+		// a voice override in the admin, it replaces the brand-config voice for
+		// this generation. Fail open: missing table or empty override → use the
+		// brand-config default.
+		const voiceOverride = await getBrandVoiceOverride(brandId);
+
+		const prompt = buildLayoutPrompt(persona, categoryName, products, picksContext, rulesContext, probabilities, { surface, reason, tagIntents, voiceOverride });
 
 		// Haiku primary; Sonnet fallback only via gateway path (skipped for direct).
 		const aiResult = await generateText({

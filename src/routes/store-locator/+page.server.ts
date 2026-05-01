@@ -2,7 +2,7 @@ import type { PageServerLoad } from './$types';
 import { getBrand } from '$lib/brand/config';
 import { getStoresForBrand, type Store } from '$lib/server/locator/stores';
 import { geocodeZip, nearestStores } from '$lib/server/locator/proximity';
-import { resolveZone } from '$lib/foundation/resolve-zone';
+import { resolveZoneAsync } from '$lib/foundation/resolve-zone';
 
 /**
  * Store locator surface (PRD-FND-014).
@@ -24,7 +24,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		? nearestStores(allStores, origin, { limit: 10 })
 		: allStores;
 
-	const editorialIntroZone = resolveZone({
+	const editorialIntroZone = await resolveZoneAsync({
 		zoneId: 'locator.editorial-intro',
 		brandId: brand.id,
 		engineOutput: {},

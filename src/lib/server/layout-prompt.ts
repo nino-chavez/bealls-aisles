@@ -413,6 +413,12 @@ const CHECKOUT_FRAMING = `CHECKOUT HANDOFF CONTEXT: Payment, shipping, billing, 
  */
 const PDP_FRAMING = `PDP CONTEXT: The product detail scaffold (gallery, title, variants, ATC, description, reviews) is foundation-rendered. Your job is to compose merchandising blocks that slot into the PDP cross-sell / related / below-recs zones. Products are pre-sorted by tag-overlap with the focal product. Use product-carousel for related/cross-sell rows; for-you-row for personalized picks; brand-spotlight or trend-shop sparingly when one fits the focal product.`;
 
+export interface BrandVoiceOverride {
+	voiceGuidance: string | null;
+	toneKeywords: string[];
+	forbiddenTerms: string[];
+}
+
 export function buildLayoutPrompt(
 	persona: string,
 	categoryName: string,
@@ -420,7 +426,7 @@ export function buildLayoutPrompt(
 	picksContext?: string,
 	rulesContext?: string,
 	probabilities?: { gatherer: number; hunter: number; researcher: number; gifter: number },
-	options?: { surface?: Surface; reason?: EmptyReason; tagIntents?: string[] },
+	options?: { surface?: Surface; reason?: EmptyReason; tagIntents?: string[]; voiceOverride?: BrandVoiceOverride | null },
 ): string {
 	const brand = getBrand();
 	const mode = getBrandMode(brand);
@@ -533,9 +539,20 @@ The shopper has expressed concrete attribute intent through refinement chat. Pro
 	// these surfaces — the surface framing carries the context.
 	const categoryLine = isEmpty || isCart || isCheckout || isPDP ? '' : `\nCATEGORY: ${categoryName}`;
 
+	// Admin-authored voice override (PRD-ADM-005) — replaces brand-config voice
+	// when present so a brand manager can edit voice without a code deploy.
+	const voiceOverride = options?.voiceOverride ?? null;
+	const voiceText = voiceOverride?.voiceGuidance?.trim() || brand.prompt.voiceGuidance;
+	const voiceTones = voiceOverride?.toneKeywords?.length
+		? `\nTONE KEYWORDS: ${voiceOverride.toneKeywords.join(', ')}`
+		: '';
+	const voiceForbidden = voiceOverride?.forbiddenTerms?.length
+		? `\nFORBIDDEN TERMS (do not use these words): ${voiceOverride.forbiddenTerms.join(', ')}`
+		: '';
+
 	return `${modeRole}
 
-VOICE: ${brand.prompt.voiceGuidance}
+VOICE: ${voiceText}${voiceTones}${voiceForbidden}
 
 PERSONA:
 ${personaDef}
