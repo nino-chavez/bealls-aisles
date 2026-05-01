@@ -3,7 +3,7 @@ import { getBrand, getBrandMode } from '$lib/brand/config';
 import { infer } from '$lib/signals/inference';
 import { createStoreFromRequest } from '$lib/signals/request';
 import { loadHomeProducts } from '$lib/server/catalog';
-import { resolveZoneAsync } from '$lib/foundation/resolve-zone';
+import { resolveZoneAsync } from '$lib/server/resolve-zone-async';
 
 export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	const brand = getBrand();

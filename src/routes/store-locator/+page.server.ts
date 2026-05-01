@@ -2,7 +2,7 @@ import type { PageServerLoad } from './$types';
 import { getBrand } from '$lib/brand/config';
 import { getStoresForBrand, type Store } from '$lib/server/locator/stores';
 import { geocodeZip, nearestStores } from '$lib/server/locator/proximity';
-import { resolveZoneAsync } from '$lib/foundation/resolve-zone';
+import { resolveZoneAsync } from '$lib/server/resolve-zone-async';
 
 /**
  * Store locator surface (PRD-FND-014).

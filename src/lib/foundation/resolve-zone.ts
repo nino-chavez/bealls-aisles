@@ -17,7 +17,6 @@
 import { ZoneSchemas } from './zone-schemas';
 import { ZONES, parseZoneInstance, type ZoneId, type ZoneInstanceId, type ZoneMetadata } from './zones';
 import { getFallback } from './fallbacks';
-import { getZoneContent } from '../server/admin-overrides';
 
 export type ZoneSource = 'engine' | 'admin' | 'fallback';
 
@@ -88,35 +87,6 @@ export function resolveZone(opts: ResolveZoneOpts): ZoneResolution {
 	// 3. Static fallback
 	const content = getFallback(family, opts.brandId);
 	return { zoneId: opts.zoneId, family, index, source: 'fallback', content };
-}
-
-/**
- * Async variant that fetches admin-authored content from `zone_content`
- * (XLAYER-004 round-trip) before applying the cascade. Use this in load
- * functions where awaiting the DB roundtrip is acceptable; the synchronous
- * `resolveZone` is retained for tests and any sync callers.
- *
- * Per-request fan-out is fine — `getZoneContent` has a 60s in-process
- * cache that absorbs duplicate lookups for the same (brand, zone).
- */
-export async function resolveZoneAsync(opts: ResolveZoneOpts): Promise<ZoneResolution> {
-	if (opts.adminContent !== undefined) {
-		// Caller already supplied admin content (e.g., bulk pre-fetched).
-		// Don't re-fetch; honor the explicit value.
-		return resolveZone(opts);
-	}
-
-	let admin: { zones: Record<ZoneInstanceId, unknown> } | undefined;
-	try {
-		const authored = await getZoneContent(opts.brandId, opts.zoneId);
-		if (authored !== null && authored !== undefined) {
-			admin = { zones: { [opts.zoneId]: authored } };
-		}
-	} catch {
-		// Fail open — admin lookup failure should not break the page.
-	}
-
-	return resolveZone({ ...opts, adminContent: admin });
 }
 
 /**

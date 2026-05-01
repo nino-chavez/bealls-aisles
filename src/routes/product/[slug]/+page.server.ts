@@ -2,7 +2,7 @@ import type { PageServerLoad } from './$types';
 import { getProductByPath, customFieldsToRecord, type BCProduct } from '$lib/server/bigcommerce';
 import { error } from '@sveltejs/kit';
 import { getBrand } from '$lib/brand/config';
-import { resolveZoneAsync } from '$lib/foundation/resolve-zone';
+import { resolveZoneAsync } from '$lib/server/resolve-zone-async';
 import { loadProductsByTagOverlap, type TagOverlapProduct } from '$lib/server/catalog';
 import { logZoneRetrieval } from '$lib/server/zone-retrieval-log';
 import { getStoresForBrand } from '$lib/server/locator/stores';
