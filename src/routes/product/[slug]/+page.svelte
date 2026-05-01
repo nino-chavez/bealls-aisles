@@ -63,7 +63,7 @@
 		<a href="/" class="hover:text-surface-fg">Home</a>
 		<span class="mx-2">/</span>
 		{#if product.categoryPath}
-			<a href="/category/{product.categoryPath.replace(/^\/|\/$/g, '').replace(/^(haven|volt|ember)-/i, '')}" class="hover:text-surface-fg">{product.category.replace(/^(Haven|Volt|Ember)\s+/i, '')}</a>
+			<a href="/category/{product.categoryPath.replace(/^\/|\/$/g, '').replace(/^(bealls|beallsflorida|homecentric)-/i, '')}" class="hover:text-surface-fg">{product.category.replace(/^(Bealls|BeallsFlorida|HomeCentric)\s+/i, '')}</a>
 			<span class="mx-2">/</span>
 		{/if}
 		<span class="text-surface-fg">{product.name}</span>

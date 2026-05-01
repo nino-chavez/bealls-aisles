@@ -61,7 +61,7 @@ console.log('\nCascade precedence: engine > admin > fallback');
 {
 	const r = resolveZone({
 		zoneId: 'home.hero',
-		brandId: 'haven',
+		brandId: 'bealls',
 		engineOutput: { zones: { 'home.hero': heroEditorial } },
 		adminContent: { zones: { 'home.hero': heroFromAdmin } },
 	});
@@ -72,7 +72,7 @@ console.log('\nCascade precedence: engine > admin > fallback');
 {
 	const r = resolveZone({
 		zoneId: 'home.hero',
-		brandId: 'haven',
+		brandId: 'bealls',
 		adminContent: { zones: { 'home.hero': heroFromAdmin } },
 	});
 	assert('admin wins when no engine output', r.source === 'admin');
@@ -80,7 +80,7 @@ console.log('\nCascade precedence: engine > admin > fallback');
 }
 
 {
-	const r = resolveZone({ zoneId: 'home.hero', brandId: 'haven' });
+	const r = resolveZone({ zoneId: 'home.hero', brandId: 'bealls' });
 	assert('fallback fires when neither engine nor admin', r.source === 'fallback');
 	assert('home.hero fallback returns brand-aware editorial-header content',
 		!!r.content && (r.content as { component?: string }).component === 'editorial-header');
@@ -90,18 +90,18 @@ console.log('\nCascade precedence: engine > admin > fallback');
 	// Zones without a registered fallback resolve to null (Hidden) — sanity
 	// check that the cascade still produces "fallback" + null when nothing
 	// is registered. home.editorial-strip is intentionally left Hidden.
-	const r = resolveZone({ zoneId: 'home.editorial-strip', brandId: 'haven' });
+	const r = resolveZone({ zoneId: 'home.editorial-strip', brandId: 'bealls' });
 	assert('zones with no registered fallback resolve to source=fallback, content=null',
 		r.source === 'fallback' && r.content === null);
 }
 
 {
-	// Brand awareness — Haven and Volt should produce different copy.
-	const haven = resolveZone({ zoneId: 'home.hero', brandId: 'haven' });
-	const volt = resolveZone({ zoneId: 'home.hero', brandId: 'volt' });
-	const havenHeadline = (haven.content as { props: { headline: string } }).props.headline;
-	const voltHeadline = (volt.content as { props: { headline: string } }).props.headline;
-	assert('home.hero fallback differs by brand (brand-aware)', havenHeadline !== voltHeadline);
+	// Brand awareness — bealls and beallsflorida should produce different copy.
+	const bealls = resolveZone({ zoneId: 'home.hero', brandId: 'bealls' });
+	const florida = resolveZone({ zoneId: 'home.hero', brandId: 'beallsflorida' });
+	const beallsHeadline = (bealls.content as { props: { headline: string } }).props.headline;
+	const floridaHeadline = (florida.content as { props: { headline: string } }).props.headline;
+	assert('home.hero fallback differs by brand (brand-aware)', beallsHeadline !== floridaHeadline);
 }
 
 {
@@ -118,7 +118,7 @@ console.log('\nSchema validation rejects invalid content');
 {
 	const r = resolveZone({
 		zoneId: 'home.hero',
-		brandId: 'haven',
+		brandId: 'bealls',
 		engineOutput: { zones: { 'home.hero': { component: 'product-grid', props: {} } } }, // wrong block for hero
 		adminContent: { zones: { 'home.hero': heroFromAdmin } },
 	});
@@ -128,7 +128,7 @@ console.log('\nSchema validation rejects invalid content');
 {
 	const r = resolveZone({
 		zoneId: 'home.hero',
-		brandId: 'haven',
+		brandId: 'bealls',
 		engineOutput: { zones: { 'home.hero': { component: 'editorial-header' } } }, // missing props
 	});
 	assert('engine content missing props falls through to fallback', r.source === 'fallback');
@@ -142,7 +142,7 @@ console.log('\nZone metadata gates which sources can populate');
 	// pdp.recently-viewed is engineComposable: true, adminAuthorable: false
 	const r = resolveZone({
 		zoneId: 'pdp.recently-viewed',
-		brandId: 'haven',
+		brandId: 'bealls',
 		adminContent: { zones: { 'pdp.recently-viewed': {
 			component: 'recently-viewed', props: { items: [] },
 		} } },
@@ -154,7 +154,7 @@ console.log('\nZone metadata gates which sources can populate');
 	// plp.below-grid is engineComposable: false, adminAuthorable: true
 	const r = resolveZone({
 		zoneId: 'plp.below-grid',
-		brandId: 'haven',
+		brandId: 'bealls',
 		engineOutput: { zones: { 'plp.below-grid': { component: 'pagination', props: {} } } },
 	});
 	assert('engine-disabled zone ignores engine content even if present', r.source === 'fallback');
@@ -167,7 +167,7 @@ console.log('\nIndexed zones resolve through family schema + index');
 {
 	const r = resolveZone({
 		zoneId: 'home.featured-row.1',
-		brandId: 'haven',
+		brandId: 'bealls',
 		engineOutput: { zones: { 'home.featured-row.1': productCarousel } },
 	});
 	assert('indexed instance resolves with engine content', r.source === 'engine');
@@ -178,7 +178,7 @@ console.log('\nIndexed zones resolve through family schema + index');
 {
 	const r = resolveZone({
 		zoneId: 'home.featured-row.6',
-		brandId: 'haven',
+		brandId: 'bealls',
 		engineOutput: { zones: { 'home.featured-row.6': productCarousel } },
 	});
 	assert('max-index instance accepted', r.source === 'engine' && r.index === 6);
@@ -187,7 +187,7 @@ console.log('\nIndexed zones resolve through family schema + index');
 {
 	let threw = false;
 	try {
-		resolveZone({ zoneId: 'home.featured-row.7', brandId: 'haven' });
+		resolveZone({ zoneId: 'home.featured-row.7', brandId: 'bealls' });
 	} catch {
 		threw = true;
 	}
@@ -201,7 +201,7 @@ console.log('\nArray zones validate each item independently');
 {
 	const r = resolveZone({
 		zoneId: 'cart.below-fold',
-		brandId: 'haven',
+		brandId: 'bealls',
 		engineOutput: { zones: { 'cart.below-fold': [cartBelowFoldItem, cartBelowFoldItem] } },
 	});
 	assert('array zone accepts list of valid items', r.source === 'engine');
@@ -211,7 +211,7 @@ console.log('\nArray zones validate each item independently');
 {
 	const r = resolveZone({
 		zoneId: 'cart.below-fold',
-		brandId: 'haven',
+		brandId: 'bealls',
 		engineOutput: { zones: { 'cart.below-fold': [cartBelowFoldItem, cartBelowFoldItem, cartBelowFoldItem] } }, // exceeds maxItems: 2
 	});
 	assert('array exceeding maxItems falls through', r.source === 'fallback');
@@ -220,7 +220,7 @@ console.log('\nArray zones validate each item independently');
 {
 	const r = resolveZone({
 		zoneId: 'cart.below-fold',
-		brandId: 'haven',
+		brandId: 'bealls',
 		engineOutput: { zones: { 'cart.below-fold': cartBelowFoldItem } }, // not an array
 	});
 	assert('non-array content for array zone falls through', r.source === 'fallback');
@@ -277,7 +277,7 @@ console.log('\nUnknown zone IDs');
 {
 	let threw = false;
 	try {
-		resolveZone({ zoneId: 'home.does-not-exist', brandId: 'haven' });
+		resolveZone({ zoneId: 'home.does-not-exist', brandId: 'bealls' });
 	} catch {
 		threw = true;
 	}

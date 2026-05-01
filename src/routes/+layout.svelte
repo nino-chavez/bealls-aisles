@@ -130,7 +130,7 @@
 		{@render children()}
 	{:else}
 		<div class="flex min-h-screen flex-col">
-			<BrandStripNav activeBrandId={data.brand?.id ?? 'haven'} />
+			<BrandStripNav activeBrandId={data.brand?.id ?? 'bealls'} />
 			{#if data.brand?.shippingPromo}
 				<div class="bg-primary text-white">
 					<div class="mx-auto max-w-7xl px-6 py-2 text-center text-xs font-semibold uppercase tracking-wider">

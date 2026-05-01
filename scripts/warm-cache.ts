@@ -4,25 +4,26 @@
  *
  * Usage: npx tsx scripts/warm-cache.ts [brand|all]
  * Examples:
- *   npx tsx scripts/warm-cache.ts          # warm Haven (default)
- *   npx tsx scripts/warm-cache.ts volt      # warm Volt
- *   npx tsx scripts/warm-cache.ts all       # warm all brands
+ *   npx tsx scripts/warm-cache.ts                # warm bealls (default)
+ *   npx tsx scripts/warm-cache.ts beallsflorida  # warm Bealls Florida
+ *   npx tsx scripts/warm-cache.ts all            # warm all storefront brands
+ *
+ * Home Centric is content-mode (no online catalog) and has nothing
+ * cacheable — skipped from `all`.
  */
 
 const PERSONAS = ['gatherer', 'hunter', 'researcher', 'gifter'];
 
+const BEALLS_CATEGORIES = ['women', 'men', 'kids', 'shoes', 'home', 'beauty', 'handbags', 'accessories'];
+
 const BRANDS: Record<string, { url: string; categories: string[] }> = {
-	haven: {
-		url: 'https://aisles-signal-x-studio-labs.vercel.app',
-		categories: ['living-room', 'bedroom', 'dining', 'office', 'outdoor', 'kids'],
+	bealls: {
+		url: 'https://aisles-demo-1-signal-x-studio-labs.vercel.app',
+		categories: BEALLS_CATEGORIES,
 	},
-	volt: {
-		url: 'https://volt-aisles-signal-x-studio-labs.vercel.app',
-		categories: ['headphones', 'earbuds', 'speakers', 'gaming'],
-	},
-	ember: {
-		url: 'https://ember-aisles-signal-x-studio-labs.vercel.app',
-		categories: ['fire-pits', 'camp-stoves', 'grills', 'accessories'],
+	beallsflorida: {
+		url: 'https://aisles-demo-2-signal-x-studio-labs.vercel.app',
+		categories: BEALLS_CATEGORIES,
 	},
 };
 
@@ -49,7 +50,6 @@ async function warmBrand(brandId: string) {
 		return;
 	}
 
-	// Warm all 4 personas for each category
 	const combos = PERSONAS.flatMap((persona) =>
 		brand.categories.map((c) => ({ persona, categorySlug: c }))
 	);
@@ -79,7 +79,7 @@ async function warmBrand(brandId: string) {
 }
 
 async function main() {
-	const target = process.argv[2] || 'haven';
+	const target = process.argv[2] || 'bealls';
 
 	if (target === 'all') {
 		for (const brandId of Object.keys(BRANDS)) {
