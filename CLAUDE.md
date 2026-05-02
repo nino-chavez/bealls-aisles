@@ -87,3 +87,13 @@ See `docs/methodology/METHODOLOGY.md` for full conventions.
 ## Default tone
 
 No emoji unless explicitly requested. Terse responses; no trailing summaries unless asked. Edit existing files over creating new ones. Don't over-engineer — minimum complexity for the task at hand.
+
+---
+
+## Decision bias — default to action, not confirmation
+
+When the next move is obvious from conversation, take it. Don't ask "continue or pause?", "want me to keep going?", or "should I think first or implement?" — those break flow without buying anything. A one-line status sentence ("continuing on X — will flag if I hit a real fork") beats a confirmation question.
+
+Still confirm for: destructive/irreversible actions (force-push, branch/table deletion, `rm -rf`, dropping data, amending published commits, modifying CI/CD), forks where picking wrong wastes >30 min, genuinely ambiguous requests, and material scope expansion beyond what was authorized.
+
+This rule applies to subagents, slash commands, and skill invocations launched from this repo too — they should not insert their own confirmation prompts on top of an already-authorized direction. Full version in `~/.claude/CLAUDE.md`.
