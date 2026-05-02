@@ -39,8 +39,10 @@
 
 <header class="sticky top-0 z-50 border-b border-surface-border bg-surface-bg/95 backdrop-blur-sm">
 	<div class="mx-auto flex h-14 max-w-7xl items-center justify-between px-6 lg:h-16">
-		<!-- Logo -->
-		<a href="/" class="font-display text-2xl text-surface-fg transition-opacity hover:opacity-80">
+		<!-- Logo — brand-red wordmark per the path-B real-Bealls reconciliation
+		     (real bealls.com renders the lowercase wordmark in cherry red `#aa182c`,
+		     not flat black). -->
+		<a href="/" class="font-display text-2xl text-primary transition-opacity hover:opacity-80">
 			{brandName}
 		</a>
 

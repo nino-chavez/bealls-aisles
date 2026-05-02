@@ -145,7 +145,8 @@ const STOREFRONT_BLOCK_GUIDES: Record<string, string> = {
 
 	'service-callouts-grid': `"service-callouts-grid" — Cluster of icon callouts (shipping/returns/BOPIS/rewards).
    Props: columns (3 or 4), callouts: Array<{icon, label, body?}>. 3-4 callouts.
-   Personas: any. Trust strip — universal value props rather than a marketing message.`,
+   Personas: any. Trust strip — universal value props rather than a marketing message.
+   ICON RULE: \`icon\` MUST be one of these named keys (lowercase): "shipping", "returns", "rewards", "store", "gift", "quality", "secure", "support". DO NOT emit emoji characters or emoji shortcodes — they render as a fallback circle outline. Pick the closest semantic match for the callout (e.g. label "Free shipping over $99" → icon "shipping"; "Easy returns" → "returns"; "Earn Bealls Bucks" → "rewards"; "Find a store" → "store").`,
 
 	'locator-strip': `"locator-strip" — Thin "Visit your nearest store" strip with CTA.
    Props: eyebrow?, headline, body?, ctaLabel, ctaHref ("/store-locator").
@@ -165,7 +166,8 @@ const STOREFRONT_BLOCK_GUIDES: Record<string, string> = {
 
 	'assurance-strip-checkout': `"assurance-strip-checkout" — Pre-checkout trust strip.
    Props: items: Array<{icon, label, body?}> (2-4, 3 ideal); variant: "first-time" | "returning" | "loyalty-known".
-   Pick variant by inferred shopper signal; first-time leans safety/returns, returning leans speed/welcome-back, loyalty-known leans tier benefits.`,
+   Pick variant by inferred shopper signal; first-time leans safety/returns, returning leans speed/welcome-back, loyalty-known leans tier benefits.
+   ICON RULE: each item's \`icon\` MUST be one of these named keys (lowercase): "secure", "returns", "shipping", "rewards", "quality". DO NOT emit emoji characters or shortcodes — they fall back to a neutral circle.`,
 
 	'for-you-row': `"for-you-row" — Personalized recommendations row.
    Props: title, reasoning?, products: ProductRef[] (3+, 4-6 ideal).
@@ -203,7 +205,8 @@ const CONTENT_BLOCK_GUIDES: Record<string, string> = {
    Personas: any. Newsletter / store-opening alerts. Always appropriate in content mode.`,
 
 	'service-callouts-grid': `"service-callouts-grid" — Cluster of icon callouts (find a store, hours, services, in-store help).
-   Props: columns (3 or 4), callouts (3-4). Trust strip with in-store value props (skip transactional language).`,
+   Props: columns (3 or 4), callouts (3-4). Trust strip with in-store value props (skip transactional language).
+   ICON RULE: \`icon\` MUST be one of "store", "support", "rewards", "secure", "gift", "quality" (lowercase named keys, not emoji).`,
 
 	'locator-strip': `"locator-strip" — Thin "Visit a store" strip.
    Props: eyebrow?, headline, body?, ctaLabel, ctaHref ("/store-locator"). Use sparingly — once per page max.`,

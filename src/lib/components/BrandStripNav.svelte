@@ -25,7 +25,7 @@
 </script>
 
 {#if isFamily}
-	<div class="bg-black text-white">
+	<div class="bg-accent text-white">
 		<div class="mx-auto flex max-w-7xl items-stretch gap-px px-2">
 			{#each banners as banner}
 				{@const active = banner.id === activeBrandId}
@@ -39,7 +39,7 @@
 				{:else}
 					<a
 						href={SISTER_URLS[banner.id]}
-						class="flex-1 px-4 py-2 text-center text-xs font-semibold uppercase tracking-wider transition-colors bg-black text-white/70 hover:text-white"
+						class="flex-1 px-4 py-2 text-center text-xs font-semibold uppercase tracking-wider transition-colors bg-accent text-white/75 hover:bg-accent hover:text-white"
 					>
 						{banner.label}
 					</a>
@@ -48,7 +48,7 @@
 
 			<!-- Right-side utility links -->
 			<div class="flex items-center gap-4 px-4 text-[11px] font-medium uppercase tracking-wider text-white/80">
-				<a href="#locator" class="hover:text-white">Find a Store</a>
+				<a href="/store-locator" class="hover:text-white">Find a Store</a>
 				<a href="#help" class="hover:text-white">Help</a>
 			</div>
 		</div>

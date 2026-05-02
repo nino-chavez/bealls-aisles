@@ -25,23 +25,23 @@ export const checkoutFallbacks: Partial<Record<string, ZoneFallback>> = {
 				variant: 'first-time',
 				items: [
 					{
-						icon: '🔒',
+						icon: 'secure',
 						label: 'Secure checkout',
 						body: 'PCI-compliant payment, encrypted in transit.',
 					},
 					{
-						icon: '↩︎',
+						icon: 'returns',
 						label: 'Easy returns',
 						body: 'Return online orders for free within 60 days.',
 					},
 					hasFreeShipping
 						? {
-								icon: '🚚',
+								icon: 'shipping',
 								label: 'Free shipping',
 								body: `Standard shipping is on us at qualifying order totals.`,
 							}
 						: {
-								icon: '✓',
+								icon: 'quality',
 								label: 'Trusted checkout',
 								body: 'Hosted by BigCommerce. Branded by the merchant.',
 							},

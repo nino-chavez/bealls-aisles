@@ -42,17 +42,18 @@ export const homeFallbacks: Partial<Record<string, ZoneFallback>> = {
 		const brand = getBrandById(brandId);
 		if (!brand) return null;
 		const isContent = brand.mode === 'content';
+		// Icon names map to named SVG keys in ServiceCalloutsGrid (no emoji).
 		const callouts = isContent
 			? [
-				{ icon: '📍', label: 'Find a store', body: 'Locator with hours + directions' },
-				{ icon: '✉️', label: 'Newsletter', body: 'Be first to know when stores open' },
-				{ icon: '🤝', label: 'In-store help', body: 'Ask any associate' },
+				{ icon: 'store', label: 'Find a store', body: 'Locator with hours + directions' },
+				{ icon: 'support', label: 'Newsletter', body: 'Be first to know when stores open' },
+				{ icon: 'support', label: 'In-store help', body: 'Ask any associate' },
 			]
 			: [
-				{ icon: '🚚', label: 'Free shipping', body: 'On orders $99+' },
-				{ icon: '↩️', label: 'Easy returns', body: '30 days, in store or by mail' },
-				{ icon: '🏬', label: 'Buy online, pick up', body: 'Ready in 2 hours' },
-				{ icon: '💎', label: brand.incentives ? 'Bealls Bucks rewards' : 'Member perks', body: 'Earn on every order' },
+				{ icon: 'shipping', label: 'Free shipping', body: 'On orders $99+' },
+				{ icon: 'returns', label: 'Easy returns', body: '30 days, in store or by mail' },
+				{ icon: 'store', label: 'Buy online, pick up', body: 'Ready in 2 hours' },
+				{ icon: 'rewards', label: brand.incentives ? 'Bealls Bucks rewards' : 'Member perks', body: 'Earn on every order' },
 			];
 		const columns = (callouts.length === 4 ? 4 : 3) as 3 | 4;
 		return {
