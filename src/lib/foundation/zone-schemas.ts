@@ -27,6 +27,7 @@ import {
 	ForYouRowSection,
 	BOPISPickerSection,
 	BOPISStripSection,
+	ClusterChipRowSection,
 	LastChanceUpsellRowSection,
 	AssuranceStripCheckoutSection,
 	// P0 marketing/capture/service additions (PRD-ENG-020).
@@ -111,8 +112,8 @@ export const ZoneSchemas = {
 		ServiceCalloutsGridSection,
 		LocatorStripSection,
 	]),
-	'plp.editorial-header': z.union([EditorialHeroSection, EditorialHeaderSection]),
-	'plp.between-thirds': z.union([EditorialArticleTeaserStub, PromoStripSection]),
+	'plp.editorial-header': z.union([EditorialHeroSection, EditorialHeaderSection, ClusterChipRowSection]),
+	'plp.between-thirds': z.union([EditorialArticleTeaserStub, PromoStripSection, ClusterChipRowSection]),
 	'plp.below-grid': z.union([CategoryTileGridSection, PaginationStub]),
 	'plp.empty-state': EmptyStateRescueStub,
 

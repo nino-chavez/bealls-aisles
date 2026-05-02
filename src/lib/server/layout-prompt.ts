@@ -155,6 +155,11 @@ const STOREFRONT_BLOCK_GUIDES: Record<string, string> = {
    Props: storeName, distanceMi, readyByLabel, productName?, ctaLabel?, ctaHref? ("/store-locator").
    Personas: hunter (speed), researcher (certainty). On home.below-fold the engine may compose this when the shopper has a known nearby store with pickup-ready stock. On PDP the strip is foundation-rendered (request-data driven), so the engine should NOT emit bopis-strip on PDP — emit locator-strip there if a store callout is needed.`,
 
+	'cluster-chip-row': `"cluster-chip-row" — Themed merchandising bins above a PLP grid (real-Bealls signature).
+   Props: sectionLabel? (sentence-case lowercase, e.g. "outfit collections"), chips: 3-8 of {label, href}. Labels MUST be Title Case in storage; render code applies TRACKING-WIDE UPPERCASE.
+   Use when the candidate pool clusters around 3+ cross-subcategory themes (e.g. tropical print + vacation outfit + warm weather → "VACATION OUTFITS"; bohemian + crochet + flowy → "BOHEMIAN ROMANCE"). Compose 3-8 chips; each href links to a search query, theme filter, or curated landing.
+   Personas: gatherer (themed discovery), gifter (occasion bins). Hunter prefers filters over themes; researcher prefers specs over moods. Skip when the candidate pool has no strong cross-cut theme.`,
+
 	'last-chance-upsell-row': `"last-chance-upsell-row" — Cart/checkout upsell row.
    Props: title, products: ProductRef[] (1-6, 3 ideal). Pick small-add products that pair with the cart.`,
 
@@ -235,6 +240,7 @@ const STOREFRONT_WIDE_BLOCKS = [
 	'service-callouts-grid',
 	'locator-strip',
 	'bopis-strip',
+	'cluster-chip-row',
 ];
 
 const SURFACE_BLOCKS_STOREFRONT: Record<Surface, string[]> = {

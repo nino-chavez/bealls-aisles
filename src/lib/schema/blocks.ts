@@ -543,6 +543,40 @@ export const BOPISStripSection = z.object({
 	}),
 });
 
+/**
+ * cluster-chip-row — a curated row of themed merchandising bins (e.g.
+ * "BOHEMIAN ROMANCE", "VACATION OUTFITS", "RODEO STYLE") shown above a
+ * PLP grid. Each chip links to a curation page or filtered view that
+ * spans subcategories. The pattern is real-Bealls' signature PLP move
+ * (see `docs/audits/visual-design-2026-05-02/REAL-BEALLS-REFERENCE.md`).
+ *
+ * The block is BOTH:
+ *   - admin-authorable (merchandiser curates seasonal themes via the
+ *     Content Authoring tab → published into `zone_content`)
+ *   - engine-composable (when the AI detects a strong cross-subcategory
+ *     theme in the candidate pool, e.g. via tag-overlap clustering)
+ *
+ * Per the lowercase brand-voice rule, chip labels render in
+ * TRACKING-WIDE UPPERCASE on the surface but are stored Title Case
+ * in the data model so they're readable in admin tooling.
+ */
+export const ClusterChipRowSection = z.object({
+	component: z.literal('cluster-chip-row'),
+	props: z.object({
+		sectionLabel: z.string().optional().describe('Optional row eyebrow, e.g. "Outfit collections" — sentence-case lowercase per brand voice'),
+		chips: z
+			.array(
+				z.object({
+					label: z.string().describe('Theme label, Title Case in storage; rendered TRACKING-WIDE UPPERCASE'),
+					href: z.string().describe('Curation destination — category page with theme filter, /search?q=, or admin-authored landing'),
+				}),
+			)
+			.min(3)
+			.max(8)
+			.describe('3–8 themed merchandising bins; spans subcategories'),
+	}),
+});
+
 // ─── Vocabulary unions ─────────────────────────────────────────────
 
 /**
@@ -585,6 +619,7 @@ export const StorefrontBlocks = [
 	ServiceCalloutsGridSection,
 	LocatorStripSection,
 	BOPISStripSection,
+	ClusterChipRowSection,
 ] as const;
 
 /**

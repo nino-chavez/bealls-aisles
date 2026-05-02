@@ -34,6 +34,7 @@
 	import ServiceCalloutsGrid from '$lib/components/layouts/sections/ServiceCalloutsGrid.svelte';
 	import LocatorStrip from '$lib/components/layouts/sections/LocatorStrip.svelte';
 	import BOPISStrip from '$lib/components/layouts/sections/BOPISStrip.svelte';
+	import ClusterChipRow from '$lib/components/layouts/sections/ClusterChipRow.svelte';
 	import DevZoneBadge from '$lib/components/dev/DevZoneBadge.svelte';
 
 	let {
@@ -231,6 +232,11 @@
 			productName={item.props.productName as string | undefined}
 			ctaLabel={item.props.ctaLabel as string | undefined}
 			ctaHref={item.props.ctaHref as string | undefined}
+		/>
+	{:else if item.component === 'cluster-chip-row'}
+		<ClusterChipRow
+			sectionLabel={item.props.sectionLabel as string | undefined}
+			chips={item.props.chips as Array<{ label: string; href: string }>}
 		/>
 	{/if}
 </DevZoneBadge>

@@ -120,10 +120,16 @@ const BRANDS: Record<string, BrandConfig> = {
 			'accessories': { bcName: 'Bealls Accessories', displayName: 'Accessories' },
 		},
 
+		// Path B (2026-05-02 reconciliation against real bealls.com):
+		// - primary `#aa182c` (real Bealls cherry red, not the brighter `#c8102e`)
+		// - secondary `#7d2540` (real promo-bar cranberry)
+		// - accent `#330A3D` (real top-strip + footer wine, not flat black)
+		// - fontBody Public Sans (open-license analogue to real Bealls' mr-eaves-xl-modern Adobe Typekit face)
+		// - fontDisplay Oswald (open-license analogue to the condensed display face on the TRENDING/FOR YOU hero)
 		theme: {
-			primary: '#c8102e',         // Bealls red
-			secondary: '#a00d24',       // deeper red for hover
-			accent: '#1a1a1a',          // black accent
+			primary: '#aa182c',         // real Bealls red (cherry, not bright)
+			secondary: '#7d2540',       // real Bealls cranberry — promo-bar bg
+			accent: '#330A3D',          // real Bealls wine — top brand-strip + footer
 			surfaceBg: '#ffffff',
 			surfaceFg: '#1a1a1a',
 			surfaceCard: '#ffffff',
@@ -131,12 +137,12 @@ const BRANDS: Record<string, BrandConfig> = {
 			surfaceMuted: '#f6f6f6',
 			surfaceMutedFg: '#5a5a5a',
 			surfaceBorder: '#e5e5e5',
-			fontDisplay: "'Plus Jakarta Sans', system-ui, sans-serif",
-			fontBody: "'Inter', system-ui, sans-serif",
-			fontMono: "'JetBrains Mono', Menlo, monospace",
+			fontDisplay: "'Oswald', 'Bebas Neue', system-ui, sans-serif",
+			fontBody: "'Public Sans', system-ui, sans-serif",
+			fontMono: "ui-monospace, Menlo, monospace",
 		},
 
-		googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap',
+		googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap',
 
 		homepage: {
 			heroHeadline: 'Find your favorites for less',
@@ -161,7 +167,7 @@ const BRANDS: Record<string, BrandConfig> = {
 				researcher: 'Reading reviews, comparing fabric content and sizing. Wants confidence on fit and quality before clicking buy. Methodical, value-oriented.',
 				gifter: 'Snowbird grandparents, holiday gifts for kids/grandkids, broad-appeal gifts at reasonable price points. Wants safe choices that feel generous.',
 			},
-			voiceGuidance: 'Friendly, value-driven, broadly inclusive. Use comparable-value language ("Comparable value $20 — You save 50%") rather than "regular price." No fake urgency, no fashion pretension. Family-oriented copy. Inclusive across ages, sizes, and budgets.',
+			voiceGuidance: 'Friendly, value-driven, broadly inclusive. Use comparable-value language ("Comparable value $20 — You save 50%") rather than "regular price." No fake urgency, no fashion pretension. Family-oriented copy. Inclusive across ages, sizes, and budgets.\n\nCASING RULES (real Bealls signature, load-bearing brand voice):\n- Editorial eyebrow + sub-headlines: lowercase ("celebrate mom", "shop women", "gifts under")\n- Hero headline (condensed display): UPPERCASE ("TRENDING FOR YOU", "MOTHER\'S DAY GIFTS")\n- Cluster / theme labels: TRACKING-WIDE UPPERCASE ("BOHEMIAN ROMANCE", "VACATION OUTFITS")\n- Product names + service rails: Title Case ("Bealls Bucks", "Find a Store", "Free Shipping")\n- Button labels: lowercase if editorial-tone CTA ("shop women"), Title Case if functional ("Add to Cart", "Continue Shopping")',
 		},
 
 		incentives: {
@@ -293,9 +299,13 @@ const BRANDS: Record<string, BrandConfig> = {
 			'furniture': { bcName: 'HomeCentric Furniture', displayName: 'Furniture' },
 		},
 
+		// Path B reconciliation: real bealls.com exposes Home Centric brand
+		// values in CSS custom properties (`--brand-home-centric-primary: #328812`,
+		// `--brand-home-centric-secondary: #3a9f15`). Both are deeper / more
+		// forest-green than our previous brighter values.
 		theme: {
-			primary: '#76b82a',         // Home Centric green
-			secondary: '#5a8f1e',       // deeper green for hover
+			primary: '#328812',         // real Home Centric forest green
+			secondary: '#3a9f15',       // real lighter green (per real-Bealls CSS custom props)
 			accent: '#d04429',          // red accent (the "centric" wordmark dots)
 			surfaceBg: '#ffffff',
 			surfaceFg: '#1a1a1a',
