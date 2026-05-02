@@ -28,13 +28,27 @@
 
 	const brand = getBrand();
 
-	// Brand-aware quick actions
-	const quickActionsByDomain: Record<string, string[]> = {
-		'DTC home furniture': ['Under $500', 'Something in leather', 'More compact options', 'Show me everything on sale', 'Best for small spaces'],
-		'consumer audio & electronics': ['Under $100', 'Best battery life', 'With ANC', 'Wireless only', 'Good for gaming'],
-		'outdoor lifestyle & fire': ['Under $200', 'Portable options', 'Best for camping', 'Smokeless only', 'Good for gifting'],
+	// Brand-aware quick actions + placeholder copy. Match by exact `domain`
+	// string from `src/lib/brand/config.ts`. New brands need an entry here
+	// or they fall through to the bealls default (the safest catch-all for
+	// the active brand set).
+	const quickActionsByDomain: Record<string, { actions: string[]; placeholder: string }> = {
+		'family apparel, shoes, home, and gifts': {
+			actions: ['Under $30', 'Casual wear for the week', 'On sale', 'For the kids', 'Vacation outfits'],
+			placeholder: 'Under $30, casual wear, soft fabric...',
+		},
+		'coastal apparel and lifestyle': {
+			actions: ['Under $50', 'Resort wear', 'Linen and breathable', 'Sun-ready', 'Pack for a getaway'],
+			placeholder: 'Under $50, linen, breathable, beach-ready...',
+		},
+		'home decor and furnishings (in-store discovery)': {
+			actions: ['Show me brand pillars', 'Find a store', 'Weekend events', 'Seasonal looks', 'Coastal home'],
+			placeholder: 'Show me coastal home, ZIP code 33701...',
+		},
 	};
-	const quickActions = quickActionsByDomain[brand.domain] || quickActionsByDomain['DTC home furniture'];
+	const brandChat = quickActionsByDomain[brand.domain] || quickActionsByDomain['family apparel, shoes, home, and gifts'];
+	const quickActions = brandChat.actions;
+	const placeholderText = brandChat.placeholder;
 
 	async function sendMessage(text: string) {
 		if (!text.trim() || isLoading) return;
@@ -195,7 +209,7 @@
 			<input
 				type="text"
 				bind:value={message}
-				placeholder="Under $200, wireless, best for running..."
+				placeholder={placeholderText}
 				disabled={isLoading}
 				class="flex-1 bg-transparent text-sm placeholder:text-surface-muted-fg focus:outline-none disabled:opacity-50"
 			/>
