@@ -23,12 +23,18 @@ export const load: PageServerLoad = async ({ cookies }) => {
 		return { reason: 'empty' as const };
 	}
 
-	const cached = getCachedCart(cartId);
+	// cart-store reads are async since the Redis migration (commit dcc70be).
+	// Earlier this file called them synchronously and the resulting Promise
+	// failed every truthy check that followed → `/checkout` ran getCheckoutRedirectUrl
+	// with `undefined` cartId, BC threw, and SvelteKit served a 500. Per the
+	// 2026-05-02 audit P0 §3.5, the fix is to await both calls and bail
+	// gracefully to the empty path when no cached cart exists.
+	const cached = await getCachedCart(cartId);
 	if (!cached || cached.cart.lineItems.physicalItems.length === 0) {
 		return { reason: 'empty' as const };
 	}
 
-	const sessionCookie = getSessionCookie(cartId) ?? undefined;
+	const sessionCookie = (await getSessionCookie(cartId)) ?? undefined;
 	const checkoutUrl = await getCheckoutRedirectUrl(cartId, sessionCookie);
 
 	const itemCount = cached.cart.lineItems.physicalItems.reduce((sum, i) => sum + i.quantity, 0);

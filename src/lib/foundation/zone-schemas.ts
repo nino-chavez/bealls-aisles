@@ -112,8 +112,9 @@ export const ZoneSchemas = {
 		ServiceCalloutsGridSection,
 		LocatorStripSection,
 	]),
-	'plp.editorial-header': z.union([EditorialHeroSection, EditorialHeaderSection, ClusterChipRowSection]),
-	'plp.between-thirds': z.union([EditorialArticleTeaserStub, PromoStripSection, ClusterChipRowSection]),
+	'plp.editorial-header': z.union([EditorialHeroSection, EditorialHeaderSection]),
+	'plp.cluster-row': ClusterChipRowSection,
+	'plp.between-thirds': z.union([EditorialArticleTeaserStub, PromoStripSection]),
 	'plp.below-grid': z.union([CategoryTileGridSection, PaginationStub]),
 	'plp.empty-state': EmptyStateRescueStub,
 

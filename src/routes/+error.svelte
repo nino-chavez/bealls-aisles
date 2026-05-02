@@ -2,10 +2,15 @@
 	/**
 	 * Branded 404 / error route (PRD-FND-012).
 	 *
-	 * Layer: foundation. Wraps the brand chrome from `+layout.svelte` (nav,
-	 * brand strip, footer) and renders an AI-composed rescue band beneath
-	 * a status-aware headline. Engine routes through `surface='empty'`
-	 * with `reason='not-found'` (per ADR-006 + PRD-FND-012).
+	 * Layer: foundation. Wraps brand chrome from `+layout.svelte` and lets
+	 * EmptyRescue own the rescue messaging — engine composes through
+	 * `surface='empty'` with `reason='not-found'` (per ADR-006).
+	 *
+	 * The earlier version of this file rendered its OWN H1 + subhead above
+	 * the EmptyRescue, producing two stacked headlines with conflicting
+	 * voice (formal "We can't find that page" + friendly "Looks like that
+	 * page wandered off"). Per the 2026-05-02 audit P0 fix we removed the
+	 * static block and kept only a small status eyebrow above the rescue.
 	 */
 	import { page } from '$app/stores';
 	import EmptyRescue from '$lib/components/EmptyRescue.svelte';
@@ -16,15 +21,10 @@
 
 	let status = $derived($page.status);
 	let isNotFound = $derived(status === 404);
-	let headline = $derived(isNotFound ? 'We can’t find that page' : 'Something went wrong');
-	let subhead = $derived(
-		isNotFound
-			? 'The link may be broken or the page may have moved. Here are a few places to pick up where you left off.'
-			: 'Our team has been notified. While you wait, here are some ways to keep browsing.',
-	);
+	let statusLabel = $derived(isNotFound ? '404' : `Error ${status ?? ''}`);
 
-	// Categories list comes from brand config — drives the static fallback
-	// in EmptyRescue when the engine is slow or unavailable.
+	// Categories list comes from brand config — drives EmptyRescue's static
+	// fallback when the engine is slow or unavailable.
 	const brandCategories = Object.entries(getBrand().categories).map(([slug, c]) => ({
 		slug,
 		name: c.displayName,
@@ -32,27 +32,19 @@
 </script>
 
 <svelte:head>
-	<title>{headline} — {data.brand?.name ?? ''}</title>
+	<title>{statusLabel} — {data.brand?.name ?? ''}</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<section class="border-b border-surface-border bg-surface-muted">
-	<div class="mx-auto max-w-7xl px-6 py-16 sm:py-20">
-		<p class="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-			{isNotFound ? '404' : `Error ${status ?? ''}`}
-		</p>
-		<h1 class="mt-3 font-display text-4xl leading-tight tracking-tight sm:text-5xl">
-			{headline}
-		</h1>
-		<p class="mt-4 max-w-xl text-base leading-relaxed text-surface-muted-fg">
-			{subhead}
-		</p>
-	</div>
-</section>
+<div class="mx-auto max-w-7xl px-6 pt-10">
+	<p class="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+		{statusLabel}
+	</p>
+</div>
 
-<div class="mx-auto max-w-7xl px-6 py-16 lg:py-20">
+<div class="mx-auto max-w-7xl px-6 py-10 lg:py-12">
 	<EmptyRescue
-		reason="not-found"
+		reason={isNotFound ? 'not-found' : 'not-found'}
 		persona={data.personaHint ?? 'gatherer'}
 		categories={brandCategories}
 	/>

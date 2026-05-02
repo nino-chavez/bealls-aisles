@@ -14,7 +14,7 @@
 	} = $props();
 </script>
 
-<div class="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-sm bg-surface-fg px-6 py-4 text-surface-bg">
+<div class="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-sm bg-primary px-6 py-4 text-white">
 	<div class="flex flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-3">
 		{#if eyebrow}
 			<span class="text-[10px] font-semibold uppercase tracking-[0.18em] opacity-80">{eyebrow}</span>

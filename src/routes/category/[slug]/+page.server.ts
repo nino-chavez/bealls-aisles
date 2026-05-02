@@ -54,6 +54,15 @@ export const load: PageServerLoad = async ({ params, url, cookies, request, pare
 		throw error(404, `Category "${slug}" not found in BigCommerce`);
 	}
 
+	// 2026-05-02 audit P0 §3.4 fix — Bealls Home category renders zero
+	// products in the BC sandbox channel; the AI then composed Women's
+	// editorial as a fallback. If the BC category exists but is empty,
+	// 404 to the rescue surface rather than letting the AI fabricate
+	// off-category content.
+	if (result.products.length === 0) {
+		throw error(404, `Category "${slug}" has no products available`);
+	}
+
 	// Store current session state in cookies
 	cookies.set('aisles_persona', inference.primary, { path: '/', maxAge: 60 * 60 * 24 * 30 });
 	cookies.set('aisles_last_category', slug, { path: '/', maxAge: 60 * 60 * 24 * 30 });

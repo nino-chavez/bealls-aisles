@@ -57,6 +57,11 @@ export const ZONES = {
 	// PLP — medium latitude
 	'plp.banner': { surface: 'plp', multiplicity: 'singleton', engineComposable: true, adminAuthorable: true },
 	'plp.editorial-header': { surface: 'plp', multiplicity: 'singleton', engineComposable: true, adminAuthorable: true },
+	// `plp.cluster-row` — themed merchandising bins between editorial header
+	// and product grid. Real-Bealls signature pattern (BOHEMIAN ROMANCE,
+	// VACATION OUTFITS, RODEO STYLE). Engine + admin both compose; admin is
+	// the merchandiser-curated path, engine the AI-detected-clusters path.
+	'plp.cluster-row': { surface: 'plp', multiplicity: 'singleton', engineComposable: true, adminAuthorable: true },
 	'plp.between-thirds': { surface: 'plp', multiplicity: 'singleton', engineComposable: true, adminAuthorable: true },
 	'plp.below-grid': { surface: 'plp', multiplicity: 'singleton', engineComposable: false, adminAuthorable: true },
 	'plp.empty-state': { surface: 'plp', multiplicity: 'singleton', engineComposable: true, adminAuthorable: true },

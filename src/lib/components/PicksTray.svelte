@@ -172,7 +172,7 @@
 						<a
 							href="/compare"
 							onclick={onclose}
-							class="flex-1 rounded-sm bg-surface-fg py-3 text-center text-sm font-semibold text-surface-bg transition-opacity hover:opacity-85"
+							class="flex-1 rounded-sm bg-primary py-3 text-center text-sm font-semibold text-white transition-opacity hover:opacity-90"
 						>
 							Compare ({count})
 						</a>

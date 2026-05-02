@@ -130,7 +130,7 @@
 					<CartSummary {subtotal} total={subtotal} />
 					<a
 						href="/checkout"
-						class="mt-6 block w-full rounded-sm bg-surface-fg py-3 text-center text-sm font-semibold text-surface-bg transition-opacity hover:opacity-85"
+						class="mt-6 block w-full rounded-sm bg-primary py-3 text-center text-sm font-semibold text-white transition-opacity hover:opacity-90"
 					>
 						Checkout — {itemCount} item{itemCount === 1 ? '' : 's'}
 					</a>

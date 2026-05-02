@@ -121,7 +121,7 @@
 			{#if data.reason === 'handoff' && data.checkoutUrl}
 				<a
 					href={data.checkoutUrl}
-					class="block w-full rounded-sm bg-surface-fg py-4 text-center text-sm font-semibold text-surface-bg transition-opacity hover:opacity-85"
+					class="block w-full rounded-sm bg-primary py-4 text-center text-sm font-semibold text-white transition-opacity hover:opacity-90"
 				>
 					Continue to secure checkout
 				</a>
@@ -138,7 +138,7 @@
 					</p>
 					<a
 						href="/"
-						class="mt-4 inline-block rounded-sm bg-surface-fg px-6 py-3 text-sm font-semibold text-surface-bg hover:opacity-85"
+						class="mt-4 inline-block rounded-sm bg-primary px-6 py-3 text-sm font-semibold text-white hover:opacity-90"
 					>
 						Continue shopping
 					</a>

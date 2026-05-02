@@ -211,10 +211,18 @@ const BRANDS: Record<string, BrandConfig> = {
 			'accessories': { bcName: 'BeallsFlorida Accessories', displayName: 'Accessories' },
 		},
 
+		// Path B reconciliation: real beallsflorida.com exposes brand values
+		// via CSS custom props. `--brand-bealls-florida-primary: #037cc2`,
+		// `--brand-bealls-florida-secondary: #02639c`, `--brand-bealls-orange: #cf4a29`
+		// (the warm coral the brand uses as a Florida-vacation accent).
+		// Promo bar is yellow `#fde047`-ish (coastal sunshine), not the cranberry
+		// of the bealls red brand. Hero uses condensed serif `FLORIDA IS A` +
+		// script italic `feeling` — open-license analogue: Playfair Display
+		// (Italic) for the script feel + the condensed serif slot.
 		theme: {
-			primary: '#0066b3',         // Bealls Florida blue
-			secondary: '#004d8a',       // deeper blue for hover
-			accent: '#00a3c4',          // teal accent
+			primary: '#037cc2',         // real Bealls Florida coastal blue (deeper than our 0066b3)
+			secondary: '#02639c',       // real BF deeper-blue secondary
+			accent: '#cf4a29',          // real BF coral/orange (`--brand-bealls-orange`)
 			surfaceBg: '#ffffff',
 			surfaceFg: '#1a2842',
 			surfaceCard: '#ffffff',
@@ -223,11 +231,11 @@ const BRANDS: Record<string, BrandConfig> = {
 			surfaceMutedFg: '#5a6c83',
 			surfaceBorder: '#dde6f0',
 			fontDisplay: "'Playfair Display', Georgia, serif",
-			fontBody: "'Inter', system-ui, sans-serif",
-			fontMono: "'JetBrains Mono', Menlo, monospace",
+			fontBody: "'Public Sans', system-ui, sans-serif",
+			fontMono: "ui-monospace, Menlo, monospace",
 		},
 
-		googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap',
+		googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Public+Sans:wght@400;500;600;700&display=swap',
 
 		homepage: {
 			heroHeadline: 'Florida is a feeling',
@@ -252,7 +260,7 @@ const BRANDS: Record<string, BrandConfig> = {
 				researcher: 'Quality of materials matters here for durability — saltwater, sun, chlorine. Reads fabric content, UPF ratings, care instructions.',
 				gifter: 'Gifts for FL relatives — the snowbird parents, the retiree who moved south, the visiting grandkids. Coastal taste, broad appeal.',
 			},
-			voiceGuidance: 'Coastal, lifestyle, casual confidence. Lead with the feeling, then the product. "Sunshine state living" beats "best-in-class shorts." Earn the editorial right by being specific about FL lifestyle (boat, beach, pool, porch) — not generic about "beach vibes."',
+			voiceGuidance: 'Coastal, lifestyle, casual confidence. Lead with the feeling, then the product. "Sunshine state living" beats "best-in-class shorts." Earn the editorial right by being specific about FL lifestyle (boat, beach, pool, porch) — not generic about "beach vibes."\n\nCASING RULES (real Bealls Florida brand voice):\n- Editorial body + sub-headlines: sentence case ("Sunshine state living never looked so good")\n- Hero headline (display): mixed-case editorial ("Florida is a feeling") OR short condensed-serif UPPERCASE ("FLORIDA IS A") with script italic emphasis word ("feeling")\n- Cluster / theme labels: TRACKING-WIDE UPPERCASE ("RESORT WEAR", "POOL DAYS", "BOAT NIGHTS")\n- Product names + service rails: Title Case\n- CTAs: SHOP WOMEN-style ALL-CAPS for editorial CTAs; Title Case for functional buttons',
 		},
 
 		incentives: {

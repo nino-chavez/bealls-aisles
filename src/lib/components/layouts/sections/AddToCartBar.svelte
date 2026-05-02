@@ -94,7 +94,7 @@
 			type="button"
 			onclick={addToCart}
 			disabled={isAdding}
-			class="flex-1 rounded-sm bg-surface-fg px-8 py-4 text-sm font-semibold text-surface-bg transition-opacity hover:opacity-85 disabled:opacity-50"
+			class="flex-1 rounded-sm bg-primary px-8 py-4 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
 		>
 			{isAdding ? 'Adding…' : `${ctaLabel} — ${fmt(price * quantity)}`}
 		</button>

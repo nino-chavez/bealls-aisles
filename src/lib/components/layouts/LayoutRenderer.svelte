@@ -19,6 +19,7 @@
 	import EmailCaptureInline from './sections/EmailCaptureInline.svelte';
 	import ServiceCalloutsGrid from './sections/ServiceCalloutsGrid.svelte';
 	import LocatorStrip from './sections/LocatorStrip.svelte';
+	import ClusterChipRow from './sections/ClusterChipRow.svelte';
 	import DevZoneBadge from '$lib/components/dev/DevZoneBadge.svelte';
 
 	let { layout, products }: { layout: Layout; products: Product[] } = $props();
@@ -188,6 +189,11 @@
 			body={section.props.body}
 			ctaLabel={section.props.ctaLabel}
 			ctaHref={section.props.ctaHref}
+		/>
+	{:else if section.component === 'cluster-chip-row' && section.props?.chips?.length}
+		<ClusterChipRow
+			sectionLabel={section.props.sectionLabel}
+			chips={section.props.chips}
 		/>
 	{/if}
 </DevZoneBadge>

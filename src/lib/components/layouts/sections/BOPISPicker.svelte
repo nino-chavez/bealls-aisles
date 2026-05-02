@@ -49,7 +49,7 @@
 		/>
 		<button
 			type="submit"
-			class="rounded-sm bg-surface-fg px-4 py-2 text-sm font-medium text-surface-bg transition-opacity hover:opacity-85"
+			class="rounded-sm bg-primary px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
 		>
 			Search
 		</button>
