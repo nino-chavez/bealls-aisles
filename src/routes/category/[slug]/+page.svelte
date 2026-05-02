@@ -22,6 +22,11 @@
 	let aiError = $state<string | null>(null);
 	let isUpgrading = $state(true);
 	let overridePersona = $state<string | null>(null);
+	// Tracks whether the override was set explicitly by the user (via dev panel
+	// button) vs. by the inference pipeline. When true, the inference-update
+	// listener stops overwriting it — so a manual choice sticks until either
+	// the user clears it or navigates to another category.
+	let manualOverride = $state(false);
 	let sessionCost = $state<{ totalCost: number; generations: number; tokens: number; cacheHitRate: number } | null>(null);
 	let currentPersona = $derived(overridePersona ?? data.persona ?? 'gatherer');
 	// ADR-008 Phase A: tag intents extracted by the refinement chat. When
@@ -45,14 +50,20 @@
 			aiMeta = null;
 			tagIntents = [];
 			lastCategory = slug;
+			// Clear manual override when navigating — intent is contextual to surface.
+			manualOverride = false;
+			overridePersona = null;
 		}
 
 		fetchLayout(persona);
 	});
 
-	// Listen for inference updates from the signal pipeline
+	// Listen for inference updates from the signal pipeline. Skip the update
+	// when the user has explicitly chosen a persona via the dev panel — their
+	// manual choice should stick until they reset it or navigate.
 	$effect(() => {
 		const handleInferenceUpdate = (e: Event) => {
+			if (manualOverride) return;
 			const inference = (e as CustomEvent).detail;
 			if (inference?.primary && inference.primary !== currentPersona) {
 				overridePersona = inference.primary;
@@ -301,11 +312,11 @@
 					{/if}
 				</div>
 
-				<!-- Persona toggle — all 4 personas -->
+				<!-- Persona toggle — all 4 personas + reset -->
 				<div class="flex flex-col gap-1.5">
 					{#each PERSONAS as persona}
 						<button
-							onclick={() => overridePersona = persona}
+							onclick={() => { overridePersona = persona; manualOverride = true; }}
 							class="rounded-sm px-3 py-1 text-xs font-medium transition-colors
 								{currentPersona === persona
 									? 'bg-accent text-white'
@@ -314,6 +325,15 @@
 							{persona.charAt(0).toUpperCase() + persona.slice(1)}
 						</button>
 					{/each}
+					{#if manualOverride}
+						<button
+							onclick={() => { manualOverride = false; overridePersona = null; }}
+							class="mt-1 rounded-sm px-3 py-1 text-[10px] font-medium text-surface-muted-fg hover:text-surface-fg"
+							title="Resume inference-driven persona"
+						>
+							↻ Reset to inferred
+						</button>
+					{/if}
 				</div>
 			</div>
 

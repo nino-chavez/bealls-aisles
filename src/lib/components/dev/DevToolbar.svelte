@@ -21,14 +21,25 @@
 
 	let mounted = $state(false);
 	let collapsed = $state(false);
+	// Track whether dev was ever activated in this session. Once true, the
+	// toolbar stays mounted even if the user toggles "Dev mode" off — so
+	// they can flip it back on without page refresh. Cleared only by
+	// `?dev=0` URL or by clearing localStorage manually.
+	let everActive = $state(false);
 
 	onMount(() => {
 		initDevMode();
 		mounted = true;
+		if (isDevMode()) everActive = true;
 	});
 
 	const brand = getBrand();
 	const active = $derived(mounted && isDevMode());
+
+	// Toolbar visibility is sticky once dev mode has been seen this session.
+	$effect(() => {
+		if (active) everActive = true;
+	});
 	const fresh = $derived(mounted && isFreshMode());
 	const traces = $derived(mounted ? getTraces() : []);
 	const recentLatency = $derived(
@@ -37,10 +48,10 @@
 	const cacheHits = $derived(traces.filter((t) => t.cacheHit).length);
 </script>
 
-{#if active}
-	<div class="aisles-dev-toolbar" class:collapsed>
+{#if mounted && everActive}
+	<div class="aisles-dev-toolbar" class:collapsed class:dimmed={!active}>
 		<div class="header">
-			<span class="dot"></span>
+			<span class="dot" class:dot-off={!active}></span>
 			<span class="title">Dev</span>
 			<button type="button" class="collapse" onclick={() => (collapsed = !collapsed)}>
 				{collapsed ? '▸' : '▾'}
@@ -51,14 +62,14 @@
 				<button
 					type="button"
 					class="fresh-toggle"
-					class:on={true}
-					onclick={() => setDevMode(false)}
-					title="Disable dev mode (badges + toolbar hide)"
+					class:on={active}
+					onclick={() => setDevMode(!active)}
+					title={active ? 'Disable badges (toolbar stays visible)' : 'Enable badges + dev features'}
 				>
 					<span class="fresh-track"><span class="fresh-thumb"></span></span>
 					<span class="fresh-label">
 						<span class="fresh-title">Dev mode</span>
-						<span class="fresh-sub">badges visible · click to hide</span>
+						<span class="fresh-sub">{active ? 'badges visible · click to hide' : 'badges hidden · click to show'}</span>
 					</span>
 				</button>
 
@@ -131,6 +142,20 @@
 		border: 1px solid #27272a;
 		border-radius: 4px;
 		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+		transition: opacity 0.15s ease;
+	}
+
+	.aisles-dev-toolbar.dimmed {
+		opacity: 0.7;
+	}
+
+	.aisles-dev-toolbar.dimmed:hover {
+		opacity: 1;
+	}
+
+	.dot.dot-off {
+		background: #6b7280;
+		box-shadow: none;
 	}
 
 	.header {
