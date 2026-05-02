@@ -36,9 +36,9 @@
       "caption": "Open a product. The foundation renders the scaffold — gallery, title, add-to-cart, reviews. Those are not negotiable. Around them, AI-composed zones: pairings sourced from the product's tag-overlap neighborhood, related and recently-viewed pulled from the same retrieval substrate. And up top — the BOPIS strip. Request-aware. Shopper ZIP geocodes to the nearest pickup-ready store. Two-hour ready window. Foundation logic, not AI prose."
     },
     {
-      "image": "07-cart-drawer-loading.png",
-      "title": "The cart upsell, composed live",
-      "caption": "Add to cart. The drawer opens. Line items, free-shipping meter, promo code field — all foundation, all read from cart state, instant. But the upsell row is engine-composed. The AI sources candidates from the cart's tag-overlap neighborhood, picks three pieces that pair with what's already in the cart, names the row in brand voice. While the AI works, the loader makes the latency legible. Composing pieces that pair with your cart, in real time.",
+      "image": "07-cart-drawer-loaded.png",
+      "title": "Foundation primitives + engine-composed upsell",
+      "caption": "Add to cart. The drawer opens. Line items, qty stepper, free-shipping meter, promo code field — all foundation, all read from cart state, instant. The 'Complete your look' row is engine-composed: the AI sources candidates from the cart's tag-overlap neighborhood, picks three pieces that pair with what's in the cart, names the row in brand voice. Foundation owns the contract; the engine writes the merchandising. The split lets the cart never break even if the AI does.",
       "captionPosition": "top"
     },
     {
