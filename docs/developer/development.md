@@ -17,16 +17,16 @@
 ```bash
 # Clone and install
 git clone <repo-url>
-cd prism
+cd bealls-aisles
 npm install
 ```
 
 Create a `.env.local` file in the project root with the following variables:
 
 ```bash
-# Brand selection (defaults to "haven" if not set)
-BRAND_ID=haven
-VITE_BRAND_ID=haven
+# Brand selection (defaults to "bealls" if not set)
+BRAND_ID=bealls
+VITE_BRAND_ID=bealls
 
 # BigCommerce
 BIGCOMMERCE_STORE_HASH=your_store_hash
@@ -65,7 +65,7 @@ The app starts at `http://localhost:5173`. The active brand is set by `VITE_BRAN
 To test a different brand locally:
 
 ```bash
-VITE_BRAND_ID=volt BRAND_ID=volt npm run dev
+VITE_BRAND_ID=beallsflorida BRAND_ID=beallsflorida npm run dev
 ```
 
 Note that switching brands locally requires matching `STOREFRONT_TOKEN` and `BIGCOMMERCE_CHANNEL_ID` for the target brand's BC channel. Using a different brand with the same BC credentials will return no products if the category names don't match.
@@ -99,7 +99,7 @@ Dev mode works in both local development and on deployed Vercel previews. It doe
 The enrichment pipeline reads products from BigCommerce, runs LLM scoring, and writes to Neon Postgres. Run it before using the app with a new channel or after adding new products.
 
 ```bash
-# Enrich Haven (channel 1 / default)
+# Enrich Bealls (channel 1 / default)
 BIGCOMMERCE_STORE_HASH=your_hash \
 STOREFRONT_TOKEN=your_token \
 BIGCOMMERCE_CHANNEL_ID=1 \
@@ -122,8 +122,8 @@ The script will:
 Creating table...
 Fetching products from BigCommerce...
 Found 24 products
-  Enriching: Haven Linen Sofa... OK (G:0.91 H:0.42 R:0.55 Gi:0.68)
-  Enriching: Walnut Coffee Table... OK (G:0.85 H:0.51 R:0.62 Gi:0.72)
+  Enriching: Reel Legends Tropical Dress... OK (G:0.91 H:0.42 R:0.55 Gi:0.68)
+  Enriching: Counterparts Career Capris... OK (G:0.85 H:0.51 R:0.62 Gi:0.72)
   ...
 Enrichment: 24 enriched, 0 failed out of 24 total
 Cost: $0.0412 (28,340 in / 9,120 out tokens across 24 calls)
@@ -178,7 +178,7 @@ npx tsx tools/seed-channels/index.ts
 
 Check `tools/seed-channels/index.ts` for required environment variables and options. The seeder creates products in BigCommerce using the Admin API (requires an Admin API token, not just a Storefront token).
 
-The brand JSON files in `brands/` (e.g., `brands/haven.json`) contain the creative brief used to generate demo product content. The seeder references these files for product descriptions, voice guidance, and category structure.
+The brand JSON files in `brands/` (e.g., `brands/bealls.json`) contain the creative brief used to generate demo product content. The seeder references these files for product descriptions, voice guidance, and category structure.
 
 ---
 
@@ -229,7 +229,7 @@ The project uses strict TypeScript. Run a type check before pushing if you've mo
 
 | Variable | Required | Context | Description |
 |---|---|---|---|
-| `BRAND_ID` | No | Server, scripts | Active brand ID. Defaults to `haven`. |
+| `BRAND_ID` | No | Server, scripts | Active brand ID. Defaults to `bealls`. |
 | `VITE_BRAND_ID` | No | Client (Vite) | Same as BRAND_ID — must be prefixed for Vite to expose it to the browser. |
 | `BIGCOMMERCE_STORE_HASH` | Yes | Server, scripts | BC store hash (from store URL) |
 | `STOREFRONT_TOKEN` | Yes | Server, scripts | BC Storefront API token (channel-specific) |

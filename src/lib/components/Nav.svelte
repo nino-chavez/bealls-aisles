@@ -51,9 +51,10 @@
 			{#each navItems as item}
 				<a
 					href={item.href}
-					class="text-[0.8125rem] font-medium tracking-wide text-surface-muted-fg transition-colors hover:text-surface-fg"
+					class="group relative text-[0.8125rem] font-medium tracking-wide text-surface-muted-fg transition-colors hover:text-surface-fg"
 				>
 					{item.label}
+					<span class="absolute -bottom-1 left-0 h-px w-0 bg-primary transition-[width] duration-200 group-hover:w-full" aria-hidden="true"></span>
 				</a>
 			{/each}
 		</nav>

@@ -8,6 +8,9 @@
 	import CartDrawer from '$lib/components/CartDrawer.svelte';
 	import PicksTray from '$lib/components/PicksTray.svelte';
 	import DevToolbar from '$lib/components/dev/DevToolbar.svelte';
+	import Toast from '$lib/components/primitives/Toast.svelte';
+	import StructuredData from '$lib/components/primitives/StructuredData.svelte';
+	import { organizationLd, websiteLd } from '$lib/seo/jsonld';
 	import { pickCount } from '$lib/stores/picks.svelte';
 	import { initEmitter, destroyEmitter, getEmitter } from '$lib/signals/emitter';
 	import { getBrand } from '$lib/brand/config';
@@ -30,6 +33,11 @@
 	let cartOpen = $state(false);
 	let picksOpen = $state(false);
 	let picksCount = $state(0);
+
+	const brandConfig = getBrand();
+	const seoOrigin = $derived($page.url.origin);
+	const orgLd = $derived(organizationLd(brandConfig, seoOrigin));
+	const siteLd = $derived(websiteLd(brandConfig, seoOrigin));
 
 	// Track picks count reactively
 	$effect(() => {
@@ -167,4 +175,7 @@
 		/>
 	{/if}
 	<DevToolbar />
+	<Toast />
+	<StructuredData data={orgLd} />
+	<StructuredData data={siteLd} />
 </div>

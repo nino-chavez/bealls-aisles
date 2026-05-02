@@ -231,6 +231,22 @@ const rules: InferenceRule[] = [
 			return { familiarityWithStore: familiarity * 0.3 };
 		},
 	},
+	{
+		// Returning shopper on a Bealls apparel/accessory category is far more
+		// likely to be restocking (Hunter) than browsing (Gatherer). Off-price
+		// retail's repeat-shopper pattern is "I came back for what I know I
+		// want" — dense PLP grid with quick-add, not editorial 2-col gatherer
+		// layout. Bumps Hunter on visit 2+.
+		name: 'returning-shopper-apparel',
+		weight: 0.7,
+		evaluate: (ctx) => {
+			if (ctx.visitCount <= 1) return null;
+			if (!ctx.currentCategory) return null;
+			const apparel = /^(women|men|kids|shoes|beauty|handbags|accessories|jewelry)$/i;
+			if (!apparel.test(ctx.currentCategory)) return null;
+			return { hunter: 0.3, priceSensitivity: 0.2 };
+		},
+	},
 
 	// ─── Behavioral signals (in-session) ──────────────────────
 
@@ -595,6 +611,8 @@ function describeRuleMatch(ruleName: string, ctx: InferenceContext, adj: Persona
 			return `Returning visitor, different category (was ${ctx.storedCategory}, now ${ctx.currentCategory})`;
 		case 'repeat-visitor-familiarity':
 			return `Visit #${ctx.visitCount} — familiarity increases with repeat visits`;
+		case 'returning-shopper-apparel':
+			return `Visit #${ctx.visitCount} on ${ctx.currentCategory} — off-price restock pattern (Hunter bias)`;
 		case 'broad-category-browsing':
 			return `Browsed ${ctx.uniqueCategoriesViewed.length} categories (${ctx.uniqueCategoriesViewed.join(', ')}) — exploratory behavior`;
 		case 'rapid-cart-adds':

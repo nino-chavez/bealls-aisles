@@ -4,6 +4,8 @@
 	import type { PersonaInference } from '$lib/signals/types';
 	import { PERSONAS } from '$lib/signals/types';
 	import LayoutRenderer from '$lib/components/layouts/LayoutRenderer.svelte';
+	import FilterStrip from '$lib/components/primitives/FilterStrip.svelte';
+	import SortSelector from '$lib/components/primitives/SortSelector.svelte';
 	import LayoutBuildingState from '$lib/components/LayoutBuildingState.svelte';
 	import GathererLayout from '$lib/components/layouts/GathererLayout.svelte';
 	import HunterLayout from '$lib/components/layouts/HunterLayout.svelte';
@@ -34,6 +36,26 @@
 	// and subsequent /api/layout calls pass them through for filtering/rerank.
 	// Resets when the category changes (intent is contextual to the surface).
 	let tagIntents = $state<string[]>([]);
+
+	// Persona-default sort. Hunter is restocking -> price-low; gatherer
+	// is exploring -> newest; researcher wants reviews -> bestsellers.
+	const SORT_OPTIONS = [
+		{ value: 'newest', label: 'Newest' },
+		{ value: 'price-low', label: 'Price: low to high' },
+		{ value: 'price-high', label: 'Price: high to low' },
+		{ value: 'bestsellers', label: 'Best sellers' },
+		{ value: 'rating', label: 'Top rated' },
+	];
+	function defaultSortFor(persona: string): string {
+		if (persona === 'hunter') return 'price-low';
+		if (persona === 'researcher') return 'bestsellers';
+		return 'newest';
+	}
+	let sortValue = $state(defaultSortFor(currentPersona));
+	$effect(() => {
+		// Keep sort aligned with persona until the user manually changes it.
+		sortValue = defaultSortFor(currentPersona);
+	});
 
 	// Fetch AI-generated layout on mount / persona change
 	// Track category to reset layout on navigation
@@ -402,6 +424,16 @@
 				<summary class="cursor-pointer text-xs text-accent hover:underline">View raw inference JSON</summary>
 				<pre class="mt-2 max-h-48 overflow-auto rounded-sm bg-neutral-950 p-3 text-xs text-neutral-300">{JSON.stringify(inf, null, 2)}</pre>
 			</details>
+		</div>
+	{/if}
+
+	<!-- Filter + sort foundation strip — deterministic UI above the AI grid.
+	     Filter chips render when active filters are present (none by default in the demo);
+	     sort selector defaults per persona and stays sticky. -->
+	{#if !isContentMode}
+		<div class="flex items-end justify-between gap-4 pt-4">
+			<FilterStrip resultCount={data.products?.length ?? 0} />
+			<SortSelector options={SORT_OPTIONS} bind:value={sortValue} />
 		</div>
 	{/if}
 

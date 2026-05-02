@@ -4,6 +4,8 @@
 **Last Updated**: 2026-04-06
 **Audience**: Demo Presenters, Sales Engineers
 
+> **Historical note (2026-05-02):** This script describes the upstream `aisles-storefront` demo flow against the synthetic reference brands (Haven, Volt, Ember). The active Bealls fork's demo reel v3 (`scripts/demo-reel/out/demo-reel.mp4`) walks the same beats against bealls / Bealls Florida / Home Centric. The structural choreography below — first impression, Observe walkthrough, persona shift, brand swap, refinement, cost close — still applies; only the brand names and URLs differ. Treat this script as the canonical demo *structure*; substitute the current Vercel project URLs (`aisles-demo-{1,2,3}-signal-x-studio-labs.vercel.app`) and Bealls family banner names when running it live.
+
 ## Setup
 
 Open two browser windows side by side — or use a split-screen tool. If presenting on a projector, put both windows on the extended display before starting.

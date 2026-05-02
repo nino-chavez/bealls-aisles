@@ -31,7 +31,7 @@
 				href={tile.href}
 				class="group block"
 			>
-				<div class="aspect-[4/3] overflow-hidden rounded-sm bg-surface-muted">
+				<div class="aspect-[4/3] overflow-hidden rounded-md bg-surface-muted shadow-sm transition-shadow group-hover:shadow-md">
 					{#if tile.image}
 						<img
 							src={tile.image}

@@ -9,9 +9,9 @@
 All endpoints are SvelteKit route handlers deployed as Vercel Functions. Authentication is cookie-based for user-facing endpoints. The Observe endpoints use a shared secret query parameter (`key=aisles-observe`).
 
 Base URL varies by brand:
-- Haven: `https://aisles-signal-x-studio-labs.vercel.app`
-- Volt: `https://volt-aisles-signal-x-studio-labs.vercel.app`
-- Ember: `https://ember-aisles-signal-x-studio-labs.vercel.app`
+- Bealls: `https://aisles-demo-1-signal-x-studio-labs.vercel.app`
+- Bealls Florida: `https://aisles-demo-2-signal-x-studio-labs.vercel.app`
+- Home Centric: `https://aisles-demo-3-signal-x-studio-labs.vercel.app`
 
 ---
 
@@ -69,7 +69,7 @@ Generate an AI layout for a persona + category combination. Returns a cached lay
       {
         "component": "hero-product",
         "props": {
-          "product": { "productId": "products/haven-linen-sofa", "role": "hero" },
+          "product": { "productId": "products/reel-legends-tropical-dress", "role": "hero" },
           "showSpecs": false
         }
       },
@@ -85,7 +85,7 @@ Generate an AI layout for a persona + category combination. Returns a cached lay
         }
       }
     ],
-    "productOrder": ["products/haven-linen-sofa", "products/walnut-coffee-table", "..."]
+    "productOrder": ["products/reel-legends-tropical-dress", "products/counterparts-career-capris", "..."]
   },
   "meta": {
     "persona": "gatherer",
@@ -553,10 +553,10 @@ Returns enriched product data for a category, sorted by persona-fit score. Used 
 {
   "products": [
     {
-      "id": "products/haven-linen-sofa",
+      "id": "products/reel-legends-tropical-dress",
       "entityId": 127,
-      "name": "Haven Linen Sofa",
-      "price": 1299,
+      "name": "Reel Legends Tropical Dress",
+      "price": 39.99,
       "salePrice": null,
       "personaFit": {
         "gatherer": 0.91,
@@ -564,7 +564,7 @@ Returns enriched product data for a category, sorted by persona-fit score. Used 
         "researcher": 0.55,
         "gifter": 0.68
       },
-      "semanticTags": ["statement-piece", "natural-material", "living-room-anchor", "photogenic", "investment-piece"]
+      "semanticTags": ["coastal", "casual wear", "vacation-ready", "photogenic", "easy-care"]
     }
   ],
   "categoryName": "Living Room"

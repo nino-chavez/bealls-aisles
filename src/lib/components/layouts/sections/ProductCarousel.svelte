@@ -64,7 +64,7 @@
 			{@const fp = formatPrice(product.price, product.salePrice)}
 			<a
 				href="/product/{product.id}"
-				class="group flex w-[220px] shrink-0 flex-col bg-surface-card sm:w-[240px]"
+				class="group flex w-[220px] shrink-0 flex-col overflow-hidden rounded-md bg-surface-card shadow-sm transition-shadow hover:shadow-md sm:w-[240px]"
 				style="scroll-snap-align: start;"
 			>
 				<div class="relative aspect-square overflow-hidden bg-surface-muted">

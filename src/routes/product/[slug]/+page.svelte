@@ -14,10 +14,39 @@
 	import AILoadingInline from '$lib/components/AILoadingInline.svelte';
 	import ZoneRenderer from '$lib/foundation/ZoneRenderer.svelte';
 	import DevZoneBadge from '$lib/components/dev/DevZoneBadge.svelte';
+	import StructuredData from '$lib/components/primitives/StructuredData.svelte';
+	import { productLd, breadcrumbLd } from '$lib/seo/jsonld';
+	import { getBrand } from '$lib/brand/config';
+	import { page } from '$app/stores';
 
 	let { data }: { data: PageData } = $props();
 	let product = $derived(data.product);
 	let relatedProducts = $derived(data.relatedProducts);
+
+	const _brand = getBrand();
+	const productJsonLd = $derived(
+		productLd({
+			id: product.id,
+			name: product.name,
+			description: product.description.replace(/<[^>]*>/g, '').slice(0, 5000),
+			image: product.image,
+			brand: _brand.name,
+			sku: product.id,
+			price: product.salePrice ?? product.price,
+			url: `${$page.url.origin}/product/${product.id}`,
+			rating:
+				data.reviewsSummary.reviewCount > 0
+					? { value: data.reviewsSummary.avgRating, count: data.reviewsSummary.reviewCount }
+					: null,
+		})
+	);
+	const breadcrumbJsonLd = $derived(
+		breadcrumbLd([
+			{ name: 'Home', url: $page.url.origin },
+			{ name: product.category, url: `${$page.url.origin}/category/${product.category.toLowerCase().replace(/\s+/g, '-')}` },
+			{ name: product.name, url: `${$page.url.origin}/product/${product.id}` },
+		])
+	);
 
 	// Track dwell time on product pages
 	$effect(() => {
@@ -62,6 +91,9 @@
 	<title>{product.name}</title>
 	<meta name="description" content={product.descriptionPlain.slice(0, 160)} />
 </svelte:head>
+
+<StructuredData data={productJsonLd} />
+<StructuredData data={breadcrumbJsonLd} />
 
 <div class="mx-auto max-w-7xl px-6 py-8">
 	<!-- Breadcrumb (PDP scaffold; future P0 block) -->

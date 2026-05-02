@@ -4,6 +4,7 @@
 	import LayoutRenderer from '$lib/components/layouts/LayoutRenderer.svelte';
 	import LayoutBuildingState from '$lib/components/LayoutBuildingState.svelte';
 	import ZoneRenderer from '$lib/foundation/ZoneRenderer.svelte';
+	import Button from '$lib/components/primitives/Button.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -72,17 +73,22 @@
 			</p>
 			<div class="mt-10 flex flex-wrap gap-3">
 				{#each data.categories.slice(0, 4).map((c, i) => ({ label: c.name, href: `/category/${c.slug}`, primary: i === 0 })) as cta}
-					<a
-						href={cta.href}
-						class="inline-flex items-center rounded-sm px-5 py-2.5 text-sm font-semibold uppercase tracking-wider transition-colors
-							{cta.primary
-								? 'bg-primary text-white hover:opacity-90'
-								: data.homepage.heroImage
-									? 'border-2 border-white text-white hover:bg-white hover:text-surface-fg'
-									: 'border border-surface-border text-surface-fg hover:bg-surface-fg hover:text-surface-bg'}"
-					>
-						{cta.label}
-					</a>
+					{#if cta.primary}
+						<Button variant="primary" size="lg" shape="pill" href={cta.href}>
+							Shop {cta.label}
+						</Button>
+					{:else if data.homepage.heroImage}
+						<a
+							href={cta.href}
+							class="inline-flex items-center rounded-full border-2 border-white px-6 py-3 text-sm font-semibold uppercase tracking-wider text-white transition-colors hover:bg-white hover:text-surface-fg"
+						>
+							{cta.label}
+						</a>
+					{:else}
+						<Button variant="tertiary" size="lg" shape="pill" href={cta.href}>
+							{cta.label}
+						</Button>
+					{/if}
 				{/each}
 			</div>
 		</div>

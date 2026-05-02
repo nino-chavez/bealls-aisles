@@ -28,8 +28,8 @@ export interface BrandConfig {
 		categoryPrefix: string;
 	};
 
-	/** Category slug → BC category name + display name */
-	categories: Record<string, { bcName: string; displayName: string }>;
+	/** Category slug → BC category name + display name + optional tile image */
+	categories: Record<string, { bcName: string; displayName: string; tileImage?: string }>;
 
 	/** CSS theme tokens (injected into :root) */
 	theme: {
@@ -110,14 +110,14 @@ const BRANDS: Record<string, BrandConfig> = {
 		},
 
 		categories: {
-			'women': { bcName: 'Bealls Women', displayName: 'Women' },
-			'men': { bcName: 'Bealls Men', displayName: 'Men' },
-			'kids': { bcName: 'Bealls Kids', displayName: 'Kids' },
-			'shoes': { bcName: 'Bealls Shoes', displayName: 'Shoes' },
-			'home': { bcName: 'Bealls Home', displayName: 'Home' },
-			'beauty': { bcName: 'Bealls Beauty', displayName: 'Beauty' },
-			'handbags': { bcName: 'Bealls Handbags', displayName: 'Handbags' },
-			'accessories': { bcName: 'Bealls Accessories', displayName: 'Accessories' },
+			'women': { bcName: 'Bealls Women', displayName: 'Women', tileImage: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&q=80&auto=format&fit=crop' },
+			'men': { bcName: 'Bealls Men', displayName: 'Men', tileImage: 'https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=800&q=80&auto=format&fit=crop' },
+			'kids': { bcName: 'Bealls Kids', displayName: 'Kids', tileImage: 'https://images.unsplash.com/photo-1519278409-1f56fdda7fe5?w=800&q=80&auto=format&fit=crop' },
+			'shoes': { bcName: 'Bealls Shoes', displayName: 'Shoes', tileImage: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80&auto=format&fit=crop' },
+			'home': { bcName: 'Bealls Home', displayName: 'Home', tileImage: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80&auto=format&fit=crop' },
+			'beauty': { bcName: 'Bealls Beauty', displayName: 'Beauty', tileImage: 'https://images.unsplash.com/photo-1522335789203-aaa83fbb1bff?w=800&q=80&auto=format&fit=crop' },
+			'handbags': { bcName: 'Bealls Handbags', displayName: 'Handbags', tileImage: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=800&q=80&auto=format&fit=crop' },
+			'accessories': { bcName: 'Bealls Accessories', displayName: 'Accessories', tileImage: 'https://images.unsplash.com/photo-1601924994987-69e26d50dc26?w=800&q=80&auto=format&fit=crop' },
 		},
 
 		// Path B (2026-05-02 reconciliation against real bealls.com):
@@ -201,14 +201,14 @@ const BRANDS: Record<string, BrandConfig> = {
 		},
 
 		categories: {
-			'women': { bcName: 'BeallsFlorida Women', displayName: 'Women' },
-			'men': { bcName: 'BeallsFlorida Men', displayName: 'Men' },
-			'kids': { bcName: 'BeallsFlorida Kids', displayName: 'Kids' },
-			'shoes': { bcName: 'BeallsFlorida Shoes', displayName: 'Shoes' },
-			'home': { bcName: 'BeallsFlorida Home', displayName: 'Home' },
-			'vacation': { bcName: 'BeallsFlorida Vacation', displayName: 'Vacation' },
-			'swim': { bcName: 'BeallsFlorida Swim & Beach', displayName: 'Swim & Beach' },
-			'accessories': { bcName: 'BeallsFlorida Accessories', displayName: 'Accessories' },
+			'women': { bcName: 'BeallsFlorida Women', displayName: 'Women', tileImage: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=800&q=80&auto=format&fit=crop' },
+			'men': { bcName: 'BeallsFlorida Men', displayName: 'Men', tileImage: 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=800&q=80&auto=format&fit=crop' },
+			'kids': { bcName: 'BeallsFlorida Kids', displayName: 'Kids', tileImage: 'https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=800&q=80&auto=format&fit=crop' },
+			'shoes': { bcName: 'BeallsFlorida Shoes', displayName: 'Shoes', tileImage: 'https://images.unsplash.com/photo-1603487742131-4160ec999306?w=800&q=80&auto=format&fit=crop' },
+			'home': { bcName: 'BeallsFlorida Home', displayName: 'Home', tileImage: 'https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=800&q=80&auto=format&fit=crop' },
+			'vacation': { bcName: 'BeallsFlorida Vacation', displayName: 'Vacation', tileImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80&auto=format&fit=crop' },
+			'swim': { bcName: 'BeallsFlorida Swim & Beach', displayName: 'Swim & Beach', tileImage: 'https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=800&q=80&auto=format&fit=crop' },
+			'accessories': { bcName: 'BeallsFlorida Accessories', displayName: 'Accessories', tileImage: 'https://images.unsplash.com/photo-1591348278863-a8fb3887e2aa?w=800&q=80&auto=format&fit=crop' },
 		},
 
 		// Path B reconciliation: real beallsflorida.com exposes brand values
@@ -298,13 +298,13 @@ const BRANDS: Record<string, BrandConfig> = {
 		// In content mode, "categories" map to brand pillars (in-store sections),
 		// not online catalog routes. Each "category" is a content surface, not a PLP.
 		categories: {
-			'bedroom': { bcName: 'HomeCentric Bedroom', displayName: 'Bedroom' },
-			'bath': { bcName: 'HomeCentric Bath', displayName: 'Bath' },
-			'rugs': { bcName: 'HomeCentric Rugs', displayName: 'Rugs' },
-			'kitchen': { bcName: 'HomeCentric Kitchen', displayName: 'Kitchen & Dining' },
-			'lighting': { bcName: 'HomeCentric Lighting', displayName: 'Lighting' },
-			'decor': { bcName: 'HomeCentric Decor', displayName: 'Decor' },
-			'furniture': { bcName: 'HomeCentric Furniture', displayName: 'Furniture' },
+			'bedroom': { bcName: 'HomeCentric Bedroom', displayName: 'Bedroom', tileImage: 'https://images.unsplash.com/photo-1505691938895-1758d7feb511?w=800&q=80&auto=format&fit=crop' },
+			'bath': { bcName: 'HomeCentric Bath', displayName: 'Bath', tileImage: 'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=800&q=80&auto=format&fit=crop' },
+			'rugs': { bcName: 'HomeCentric Rugs', displayName: 'Rugs', tileImage: 'https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=800&q=80&auto=format&fit=crop' },
+			'kitchen': { bcName: 'HomeCentric Kitchen', displayName: 'Kitchen & Dining', tileImage: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80&auto=format&fit=crop' },
+			'lighting': { bcName: 'HomeCentric Lighting', displayName: 'Lighting', tileImage: 'https://images.unsplash.com/photo-1565538810643-b5bdb714032a?w=800&q=80&auto=format&fit=crop' },
+			'decor': { bcName: 'HomeCentric Decor', displayName: 'Decor', tileImage: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=800&q=80&auto=format&fit=crop' },
+			'furniture': { bcName: 'HomeCentric Furniture', displayName: 'Furniture', tileImage: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&q=80&auto=format&fit=crop' },
 		},
 
 		// Path B reconciliation: real bealls.com exposes Home Centric brand

@@ -4,6 +4,8 @@
 
 **Companion doc**: `docs/strategic/demos/script.md` (the talk track). This doc is for Q&A and recovery.
 
+> **Historical note (2026-05-02):** This prep sheet was authored against the upstream `aisles-storefront` demo flow (Haven / Volt / Ember). The active Bealls fork's demo reel v3 walks the same beats against bealls / Bealls Florida / Home Centric. The Q&A content below — model choice, schema enforcement, vendor risk, accessibility, prompt injection — is brand-agnostic and still applies verbatim. When running a Bealls-family demo live, swap the URLs (`aisles-demo-{1,2,3}-signal-x-studio-labs.vercel.app`), the brand names, and the voice-contrast example (use bealls' off-price comparable-value grammar vs. Bealls Florida's coastal lifestyle voice instead of the Haven/Volt furniture-vs-audio contrast).
+
 ---
 
 ## Pre-show checklist

@@ -206,7 +206,7 @@ Aisles is positioned for this transition. The refinement chat is already an earl
 2. **Near-term**: Conversational discovery where the chat can proactively surface products, not just filter them
 3. **Future**: The visual feed becomes a *rendering surface* for the conversational agent's selections — the shopper tells the agent what they need, and the feed reorganizes in response
 
-This aligns with the Prism north star (`specchain/product/north-star.md`): the agentic orchestration layer is the durable differentiation, and the visual feed is one rendering mode among several.
+The agentic orchestration layer is the durable differentiation; the visual feed is one rendering mode among several.
 
 ### The Creative Asset Challenge
 
@@ -480,17 +480,19 @@ For the engagement plan, deliverables, and current state, see [`docs/strategic/e
 
 ## 6. Reference brands
 
-Aisles ships with three additional reference brands (Haven, Volt, Ember) that prove the architecture is vertical-agnostic. The same inference rules, layout engine, and AI pipeline serve furniture, electronics, and outdoor goods without modification.
+> **Historical note (v0.4.0):** This section reflects the upstream `aisles-storefront` repo's reference brands (Haven, Volt, Ember) — synthetic demos that proved the architecture was vertical-agnostic. The active Bealls fork uses the three real merchant banners introduced in §5 (bealls, Bealls Florida, Home Centric); the synthetic reference brands are not present in this codebase. The vertical-agnostic claim is preserved here because it explains why the engine was designed around a brand-config abstraction rather than hard-coded merchandising — that design property is what makes the Bealls family-of-brands setup possible.
+
+The upstream Aisles prototype shipped with three additional reference brands (Haven, Volt, Ember) that proved the architecture is vertical-agnostic. The same inference rules, layout engine, and AI pipeline served furniture, electronics, and outdoor goods without modification.
 
 | Brand | Domain | Positioning |
 |---|---|---|
-| **Haven** | DTC home furniture | Warm, editorial. Emphasizes lifestyle storytelling and aesthetic discovery. |
-| **Volt** | Consumer audio & electronics | Technical, spec-forward. Emphasizes performance data and compatibility. |
-| **Ember** | Outdoor lifestyle & fire | Rugged, seasonal. Emphasizes activity fit and weather-appropriate bundling. |
+| **Haven** | DTC home furniture | Warm, editorial. Emphasized lifestyle storytelling and aesthetic discovery. |
+| **Volt** | Consumer audio & electronics | Technical, spec-forward. Emphasized performance data and compatibility. |
+| **Ember** | Outdoor lifestyle & fire | Rugged, seasonal. Emphasized activity fit and weather-appropriate bundling. |
 
-The reference brands share no product data, no BC channel, and no visual identity. They do share the inference engine, the layout component vocabulary, the enrichment pipeline, and the prompt construction logic. A brand is a configuration file — `src/lib/brand/config.ts` — not a fork.
+The reference brands shared no product data, no BC channel, and no visual identity. They did share the inference engine, the layout component vocabulary, the enrichment pipeline, and the prompt construction logic. A brand is a configuration file — `src/lib/brand/config.ts` — not a fork.
 
-This is intentional positioning for the BC marketplace app: a merchant installs Aisles once and configures their brand. No code changes required. The reference brands serve as ready-made demonstrations of vertical-agnostic configurability when pitching merchants in adjacent verticals.
+This is the design property that the Bealls fork exercises against real merchant data: a merchant configures their brand in one file, no code changes required. The synthetic reference brands served as the original demonstrations of vertical-agnostic configurability; the Bealls family of three banners now serves the same function with real-merchant grounding.
 
 ---
 

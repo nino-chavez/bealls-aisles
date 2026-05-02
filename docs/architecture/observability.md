@@ -17,14 +17,14 @@ It is designed for side-by-side use during demos: storefront in one window, Obse
 The dashboard is gated by a URL parameter to prevent casual discovery:
 
 ```
-https://aisles-signal-x-studio-labs.vercel.app/observe?key=aisles-observe
+https://aisles-demo-1-signal-x-studio-labs.vercel.app/observe?key=aisles-observe
 ```
 
 Any brand's Observe dashboard uses the same key. Substitute the brand's base URL:
 
-- Haven: `https://aisles-signal-x-studio-labs.vercel.app/observe?key=aisles-observe`
-- Volt: `https://volt-aisles-signal-x-studio-labs.vercel.app/observe?key=aisles-observe`
-- Ember: `https://ember-aisles-signal-x-studio-labs.vercel.app/observe?key=aisles-observe`
+- Bealls: `https://aisles-demo-1-signal-x-studio-labs.vercel.app/observe?key=aisles-observe`
+- Bealls Florida: `https://aisles-demo-2-signal-x-studio-labs.vercel.app/observe?key=aisles-observe`
+- Home Centric: `https://aisles-demo-3-signal-x-studio-labs.vercel.app/observe?key=aisles-observe`
 
 Without `?key=aisles-observe`, the page will not load the dashboard content.
 

@@ -279,7 +279,7 @@ In brief: `BRAND_ID` (or `VITE_BRAND_ID` in the browser context) selects the act
 - LLM prompt context (store name, description, product domain, persona definitions, voice guidance)
 - Category slug → BigCommerce category name mapping
 
-Three brands ship in the codebase: `haven`, `volt`, `ember`. Each is deployed as a separate Vercel project from the same Git repository, with a different `BRAND_ID` environment variable.
+Three brands ship in the codebase: `bealls`, `beallsflorida`, `homecentric`. Each is deployed as a separate Vercel project from the same Git repository, with a different `BRAND_ID` environment variable.
 
 ---
 

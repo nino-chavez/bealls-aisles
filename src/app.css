@@ -4,18 +4,28 @@
  * Aisles — Design Token Structure
  *
  * Per-brand values are injected at runtime by `+layout.svelte` from
- * `getBrand().theme`. This file defines only the universal structure
- * (semantic state colors, neutral scale, scales). The brand-config
- * runtime injection overrides --color-primary, --color-secondary,
- * --color-accent, --color-surface-*, --font-display, --font-body,
- * --font-mono on the theme element.
+ * `getBrand().theme`. The @theme block below declares the structural
+ * SLOTS Tailwind v4 needs to generate utilities (bg-primary, text-accent,
+ * bg-surface-fg etc). Without these slots Tailwind emits no rule for the
+ * utility, and runtime injection has nothing to apply.
  *
- * Earlier revisions of this file shipped DM Sans / DM Serif / #a3522d
- * residue from a forge-brand-kit run on a different brand entirely;
- * those are now removed. Do not reintroduce per-brand defaults here —
- * everything brand-specific lives in `src/lib/brand/config.ts`.
+ * Slot values here are placeholders — runtime override always wins.
+ * See docs/design/SYSTEM.md §1 for the three-layer token contract and
+ * §8.1 for the regression pattern this protects against (2026-05-02).
  */
 @theme {
+	/* Brand slots — placeholders; +layout.svelte overrides per banner. */
+	--color-primary: #aa182c;
+	--color-secondary: #7d2540;
+	--color-accent: #330A3D;
+	--color-surface-bg: #ffffff;
+	--color-surface-fg: #1a1a1a;
+	--color-surface-card: #ffffff;
+	--color-surface-card-fg: #1a1a1a;
+	--color-surface-muted: #f6f6f6;
+	--color-surface-muted-fg: #5a5a5a;
+	--color-surface-border: #e5e5e5;
+
 	/* Semantic state colors — brand-neutral defaults; brands can override */
 	--color-success: #2c6e63;
 	--color-warning: #996d1a;

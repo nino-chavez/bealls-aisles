@@ -29,8 +29,31 @@ export const homeFallbacks: Partial<Record<string, ZoneFallback>> = {
 	// that adds curated best-sellers per brand. Hidden until then.
 	// 'home.featured-row': (brandId) => null,
 
-	// home.editorial-strip — Hidden per spec §3.1 (engine/admin populate; no
-	// reasonable static default).
+	// home.editorial-strip — category-tile-grid keyed off brand.categories
+	// tileImage URLs. Per V-02 in REDESIGN-PLAN: photographic category tiles
+	// per banner. AI may override; this static fallback ensures the home
+	// page never lands without category navigation imagery.
+	'home.editorial-strip': (brandId) => {
+		const brand = getBrandById(brandId);
+		if (!brand) return null;
+		const tilesAll = Object.entries(brand.categories)
+			.filter(([, c]) => Boolean(c.tileImage))
+			.slice(0, 4)
+			.map(([slug, c]) => ({
+				label: c.displayName,
+				href: `/category/${slug}`,
+				image: c.tileImage as string,
+			}));
+		if (tilesAll.length === 0) return null;
+		return {
+			component: 'category-tile-grid',
+			props: {
+				sectionLabel: 'Shop by category',
+				tiles: tilesAll,
+				columns: tilesAll.length === 4 ? 4 : 3,
+			},
+		};
+	},
 
 	// home.brand-spotlight — Hidden per spec §3.1.
 

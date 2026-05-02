@@ -1,20 +1,20 @@
 # Aisles — Multi-Brand Setup Guide
 
-**Version**: 0.1.0
-**Last Updated**: 2026-04-06
+**Version**: 0.2.0
+**Last Updated**: 2026-05-02
 **Audience**: Developers, Platform Operators
 
 ## Overview
 
-A single Aisles codebase serves multiple brands. Brand selection is controlled by the `BRAND_ID` environment variable. Each brand gets its own Vercel project, BigCommerce channel, and visual identity, but shares all application code, AI logic, and infrastructure patterns.
+A single Aisles codebase serves multiple brands. Brand selection is controlled by the `BRAND_ID` environment variable. Each brand gets its own Vercel project, BigCommerce channel (storefront mode) or content set (content mode), and visual identity, but shares all application code, AI logic, and infrastructure patterns.
 
-The three built-in brands demonstrate the breadth of the system:
+The three brands in this fork demonstrate the breadth of the system, including the storefront vs. content mode split (see [ADR-005](decisions/005-storefront-vs-content-modes.md)):
 
-| Brand | Domain | BC Channel | Vercel Project |
-|---|---|---|---|
-| Haven | DTC home furniture | Channel 1 (default) | `aisles-signal-x-studio-labs` |
-| Volt | Consumer audio & electronics | Channel 1846321 | `volt-aisles-signal-x-studio-labs` |
-| Ember | Outdoor lifestyle & fire | Channel 1846324 | `ember-aisles-signal-x-studio-labs` |
+| Brand | Domain | Mode | BC Channel | Vercel Project |
+|---|---|---|---|---|
+| bealls | Off-price family apparel, home, gifts | storefront | Channel 1846324 | `aisles-demo-1` |
+| Bealls Florida | Coastal apparel and lifestyle | storefront | Channel 1846321 | `aisles-demo-2` |
+| Home Centric | Home decor (in-store discovery) | content | n/a (content set) | `aisles-demo-3` |
 
 ---
 
@@ -26,14 +26,14 @@ At runtime, `getBrand()` in `src/lib/brand/config.ts` reads the environment:
 const brandId =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BRAND_ID) ||
   (typeof process !== 'undefined' && process.env?.BRAND_ID) ||
-  'haven';
+  'bealls';
 ```
 
 - **Vercel Functions (server-side)**: reads `BRAND_ID`
 - **Vite/client-side**: reads `VITE_BRAND_ID` (must be prefixed for Vite to expose it)
 - **Node scripts** (enrichment, seeding): reads `BRAND_ID` from `process.env`
 
-Unrecognized brand IDs fall back to `haven`.
+Unrecognized brand IDs fall back to `bealls`.
 
 ---
 
@@ -44,18 +44,20 @@ Every brand is defined by this TypeScript interface in `src/lib/brand/config.ts`
 ```typescript
 interface BrandConfig {
   id: string;          // Machine identifier, matches the BRAND_ID value
-  name: string;        // Display name ("Haven", "Volt", "Ember")
+  name: string;        // Display name ("bealls", "Bealls Florida", "Home Centric")
   tagline: string;     // Short tagline shown in the nav and footer
-  domain: string;      // Product domain label ("DTC home furniture")
+  domain: string;      // Product domain label
   footerNote: string;  // Footer attribution line
 
+  mode?: 'storefront' | 'content'; // Default 'storefront'. See ADR-005.
+
   bc: {
-    channelId: number;      // BigCommerce channel ID
+    channelId: number;      // BigCommerce channel ID (unused in content mode)
     categoryPrefix: string; // Prefix to filter BC categories by brand
   };
 
   categories: Record<string, {
-    bcName: string;      // Exact BC category name to query
+    bcName: string;      // Exact BC category name to query (or content-pillar key)
     displayName: string; // Human-readable display name
   }>;
 
@@ -80,7 +82,7 @@ interface BrandConfig {
   prompt: {
     storeName: string;          // Used in LLM prompts
     storeDescription: string;   // Brand description injected into prompts
-    productDomain: string;      // e.g., "furniture", "audio electronics"
+    productDomain: string;      // e.g., "off-price family apparel", "coastal apparel"
     personaDefinitions: Record<'gatherer'|'hunter'|'researcher'|'gifter', string>;
     voiceGuidance: string;      // Writing style instructions for the AI
   };
@@ -91,15 +93,21 @@ The `theme` object is injected as CSS custom properties on `:root` at page load,
 
 The `prompt` fields are injected into every AI call — layout generation, refinement, and enrichment — so the AI produces brand-appropriate copy and persona definitions that match the product domain.
 
+The `mode` field selects between transactional storefront mode and content/locator mode. See [ADR-005](decisions/005-storefront-vs-content-modes.md) for the full mode contract and component vocabulary differences.
+
 ---
 
 ## How to Add a New Brand
 
-### Step 1: Create the BigCommerce Channel
+### Step 1: Create the BigCommerce Channel (storefront mode only)
+
+For content-mode brands, skip this step — there is no BC channel; content is hand-authored in `brands/{brand}-content.json` per ADR-005.
+
+For storefront-mode brands:
 
 1. In the BigCommerce control panel, go to **Channel Manager** and create a new channel
 2. Note the channel ID (visible in the URL when you open the channel settings)
-3. Create the category structure under this channel. Categories must be named with a brand prefix that matches what you'll set in `categoryPrefix` (e.g., `Newbrand Living Room`, `Newbrand Bedroom`)
+3. Create the category structure under this channel. Categories must be named with a brand prefix that matches what you'll set in `categoryPrefix` (e.g., `Newbrand Women`, `Newbrand Home`)
 4. Generate a Storefront API token for this channel (Storefront API tokens are channel-specific)
 5. Add products to the channel's categories
 
@@ -127,6 +135,8 @@ const BRANDS: Record<string, BrandConfig> = {
     tagline: 'Your brand tagline here',
     domain: 'your product domain',
     footerNote: 'New Brand is a demo storefront powered by Aisles',
+
+    mode: 'storefront', // or 'content' — see ADR-005
 
     bc: {
       channelId: 1234567,   // Your BC channel ID
@@ -174,15 +184,17 @@ const BRANDS: Record<string, BrandConfig> = {
 
 **Persona definitions matter.** The AI uses these verbatim when building layout prompts. Write them as behavior descriptions, not character sketches. Reference the existing brands for calibration:
 
-- Haven gatherer: "Exploratory, inspiration-driven. Browsing aesthetics, lifestyle imagery..."
-- Volt hunter: "Knows exactly what they want. Comparing prices, checking specs..."
-- Ember gifter: "Fire pit as a housewarming or holiday gift. Needs impressive presentation..."
+- bealls hunter: focused on comparable-value pricing, clear sale grammar, fast scan of price-rail merchandising
+- Bealls Florida gatherer: coastal lifestyle, vacation-imagery-driven, "Florida is a feeling" aspirational tone
+- Home Centric gifter: editorial home-decor inspiration, store-locator-led intent (no online checkout)
 
 **Voice guidance matters equally.** This is the single line that most shapes AI copy quality. Be prescriptive about what to lead with and what to avoid.
 
-### Step 4: Run the Enrichment Pipeline
+### Step 4: Run the Enrichment Pipeline (storefront mode only)
 
-Enrichment is channel-specific. Set the environment variables for the new channel and run:
+Content-mode brands use hand-authored persona-fit values per ADR-005 and skip this step.
+
+For storefront-mode brands, enrichment is channel-specific. Set the environment variables for the new channel and run:
 
 ```bash
 BRAND_ID=newbrand \
@@ -244,22 +256,24 @@ The `categories` field in the brand config maps URL slugs to BigCommerce categor
 
 ```typescript
 categories: {
-  'living-room': { bcName: 'Haven Living Room', displayName: 'Living Room' },
-  'office':      { bcName: 'Haven Office',      displayName: 'Office' },
+  'women': { bcName: 'Bealls Women', displayName: 'Women' },
+  'home':  { bcName: 'Bealls Home',  displayName: 'Home' },
 }
 ```
 
-- **Key** (e.g., `living-room`): the URL slug used in `/category/[slug]` routes
+- **Key** (e.g., `women`): the URL slug used in `/category/[slug]` routes
 - **`bcName`**: the exact `name` of the category in BigCommerce (case-sensitive)
 - **`displayName`**: shown in the storefront navigation and page titles
 
 If a slug in the URL does not match any key in the `categories` map, the category page returns a 404. If the `bcName` does not match any category in BigCommerce, the category page also returns a 404.
 
+For content-mode brands the `categories` map keys identify content pillars rather than catalog routes (see ADR-005).
+
 ---
 
 ## BigCommerce Multi-Channel Configuration
 
-Each brand requires its own BC channel to isolate product catalogs and storefront tokens.
+Each storefront-mode brand requires its own BC channel to isolate product catalogs and storefront tokens. Content-mode brands (e.g., Home Centric) do not use a BC channel.
 
 **Channel types**: Use the "Storefront" channel type (not a headless channel) for full GraphQL Storefront API support.
 
@@ -279,9 +293,9 @@ The enrichment script (`enrich.ts`) handles this automatically based on `BIGCOMM
 
 Theme tokens are injected into `:root` as CSS custom properties. The page layout reads these via `var(--...)`. You do not need to create brand-specific CSS files.
 
-The Google Fonts URL is injected as a `<link rel="stylesheet">` in the document `<head>`. Include all weights used by the theme fonts. JetBrains Mono is used by all brands for monospace/code contexts and should always be included.
+The Google Fonts URL is injected as a `<link rel="stylesheet">` in the document `<head>`. Include all weights used by the theme fonts. JetBrains Mono is used as a monospace fallback and should always be available.
 
-For dark-background brands (like Volt), ensure surface tokens provide sufficient contrast:
+For dark-background or high-contrast brands, ensure surface tokens provide sufficient contrast:
 - `surfaceBg` + `surfaceFg` contrast ratio should meet WCAG AA (4.5:1 for body text)
 - `surfaceCard` + `surfaceCardFg` contrast ratio should meet WCAG AA
 - `surfaceMuted` + `surfaceMutedFg` is typically relaxed (large text / secondary context)
@@ -296,6 +310,6 @@ All brands share the same Upstash Redis instance and Neon Postgres database. Cac
 - Session store: `aisles:session:{sessionId}`
 - Enrichment data: `enriched_products` table, keyed by `bc_entity_id`
 
-Because category slugs and product entity IDs are global across brands (not namespaced by brand), there is a theoretical collision risk if two brands use the same category slug (e.g., both have an `accessories` category). In practice this is avoided by using brand-prefixed BC category names and ensuring category slugs don't overlap across brands.
+Because category slugs and product entity IDs are global across brands (not namespaced by brand), there is a theoretical collision risk if two brands use the same category slug. In practice this is avoided by using brand-prefixed BC category names.
 
 If you need strict isolation, use separate Upstash and Neon instances per brand and set the connection environment variables per Vercel project.

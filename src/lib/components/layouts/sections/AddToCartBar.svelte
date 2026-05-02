@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getEmitter } from '$lib/signals/emitter';
+	import { showToast } from '$lib/components/primitives/Toast.svelte';
 
 	let {
 		productEntityId,
@@ -46,6 +47,12 @@
 			if (!res.ok) throw new Error('Failed to add to cart');
 			const result = await res.json();
 			message = `Added to cart (${result.itemCount} items)`;
+			showToast({
+				message: `Added to bag — ${productName ?? 'item'}`,
+				variant: 'success',
+				href: '/cart',
+				hrefLabel: 'View cart',
+			});
 
 			getEmitter()?.emit('commerce.add_to_cart', {
 				productId: productId ?? String(productEntityId),
