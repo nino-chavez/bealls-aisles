@@ -49,8 +49,10 @@ function loadKey(name, searchPaths = []) {
 }
 
 const rallyEnv = path.resolve(process.env.HOME || '', 'Workspace/dev/apps/rally-hq/.env.local');
-const ELEVENLABS_API_KEY = loadKey('ELEVENLABS_API_KEY', [rallyEnv, path.join(ROOT, '.env')]);
-const OPENAI_API_KEY = loadKey('OPENAI_API_KEY', [rallyEnv]);
+const projectEnvLocal = path.resolve(ROOT, '..', '..', '.env.local');
+const projectEnv = path.resolve(ROOT, '..', '..', '.env');
+const ELEVENLABS_API_KEY = loadKey('ELEVENLABS_API_KEY', [projectEnvLocal, projectEnv, rallyEnv, path.join(ROOT, '.env')]);
+const OPENAI_API_KEY = loadKey('OPENAI_API_KEY', [projectEnvLocal, projectEnv, rallyEnv]);
 const TTS_BACKEND = ELEVENLABS_API_KEY ? 'elevenlabs' : 'openai';
 
 if (!ELEVENLABS_API_KEY && !OPENAI_API_KEY) {
@@ -64,21 +66,30 @@ const TTS_MODEL = process.env.TTS_MODEL || captions.model || 'eleven_multilingua
 const TTS_INSTRUCTIONS = captions.instructions || null;
 const DEFAULT_HOLD_S = captions.defaultHoldSeconds ?? 0.4;
 
-// ElevenLabs voice IDs for pre-built voices good for demos/narration
+// ElevenLabs voice IDs — narrator-grade stock voices that work well for
+// technical/builder content. The default is `brian` (deep American narrator)
+// — close to an "engineering podcast" register, low theatrical variance.
 const ELEVENLABS_VOICES = {
-	'george': 'JBFqnCBsd6RMkjVDRZzb',    // British, warm, narration
-	'rachel': '21m00Tcm4TlvDq8ikWAM',     // American, clear, professional
+	'brian': 'nPczCjzI2devNBz1zQrb',      // American, deep, narrator (default — best for tech demos)
+	'bill': 'pqHfZKP75CvOlQylNhV4',        // American, mature, documentary narrator
+	'daniel': 'onwK4e9ZLuTAKqWW03F9',      // British, authoritative, news-anchor
+	'liam': 'TX3LPaxmHKxFdv7VOQHJ',        // American, articulate, younger
+	'george': 'JBFqnCBsd6RMkjVDRZzb',      // British, warm, narration
+	'rachel': '21m00Tcm4TlvDq8ikWAM',      // American, clear, professional
 	'adam': 'pNInz6obpgDQGcFmaJgB',        // American, deep, confident
-	'josh': 'TxGEqnHWrfWFTfGW9XjX',       // American, conversational
+	'josh': 'TxGEqnHWrfWFTfGW9XjX',        // American, conversational
 	'sam': 'yoZ06aMxZJJ28mfd3POQ',         // American, casual
 	'charlie': 'IKne3meq5aSn9XLyUdCD',     // Australian, friendly
 };
 
-// Landscape 16:10 matching the recaptured Playwright viewport (1440×900).
-// Screenshots composite full-bleed; captions overlay as a translucent band at the bottom.
-const VIDEO_W = 1440;
-const VIDEO_H = 900;
+// Frame layout: screenshot on top, caption band below — no overlap.
+// Captures are 1440×900; caption band occupies its own 220px region underneath
+// so nothing in the screenshot is ever obscured.
+const SCREENSHOT_W = 1440;
+const SCREENSHOT_H = 900;
 const CAPTION_BAND_H = 220;
+const VIDEO_W = SCREENSHOT_W;
+const VIDEO_H = SCREENSHOT_H + CAPTION_BAND_H; // 1120
 const CAPTION_PAD_X = 60;
 const CAPTION_PAD_TOP = 22;
 const TITLE_FONT_SIZE = 30;
@@ -112,9 +123,12 @@ async function generateTTS_ElevenLabs(text, outputPath) {
 			text,
 			model_id: TTS_MODEL,
 			voice_settings: {
-				stability: 0.55,         // balanced — natural, not robotic
-				similarity_boost: 0.80,
-				style: 0.25,             // subtle style, not theatrical
+				// Tuned for technical narration: high stability for consistent pacing,
+				// no expressive style (which produces erratic cadence on tech content),
+				// modest similarity boost. Closer to ElevenLabs' suggested narrator preset.
+				stability: 0.7,
+				similarity_boost: 0.8,
+				style: 0.0,
 				use_speaker_boost: true,
 			},
 		}),
@@ -168,44 +182,46 @@ function buildFrame(scene, index, framePath) {
 	const captionText = scene.caption;
 	const titleText = scene.title;
 
-	// Screenshot crop: from top of the source, sized to fill the full VIDEO_W×VIDEO_H.
-	// Caption band can be anchored top or bottom (default bottom). When a scene's UI
-	// is anchored to the same edge as the band — e.g. a chat FAB pinned bottom-right —
-	// flip the band to the opposite edge so it doesn't obscure that UI.
-	const position = scene.captionPosition || 'bottom';
+	// Layout: screenshot occupies the top SCREENSHOT_H pixels (resized to fit width,
+	// preserving aspect, letterboxed if needed). Caption band is a solid region
+	// directly underneath — never overlaps the screenshot.
 	const textWidth = VIDEO_W - CAPTION_PAD_X * 2;
-	const captionBandY = position === 'top' ? 0 : VIDEO_H - CAPTION_BAND_H;
-	const accentLineY = position === 'top' ? CAPTION_BAND_H - 2 : captionBandY;
+	const captionBandY = SCREENSHOT_H;
 	const titleY = captionBandY + CAPTION_PAD_TOP;
 	const bodyY = titleY + TITLE_FONT_SIZE + 14;
 
 	const args = [
-		// 1. Screenshot full-bleed — resize to fill, crop overflow from bottom
+		// 1. Screenshot — resize to fit inside SCREENSHOT_W×SCREENSHOT_H (preserve
+		//    aspect, no crop), letterbox extra space with the BG_COLOR. Then place
+		//    on a VIDEO_W×VIDEO_H canvas anchored top so the bottom CAPTION_BAND_H
+		//    remains empty for the caption band.
 		src,
-		'-resize', `${VIDEO_W}x${VIDEO_H}^`,
-		'-gravity', 'north',
+		'-resize', `${SCREENSHOT_W}x${SCREENSHOT_H}`,
 		'-background', BG_COLOR,
+		'-gravity', 'center',
+		'-extent', `${SCREENSHOT_W}x${SCREENSHOT_H}`,
+		'-gravity', 'north',
 		'-extent', `${VIDEO_W}x${VIDEO_H}`,
 
-		// 2. Translucent caption band (rgba so it blends with the screenshot)
+		// 2. Caption band — solid (no transparency, no overlap)
 		'(',
 			'-size', `${VIDEO_W}x${CAPTION_BAND_H}`,
-			'xc:rgba(10,10,10,0.88)',
+			`xc:${BG_COLOR}`,
 		')',
 		'-gravity', 'northwest',
 		'-geometry', `+0+${captionBandY}`,
 		'-composite',
 
-		// 3. Emerald hairline on the inner edge of the band (separates band from screenshot)
+		// 3. Emerald hairline at the seam between screenshot and caption band
 		'(',
 			'-size', `${VIDEO_W}x2`,
 			`xc:${ACCENT_COLOR}`,
 		')',
 		'-gravity', 'northwest',
-		'-geometry', `+0+${accentLineY}`,
+		'-geometry', `+0+${captionBandY}`,
 		'-composite',
 
-		// 4. Scene counter — tiny, top-right of the caption band
+		// 4. Scene counter — top-right of the caption band
 		'-font', 'Helvetica',
 		'-pointsize', String(COUNTER_FONT_SIZE),
 		'-fill', '#737373',
@@ -277,8 +293,13 @@ async function main() {
 			console.log(`  ${idx} cached`);
 			continue;
 		}
-		console.log(`  ${idx} → ${scene.caption.length} chars`);
-		await generateTTS(scene.caption, audioPath);
+		// `tts` overrides `caption` for narration only — used when the visible
+		// caption needs technical accuracy (a code-style label, a brand
+		// spelling like "Bealls") but the spoken read should differ
+		// (plain English, "Bells" pronunciation).
+		const narration = scene.tts || scene.caption;
+		console.log(`  ${idx} → ${narration.length} chars`);
+		await generateTTS(narration, audioPath);
 		await new Promise((r) => setTimeout(r, 800));
 	}
 
