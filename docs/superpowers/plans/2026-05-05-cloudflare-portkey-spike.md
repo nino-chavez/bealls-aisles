@@ -1,21 +1,23 @@
-# Cloudflare + Portkey Migration — Spike Plan
+# Cloudflare-only Migration — Spike Plan
+
+> **Pivot note (2026-05-05):** Original framing was "Cloudflare + Portkey." After the adapter feasibility deep-dive (`docs/spikes/2026-05-05-cloudflare-portkey/adapter-feasibility.md`) and CF AI Gateway evaluation (`cf-ai-gateway-decision.md`), Portkey was dropped in favor of **Cloudflare AI Gateway**. Branch and filenames retain the legacy `portkey` slug — cosmetic. The follow-on migration plan (if Go) will use a clean slug.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Validate (and timebox) a migration of Aisles from Vercel + Vercel AI Gateway to Cloudflare-only infrastructure (Workers + bindings) using Portkey as the AI gateway. The spike ends with a Go / No-Go recommendation, a working PoC of the riskiest pieces, and a sized full-migration plan — not a production cutover.
+**Goal:** Validate (and timebox) a migration of Aisles from Vercel + Vercel AI Gateway to **Cloudflare-only infrastructure** — Workers + Cloudflare AI Gateway. The spike ends with a Go / No-Go recommendation, a working PoC of the riskiest pieces, and a sized full-migration plan — not a production cutover.
 
-**Architecture:** The migration touches two layers (per `CLAUDE.md`): the **foundation** (SvelteKit adapter, deploy model, env binding, streaming) and the **engine** (AI provider routing through Portkey instead of `@ai-sdk/gateway`). Data stores (Neon Postgres, Upstash Redis) are already accessed over HTTP and should require zero changes — the spike confirms that. The three-Vercel-project multi-brand model maps to three Workers (one per `BRAND_ID`) deploying off `main`.
+**Architecture:** The migration touches two layers (per `CLAUDE.md`): the **foundation** (SvelteKit adapter, deploy model, env binding, streaming) and the **engine** (AI provider routing through Cloudflare AI Gateway instead of `@ai-sdk/gateway`). The engine swap is implemented as a `baseURL` override on the maintained `@ai-sdk/anthropic` provider — no new SDK, no stale package. Data stores (Neon Postgres, Upstash Redis) are already accessed over HTTP — confirmed Workers-compatible. The three-Vercel-project multi-brand model maps to three Workers (one per `BRAND_ID`) deploying off `main`.
 
 **Tech Stack:**
 - Current: SvelteKit 2, Svelte 5, `@sveltejs/adapter-vercel`, `ai` v6 + `@ai-sdk/gateway`, `@ai-sdk/anthropic`, `@neondatabase/serverless`, `@upstash/redis`, Vercel Functions
-- Target: Cloudflare Workers (`@sveltejs/adapter-cloudflare`), Wrangler, `ai` v6 + Portkey provider (`@portkey-ai/vercel-provider` or OpenAI-compatible), `@neondatabase/serverless` (unchanged), `@upstash/redis` (unchanged or Cloudflare KV)
+- Target: Cloudflare Workers (`@sveltejs/adapter-cloudflare` 7.2.x), Wrangler 4.x, `ai` v6 + `@ai-sdk/anthropic` with `createAnthropic({ baseURL })` pointing at Cloudflare AI Gateway, `@neondatabase/serverless` (unchanged), `@upstash/redis` (unchanged)
 - Deploy: Wrangler + GitHub Actions (one Worker per brand) replacing three Vercel projects
 
 ---
 
 ## Spike framing
 
-A spike is **timeboxed investigation**, not implementation. Total budget: **5 working days**. Each task below is half-to-full-day.
+A spike is **timeboxed investigation**, not implementation. Total budget: **3 working days** (revised down from 5 after the CF AI Gateway pivot collapsed several Portkey-specific tasks). Each task below is half-to-full-day.
 
 The spike produces three artifacts:
 1. **`docs/spikes/2026-05-05-cloudflare-portkey/REPORT.md`** — findings, decision matrix, Go/No-Go.
@@ -30,15 +32,18 @@ Investigation tasks are ordered by risk — highest unknowns first. Stop early a
 
 These are the unknowns. Each task targets one or more.
 
-| # | Question | Risk if wrong | Task(s) |
+| # | Question | Status entering spike | Task(s) |
 |---|----------|---------------|---------|
-| Q1 | Does `@sveltejs/adapter-cloudflare` support our SvelteKit feature surface (streaming, `$env/dynamic/private`, server-only modules)? | Adapter incompatibility = dead-end. | T1, T5 |
-| Q2 | Can Portkey replace `@ai-sdk/gateway` with the same AI SDK ergonomics — fallback chains, structured `Output`, streaming, cost tags? | Spike-killer if structured outputs or streaming don't work. | T2, T5 |
-| Q3 | Do `@neondatabase/serverless` and `@upstash/redis` work unchanged on Workers? | If broken, scope expands to D1 + KV migration. | T3 |
-| Q4 | Does the three-brand deploy model (one repo, three deploy targets via `BRAND_ID`) translate cleanly to Wrangler? | If awkward, rethink build pipeline. | T4 |
-| Q5 | Does Portkey's observability (logs, metrics, trace tags) match or exceed what Vercel AI Gateway provides? | Loss of observability is a real cost — needs to be quantified. | T6 |
-| Q6 | What's the cold-start + p50/p95 latency delta vs current Vercel deploy on the layout-generation hot path? | Worse latency on the demo-defining endpoint kills the migration. | T7 |
-| Q7 | What's the all-in monthly cost delta (Workers + Portkey + Neon/Upstash external) vs current Vercel + AI Gateway + Upstash + Neon? | Migration must not be more expensive without offsetting wins. | T8 |
+| Q1 | Does `@sveltejs/adapter-cloudflare` support our SvelteKit feature surface (streaming, `$env/dynamic/private`, server-only modules)? | **Likely yes** — adapter 7.x mature, no banned-API usage in `src/`. PoC confirms. | T1, T5 |
+| Q2 | Does CF AI Gateway via `createAnthropic({ baseURL })` provide parity with `@ai-sdk/gateway` for `generateText`, `streamText`, structured `Output`? | **Likely yes** — gateway is thin proxy over Anthropic; AI SDK provider is unchanged. PoC confirms. | T2, T5 |
+| Q3 | Do `@neondatabase/serverless` and `@upstash/redis` work unchanged on Workers? | **Resolved (deep-dive)** — both fetch-based. PoC verifies end-to-end. | T3 |
+| Q4 | Does the three-brand deploy model (one repo, three deploy targets via `BRAND_ID`) translate cleanly to Wrangler? | Open. | T4 |
+| Q5 | Does CF AI Gateway's dashboard answer the five operational queries we currently answer in Vercel AI Gateway, within the 5-metadata-field limit? | Open — likely better (unified with Workers analytics). | T6 |
+| Q6 | What's the cold-start + p50/p95 latency delta vs current Vercel deploy on the layout-generation hot path? | Open — likely small improvement. | T7 |
+| Q7 | What's the all-in monthly cost delta (Workers + CF AI Gateway + Neon + Upstash) vs current Vercel + AI Gateway + Upstash + Neon? | **Likely favorable** — CF AI Gateway is free, no token markup. Spike quantifies. | T8 |
+| **NQ1** | Universal endpoint vs Anthropic-specific endpoint — can we get fallback chains without giving up the clean `createAnthropic({ baseURL })` integration? | New (post-pivot). | T2 |
+| **NQ2** | Does our 3-tag set (`feature`, `persona`, `category`) plus any future tags fit within CF AI Gateway's 5-metadata-field limit? | New (post-pivot). | T6 |
+| **NQ3** | Are CF-added response headers (`cf-aig-step`, `cf-cache-status`) preserved through the SvelteKit response so we can debug in browser? | New (post-pivot). | T2 |
 
 ---
 
@@ -59,7 +64,9 @@ The spike modifies these files. The full migration would touch more — we expli
 - `docs/spikes/2026-05-05-cloudflare-portkey/decision-matrix.md` — scored comparison
 
 **Untouched in spike (would change in full migration):**
-- All other `+server.ts` routes (`/api/suggest`, `/api/refine`, `/api/layout/stream`, `/api/signals`, observe routes)
+- `/api/suggest`, `/api/refine` — they will migrate identically to `/api/layout` (same `gatewayProviderOptions` seam) but PoC scope is one route to bound risk
+- `/api/layout/stream` — covered only in T5 streaming validation, not full migration
+- `/api/signals`, observe routes — no AI calls; trivial to migrate, deferred
 - `enrichment/enrich.ts` (script context, not request-path)
 - `cache.ts`, `db.ts` (PoC validates they work as-is)
 
@@ -231,85 +238,87 @@ git commit -m "spike(cf-portkey): T1 cloudflare adapter swap"
 
 ---
 
-## Task 2: Portkey provider — replace one `gateway()` call
+## Task 2: Cloudflare AI Gateway — replace one `gateway()` call
 
-**Hypothesis:** Portkey provides an AI SDK-compatible provider that supports `generateText`, structured `Output` (Zod schemas), and streaming, with fallback chains configured via Portkey config (not provider options).
+**Hypothesis:** Cloudflare AI Gateway is a thin proxy over Anthropic. By overriding `baseURL` on `@ai-sdk/anthropic`, every AI SDK feature we use today (`generateText`, `streamText`, structured `Output`) keeps working with zero provider-package changes. Metadata flows via the `cf-aig-metadata` header. Fallback is configured at the gateway dashboard level OR via the Universal endpoint per-request.
 
-**Validation:** `/api/layout` returns a valid layout when the request is routed through Portkey. The structured `Output` shape parses the same as via `@ai-sdk/gateway`. Manual fallback chain (haiku → sonnet) is exercisable from Portkey's dashboard config (no code change needed).
+**Validation:** `/api/layout` returns a valid layout when routed through CF AI Gateway. Structured `Output` parses identically to the current Vercel-Gateway path. The CF AI Gateway dashboard shows the request, with our 3 metadata fields populated. Response includes `cf-aig-step: 0` (primary served).
 
-**Exit criteria:** A Portkey-routed layout response equals (in shape, not byte-for-byte) the AI Gateway response. Fallback config tested. OR a concrete blocker (e.g., structured output unsupported on Portkey + Anthropic).
+**Exit criteria:** Gateway-routed layout response is shape-equivalent to current. Metadata visible in dashboard. NQ3 (CF response headers preserved through SvelteKit) confirmed. OR a concrete blocker.
 
 **Files:**
-- Modify: `src/lib/server/ai-model.ts` (add Portkey path)
-- Modify: `src/routes/api/layout/+server.ts` (use new model selector)
-- Modify: `package.json`
+- Modify: `src/lib/server/ai-model.ts` (replace gateway path)
+- Modify: `package.json` (no new deps — `@ai-sdk/anthropic` already present)
 - Modify: `.dev.vars`
 
-- [ ] **Step 1: Sign up for Portkey, create a virtual key for Anthropic, create a config with haiku-4.5 primary + sonnet-4.6 fallback**
+- [ ] **Step 1: Create a Cloudflare AI Gateway in the dashboard**
 
-Document the virtual key + config IDs in `REPORT.md` Q2. Do not commit keys.
+In the Cloudflare dashboard → AI Gateway → create new gateway named `aisles-bealls`. Capture:
+- Account ID (already on file for Workers)
+- Gateway ID = `aisles-bealls`
+- Optional: enable "stored API keys" so the Anthropic key lives at Cloudflare and our Worker doesn't need it. For spike, easier to pass the Anthropic key client-side via standard `x-api-key` header — defer stored-keys for follow-on.
 
-- [ ] **Step 2: Install Portkey provider**
+Note IDs in `REPORT.md` Q2 section.
 
-Run:
-```bash
-npm install @portkey-ai/vercel-provider
-```
-
-(If the package is unmaintained or doesn't support AI SDK v6: fall back to using `createOpenAI` from `@ai-sdk/openai` with Portkey's OpenAI-compatible URL. Note which path was taken in the report.)
-
-- [ ] **Step 3: Add Portkey path to `src/lib/server/ai-model.ts`**
+- [ ] **Step 2: Replace gateway path in `src/lib/server/ai-model.ts`**
 
 Replace contents with:
 ```ts
 /**
  * Model selector — supports three backends:
- *   1. Portkey (target) — when PORTKEY_API_KEY is set
- *   2. Vercel AI Gateway — when AI_GATEWAY_API_KEY or VERCEL_OIDC_TOKEN is set
+ *   1. Cloudflare AI Gateway (target) — when CF_AIG_ACCOUNT_ID + CF_AIG_GATEWAY_ID set
+ *   2. Vercel AI Gateway — when AI_GATEWAY_API_KEY or VERCEL_OIDC_TOKEN set
  *   3. Direct Anthropic — fallback, requires ANTHROPIC_API_KEY
  *
- * The seam is intentional: spike-mode flips between paths via env, no code edits.
+ * Spike-mode flips between paths via env, no code edits.
  */
 import { gateway } from 'ai';
 import { createAnthropic } from '@ai-sdk/anthropic';
-import { createPortkey } from '@portkey-ai/vercel-provider';
 import { env } from '$env/dynamic/private';
 
-const anthropic = createAnthropic({ apiKey: env.ANTHROPIC_API_KEY });
+export const useCfAig = !!(env.CF_AIG_ACCOUNT_ID && env.CF_AIG_GATEWAY_ID);
+export const useGateway = !useCfAig && (!!env.AI_GATEWAY_API_KEY || !!env.VERCEL_OIDC_TOKEN);
 
-export const usePortkey = !!env.PORTKEY_API_KEY;
-export const useGateway = !usePortkey && (!!env.AI_GATEWAY_API_KEY || !!env.VERCEL_OIDC_TOKEN);
+const directAnthropic = createAnthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
-const portkey = usePortkey
-	? createPortkey({
-			apiKey: env.PORTKEY_API_KEY,
-			config: env.PORTKEY_CONFIG_ID, // points at fallback chain in Portkey dashboard
+const cfAig = useCfAig
+	? createAnthropic({
+			apiKey: env.ANTHROPIC_API_KEY,
+			baseURL: `https://gateway.ai.cloudflare.com/v1/${env.CF_AIG_ACCOUNT_ID}/${env.CF_AIG_GATEWAY_ID}/anthropic`,
 		})
 	: null;
 
 export function layoutModel() {
-	if (usePortkey && portkey) return portkey.chatModel('claude-haiku-4-5-20251001');
+	if (useCfAig && cfAig) return cfAig('claude-haiku-4-5-20251001');
 	if (useGateway) return gateway('anthropic/claude-haiku-4.5');
-	return anthropic('claude-haiku-4-5-20251001');
+	return directAnthropic('claude-haiku-4-5-20251001');
 }
 
+/**
+ * Provider options builder.
+ * - CF AIG path: returns headers to attach via the AI SDK's `headers` option
+ *   on the call site (cf-aig-metadata, optional cf-aig-cache-ttl).
+ * - Vercel gateway path: returns providerOptions.gateway (existing shape).
+ */
 export function gatewayProviderOptions(persona: string, categorySlug: string) {
-	if (usePortkey) {
+	if (useCfAig) {
 		return {
-			portkey: {
-				metadata: {
+			headers: {
+				'cf-aig-metadata': JSON.stringify({
 					feature: 'layout',
 					persona,
 					category: categorySlug,
-				},
+				}),
 			},
 		};
 	}
 	if (useGateway) {
 		return {
-			gateway: {
-				models: ['anthropic/claude-sonnet-4.6'],
-				tags: [`feature:layout`, `persona:${persona}`, `category:${categorySlug}`],
+			providerOptions: {
+				gateway: {
+					models: ['anthropic/claude-sonnet-4.6'],
+					tags: [`feature:layout`, `persona:${persona}`, `category:${categorySlug}`],
+				},
 			},
 		};
 	}
@@ -317,35 +326,47 @@ export function gatewayProviderOptions(persona: string, categorySlug: string) {
 }
 ```
 
-(Verify exact API shape against current Portkey docs at spike time — fields may have moved. Note any deviation in REPORT.)
+**Note:** the return shape of `gatewayProviderOptions` differs between branches (CF AIG returns `{ headers }` for the AI SDK call's top-level option; Vercel gateway returns `{ providerOptions }`). The 4 callsites currently spread the result onto `generateText`/`streamText` calls — this still works because both keys are valid AI SDK options. **Verify** at first callsite during PoC; adjust shape if needed.
 
-- [ ] **Step 4: Add Portkey env to `.dev.vars`**
+- [ ] **Step 3: Add CF AIG env to `.dev.vars`**
 
 ```
-PORTKEY_API_KEY=pk-live-...
-PORTKEY_CONFIG_ID=cfg-...
+CF_AIG_ACCOUNT_ID=...
+CF_AIG_GATEWAY_ID=aisles-bealls
 ```
 
-- [ ] **Step 5: Run a layout request through Portkey**
+(Anthropic key is already there.)
 
-Run dev server with Portkey env set, hit `/api/layout?persona=family-shopper&category=women`. Capture:
-- Response shape — does the structured Zod parse pass?
+- [ ] **Step 4: Run a layout request through CF AI Gateway**
+
+Run `wrangler dev` with the env set, hit `/api/layout?persona=family-shopper&category=women`. Capture:
+- Response shape — does the structured Zod `Output` parse pass?
 - Latency — first-call (cold) and second-call (warm) p50.
-- Portkey dashboard — request logged? cost tracked? fallback config visible?
+- CF AI Gateway dashboard — request logged? metadata fields present? cost estimated?
 
-- [ ] **Step 6: Test the fallback chain**
+- [ ] **Step 5: Verify response headers reach the browser (NQ3)**
 
-In Portkey dashboard, temporarily mis-configure the haiku key to force a fallback to sonnet. Re-run the request. Expected: response still succeeds (sonnet path).
+Open Chrome DevTools Network tab, hit `/api/layout`. In the response headers panel, look for:
+- `cf-aig-step` (which fallback rung served — should be `0` for normal flow)
+- `cf-cache-status` (cache hit/miss)
+
+If absent: SvelteKit's response handling may be stripping or replacing the Response object. Note in REPORT — non-blocking but worth knowing.
+
+- [ ] **Step 6: Test fallback (deferred or via Universal endpoint)**
+
+Two paths:
+- **Easier:** configure a default fallback rule in the CF AI Gateway dashboard (if available). Force-fail haiku via misconfigured key, verify sonnet serves.
+- **Harder:** switch one route to use the Universal endpoint URL with a per-request fallback array. Document the trade-off (loses clean SDK integration). Mark as follow-on if the dashboard config is sufficient.
 
 - [ ] **Step 7: Document findings**
 
-REPORT Q2: structured output works Y/N, streaming verified Y/N (test with `streamText` separately if time allows), fallback chain works Y/N, observability surface vs Vercel AI Gateway side-by-side notes.
+REPORT Q2: structured output works Y/N, dashboard observability matches expectations Y/N, fallback chain works Y/N, NQ3 outcome.
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/lib/server/ai-model.ts package.json package-lock.json docs/spikes/
-git commit -m "spike(cf-portkey): T2 portkey provider behind env flag"
+git add src/lib/server/ai-model.ts package.json docs/spikes/
+git commit -m "spike(cf-portkey): T2 cloudflare ai gateway via baseURL override"
 ```
 
 ---
@@ -429,9 +450,10 @@ npx wrangler secret put ANTHROPIC_API_KEY --env bealls
 npx wrangler secret put DATABASE_URL --env bealls
 npx wrangler secret put KV_REST_API_URL --env bealls
 npx wrangler secret put KV_REST_API_TOKEN --env bealls
-npx wrangler secret put PORTKEY_API_KEY --env bealls
-npx wrangler secret put PORTKEY_CONFIG_ID --env bealls
-# repeat for bealls-fl, home-centric
+npx wrangler secret put CF_AIG_ACCOUNT_ID --env bealls
+npx wrangler secret put CF_AIG_GATEWAY_ID --env bealls
+# repeat for bealls-fl, home-centric (likely separate AI gateways per brand
+# so observability slices cleanly — confirm in T6)
 ```
 
 (Tedious but one-time. Document the list.)
@@ -461,13 +483,13 @@ git commit -m "spike(cf-portkey): T4 three-brand wrangler envs"
 
 ---
 
-## Task 5: Streaming endpoint validation
+## Task 5: Streaming endpoint validation [HARD GATE]
 
-**Hypothesis:** `/api/layout/stream` (uses `streamText` from AI SDK) works on Workers via Portkey. Streaming responses arrive incrementally to the client.
+**Hypothesis:** `/api/layout/stream` (uses `streamText` from AI SDK) works on Workers via CF AI Gateway. Streaming responses arrive incrementally to the client. CF AI Gateway is a thin SSE pass-through.
 
-**Validation:** Hit `/api/layout/stream` from a deployed Worker URL, observe chunked response in browser dev tools network tab.
+**Validation:** Byte-level evidence that the response is incremental. TTFB < 2s on cold cache. Chunks visible over time in `curl -N -v` output and in browser DevTools network tab. **This is a hard go/no-go gate** — a buffered streaming response on the demo's marquee endpoint kills the migration.
 
-**Exit criteria:** Streaming works end-to-end. OR a documented reason it doesn't (e.g., Portkey buffers, Worker response streaming not compatible with SvelteKit's response shape).
+**Exit criteria:** Streaming works end-to-end with byte-level evidence. OR documented buffering with an attempted fix using a hand-rolled `new Response(readableStream, { headers })` from AI SDK's `textStream` async iterator (per known-footgun mitigation in adapter-feasibility.md §6).
 
 **Files:**
 - Modify: `src/routes/api/layout/stream/+server.ts` only if needed
@@ -475,18 +497,41 @@ git commit -m "spike(cf-portkey): T4 three-brand wrangler envs"
 - [ ] **Step 1: Hit stream endpoint locally on `wrangler dev`**
 
 ```bash
-curl -N "http://localhost:8787/api/layout/stream?persona=family-shopper&category=women"
+curl -N -v -w "\n\n---\nTTFB: %{time_starttransfer}s\nTotal: %{time_total}s\n" \
+  "http://localhost:8787/api/layout/stream?persona=family-shopper&category=women&fresh=1"
 ```
 
-Expected: response chunks arrive over time, not all at once.
+Expected: chunks visible in `<` lines spread over multiple seconds (not arriving all at once at the end). TTFB < 2s. If TTFB ≈ Total, response was buffered — go to Step 4.
 
 - [ ] **Step 2: Hit stream endpoint on deployed Worker URL**
 
-Same curl against the deployed URL. Confirm streaming preserved through Cloudflare's edge.
+Same curl against the deployed URL. Confirm streaming preserved through Cloudflare's edge (no extra buffering tier).
 
-- [ ] **Step 3: Verify Portkey logs the streamed call correctly**
+- [ ] **Step 3: Verify CF AI Gateway logs the streamed call correctly**
 
-Portkey dashboard: was the request logged with token usage? Streaming requests sometimes lose accounting on gateways — verify.
+CF AI Gateway dashboard: was the request logged with token usage? Streaming requests sometimes lose accounting on gateways — verify.
+
+- [ ] **Step 4 (only if buffered): Apply known-footgun mitigation**
+
+Open `src/routes/api/layout/stream/+server.ts`. Replace the AI SDK Response helper with a direct `new Response(...)` from the `textStream` async iterator:
+
+```ts
+const result = streamText({ model, prompt, /* ... */ });
+const stream = new ReadableStream({
+	async start(controller) {
+		const encoder = new TextEncoder();
+		for await (const chunk of result.textStream) {
+			controller.enqueue(encoder.encode(chunk));
+		}
+		controller.close();
+	},
+});
+return new Response(stream, {
+	headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' },
+});
+```
+
+Re-run Step 1 and Step 2. If still buffered: hard blocker — document and stop.
 
 - [ ] **Step 4: Document findings**
 
@@ -503,30 +548,34 @@ git commit -m "spike(cf-portkey): T5 streaming verified on cf+portkey"
 
 ## Task 6: Observability parity check
 
-**Hypothesis:** Portkey provides per-request logs, model fallback traces, latency histograms, token cost, and metadata-tag-based filtering — at parity or better than Vercel AI Gateway's tag system.
+**Hypothesis:** CF AI Gateway provides per-request logs, model fallback traces (`cf-aig-step`), latency, token cost estimates, and metadata-filterable views. Unified pane with Workers analytics. Parity or better than Vercel AI Gateway, with the caveat of the 5-metadata-field limit (NQ2).
 
-**Validation:** Side-by-side dashboard comparison. Can you answer the same operational questions on Portkey that you currently answer on Vercel AI Gateway?
+**Validation:** Side-by-side dashboard comparison. Can you answer the same five operational questions on CF AI Gateway that you currently answer on Vercel AI Gateway?
 
-**Exit criteria:** All five operational queries below resolve on Portkey OR a documented gap.
+**Exit criteria:** All five operational queries below resolve on CF AI Gateway OR a documented gap. NQ2 confirmed (3 fields fits, room for 2 more).
 
 **Files:** none — this is dashboard exploration.
 
 - [ ] **Step 1: Generate ~20 mixed requests**
 
-Hit each of the four AI routes from local dev with Portkey enabled. Vary persona + category. Mix layout, refine, suggest.
+Hit each of the four AI routes (note: only `/api/layout` migrated in PoC; the other three still use Vercel gateway. For T6 metric purposes, run `/api/layout` 20 times with varied persona + category to get spread).
 
-- [ ] **Step 2: Answer these five questions on Portkey dashboard**
+- [ ] **Step 2: Answer these five questions on CF AI Gateway dashboard**
 
 For each, capture a screenshot in `docs/spikes/2026-05-05-cloudflare-portkey/screenshots/`:
 1. What's the p95 latency for `feature:layout` requests in the last hour?
-2. Which persona has the highest token spend?
-3. Show me all requests that fell back from haiku to sonnet.
+2. Which persona has the highest token spend (filter by `persona` metadata)?
+3. Show me all requests where `cf-aig-step > 0` (i.e., a fallback served).
 4. Show me the prompt + response for request id X.
-5. What's today's total Anthropic API spend across all features?
+5. What's today's total Anthropic API spend?
 
-- [ ] **Step 3: Document gaps**
+- [ ] **Step 3: Confirm NQ2 — metadata headroom**
 
-REPORT Q5: which queries Portkey can answer, which it can't, and what alternatives exist (custom dashboard via Portkey API, separate observability tooling).
+In the dashboard, confirm all 3 metadata fields (`feature`, `persona`, `category`) are queryable. We have headroom of 2 more (limit is 5). Document any future fields we'd want (`brand_id`, `surface`, `cache_state`) and decide priority — only 2 of the 3 candidates fit.
+
+- [ ] **Step 4: Document gaps**
+
+REPORT Q5: which queries CF AI Gateway can answer, which it can't, and what alternatives exist (Workers Analytics Engine for custom dashboards, Logpush for archival).
 
 - [ ] **Step 4: Commit**
 
@@ -576,7 +625,7 @@ git commit -m "spike(cf-portkey): T7 latency baseline"
 
 ## Task 8: Cost baseline
 
-**Hypothesis:** Monthly cost on Cloudflare + Portkey + (still-external) Neon + Upstash is ≤ current Vercel + AI Gateway + Upstash + Neon.
+**Hypothesis:** Monthly cost on Cloudflare (Workers + AI Gateway) + still-external Neon + Upstash is **lower** than current Vercel + Vercel AI Gateway + Upstash + Neon, primarily because (a) CF AI Gateway is free with no token markup, and (b) Workers Paid bundles 10M requests vs Vercel Functions per-invocation pricing.
 
 **Validation:** Spreadsheet of fixed + variable cost per provider at projected request volume.
 
@@ -592,9 +641,9 @@ Capture: Vercel Pro seat + Functions invocations + bandwidth, AI Gateway request
 
 Workers Paid plan ($5/mo per account base) + Workers requests (10M included, $0.30/M after) + bandwidth (free). Assets storage (free). Domains.
 
-- [ ] **Step 3: Estimate Portkey**
+- [ ] **Step 3: Estimate CF AI Gateway**
 
-Portkey hosted: free tier limits, paid tier $/req or $/k tokens. Note: Portkey takes its cut on top of raw Anthropic API cost — the Vercel AI Gateway markup goes away but Portkey's appears.
+Per Cloudflare's pricing: gateway features (analytics, caching, rate limiting, fallback) are **free**. Persistent logs: 100k/mo free across all gateways on Workers Free; 10M/gateway on Workers Paid. Logpush (archival) is paid above 10M/mo at ~$0.05/M. **No markup on third-party (Anthropic) tokens** — pay Anthropic rates direct, optionally consolidated on the Cloudflare invoice. This is the headline savings vs Vercel AI Gateway.
 
 - [ ] **Step 4: Build the cost-model.md table**
 
@@ -632,15 +681,15 @@ git commit -m "spike(cf-portkey): T8 cost baseline"
 
 In `decision-matrix.md`:
 
-| Dimension | Weight | Vercel score | Cloudflare+Portkey score | Weighted delta |
-|-----------|-------:|-------------:|-------------------------:|---------------:|
+| Dimension | Weight | Vercel score | Cloudflare + CF AI Gateway score | Weighted delta |
+|-----------|-------:|-------------:|---------------------------------:|---------------:|
 | Adapter compatibility | 3 | 5 | ?  | ? |
 | Streaming reliability | 3 | 5 | ?  | ? |
-| AI gateway features (fallback, structured output, observability) | 3 | 5 | ? | ? |
+| AI gateway features (fallback, structured output, observability, metadata) | 3 | 5 | ? | ? |
 | Multi-brand deploy ergonomics | 2 | 4 | ? | ? |
 | p95 latency | 3 | 5 | ? | ? |
-| Monthly cost | 2 | 5 | ? | ? |
-| Vendor concentration | 1 | 2 | ? | ? |
+| Monthly cost | 2 | 3 (markup on tokens) | ? | ? |
+| Vendor concentration | 1 | 2 (split: hosting Vercel, gateway Vercel) | 5 (single: Cloudflare) | + |
 | Observability surface | 2 | 5 | ? | ? |
 | Migration risk | -3 | n/a | (cost) | ? |
 
@@ -655,14 +704,14 @@ Three possible recommendations:
 
 - [ ] **Step 3 (Go path only): Size the follow-on migration**
 
-Create `docs/superpowers/plans/<today>-cloudflare-portkey-migration.md` using the writing-plans skill. Cover:
+Create `docs/superpowers/plans/<today>-cloudflare-aigateway-migration.md` (clean slug — no `portkey`) using the writing-plans skill. Cover:
 - Cutover strategy (parallel-run vs flag-flip vs hard cutover)
-- All four AI routes migrated (not just `/api/layout`)
+- All four AI routes migrated (not just `/api/layout`) — single `gatewayProviderOptions` shape change
 - Three-brand deploy CI/CD (GitHub Actions)
 - DNS migration plan (per brand, including TTL drop ahead of cutover)
-- Rollback plan (the Vercel projects stay deployable for N weeks)
-- Observability cutover (Portkey dashboards built, alerts configured)
-- ADR drafted at `docs/architecture/decisions/009-deploy-target-cloudflare.md` summarizing the decision
+- Rollback plan (the Vercel projects stay deployable for N weeks; the env-flag seam in `ai-model.ts` allows runtime flip back to Vercel AI Gateway if needed)
+- Observability cutover (CF AI Gateway dashboards bookmarked, alert thresholds set)
+- ADR drafted at `docs/architecture/decisions/009-deploy-target-cloudflare.md` summarizing the decision (replaces `@ai-sdk/gateway` and `@sveltejs/adapter-vercel`)
 
 - [ ] **Step 4: Commit**
 
