@@ -27,7 +27,7 @@ function composeCacheDiscriminator(picksContext?: string, tagIntents: string[] =
 }
 import { logGeneration } from '$lib/server/generation-log';
 import { getActiveRules, rulesToPromptContext } from '$lib/server/rules';
-import { layoutModel, gatewayProviderOptions } from '$lib/server/ai-model';
+import { layoutModel, gatewayProviderOptions, anthropicSafeSchema } from '$lib/server/ai-model';
 import { getBrand, getBrandMode } from '$lib/brand/config';
 
 /**
@@ -115,7 +115,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		// Haiku primary; Sonnet fallback only via gateway path (skipped for direct).
 		const stream = streamText({
 			model: layoutModel(),
-			output: Output.object({ schema: layoutSchema }),
+			output: Output.object({ schema: await anthropicSafeSchema(layoutSchema) }),
 			prompt,
 			...gatewayProviderOptions(persona, categorySlug),
 		});
