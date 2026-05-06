@@ -6,7 +6,14 @@
 
 **Architecture:** Three workstreams, ordered by dependency. **Stream 1 (calibration)** is offline-only — produces a report and an ADR; no runtime change. It establishes the persona-fingerprinting heuristic that streams 2 and 3 reuse. **Stream 2 (cohort priors)** modifies the engine's persona-inference cold start: a new Neon table holds priors per `(referrer, postal-prefix, hour-bucket)` cluster; `inference.ts` reads it before applying signal rules. **Stream 3 (session replay)** is foundation+engine cross-cutting — a curated subset of real sessions becomes a fixture, a Svelte component in the dev toolbar drives navigation + signal emission to replay them, the existing inference and AI-layout pipeline reacts as if the events were live.
 
-> **2026-05-06 schema update:** The privacy-filtered CSV dropped UTM columns (`utm_source`, `utm_medium`, `utm_campaign`). Working schema: `event, session_id_hashed, timestamp_hour, referrer_domain, request_path, postal_prefix`. Plan has been amended throughout: cohort key dropped to `(referrer × postal_prefix × hour_bucket)`; hunter heuristic re-grounded on referrer + cart funnel instead of `utm_medium=cpc`; replay fixture and replay engine no longer attach UTM params. `referrer_domain` remains the paid-vs-organic-vs-direct discriminator (`facebook.com`, `instagram.com`, `google.com`, `internal`, `dormezvous.com`, `(direct)`).
+> **2026-05-06 schema update:** The privacy-filtered CSV dropped UTM columns (`utm_source`, `utm_medium`, `utm_campaign`). Working schema: `event, session_id_hashed, timestamp_hour, referrer_domain, request_path, postal_prefix`. Plan amended throughout: cohort key dropped UTM dimension; hunter heuristic re-grounded on referrer + cart funnel; replay fixture and replay engine no longer attach UTM params. `referrer_domain` remains the paid-vs-organic-vs-direct discriminator.
+
+> **2026-05-06 data-quality update:** First ingest pass surfaced three quirks (full detail in `docs/spikes/2026-05-05-cloudflare-portkey/sleepcountry-data-quirks.md`):
+> - **1,247 rows orphan** (no `session_id_hashed`); these are mostly `SHOPPER_CART_UPDATED` and `SHOPPER_CHECKOUT_COMPLETED`. Sessions with attributable cart events: **510 (4.4%)**; sessions reaching checkout: **117 (1.0%)**.
+> - **Postal prefix is 78.6% empty** with only 2 distinct values (`L6T`, `H9R`). Drops postal as a useful cohort dimension.
+> - **Session length is heavily right-skewed** — p50=1, p75=2 events. Half the sessions are bounces.
+>
+> **Stream 2 reshape:** the original cohort-priors-in-Neon design (Tasks 2.1-2.5) is replaced with a smaller **referrer-bias rule baked into `src/lib/signals/inference.ts`** (see "Stream 2 (downgraded)" section below). The full Neon cohort table is over-engineered for the discriminating power available; we ship the cheaper version honestly.
 
 **Tech stack:** Node scripts for offline analysis (Stream 1), Neon Postgres + small modification to `src/lib/signals/inference.ts` (Stream 2), Svelte 5 component + `src/lib/signals/emitter.ts` integration + JSON fixture (Stream 3). No new runtime dependencies.
 
@@ -263,13 +270,125 @@ This task is sized as 0.5 day if surgery is needed, 0 days if not.
 
 ---
 
-# Stream 2 — Cohort priors at session start
+# Stream 2 (downgraded) — Referrer-bias rule in inference.ts
 
-**Goal:** Replace the uniform persona prior with cohort-aware priors derived from the same fingerprinted dataset. Visitors entering via "Meta paid social, prospecting Bloom" get a researcher-heavy prior on their very first request, before any signals fire.
+**2026-05-06 reshape:** Original design called for a Neon `cohort_priors` table keyed by `(referrer × postal × hour)`. Data-quality findings (postal 78.6% empty, only 2 distinct values; cart events 95.6% orphan) collapse the discriminating power to roughly the referrer dimension alone. Shipping the Neon table for that little signal is over-engineered. Replaced with a small static map in `src/lib/signals/inference.ts`, derived from the same fingerprinting pass.
 
-**Estimated effort:** 3 days active.
+**Goal:** When a sleepcountry session arrives with no signals yet, seed the persona prior from the entry referrer instead of uniform `0.25/0.25/0.25/0.25`.
 
-**Depends on:** Stream 1 Task 1.2 (fingerprinted JSONL) at minimum. Stream 1 Task 1.4 (calibration findings) optionally — if calibration shows our fingerprinting was wrong, fix it before deriving priors.
+**Estimated effort:** 0.5 days active.
+
+**Depends on:** Stream 1 Task 1.2 (fingerprinted JSONL).
+
+## Task 2.1: Derive referrer-keyed priors from fingerprinted data
+
+**Files:**
+- Create: `scripts/analytics/derive-referrer-priors.mjs`
+
+- [ ] **Step 1: For each referrer bucket, count fingerprinted personas (excluding "unknown")**
+
+```js
+import { loadSessions } from './load.mjs';
+import { fingerprint } from './fingerprint.mjs';
+
+const referrerBuckets = ['internal', 'direct', 'google', 'facebook', 'instagram', 'youtube', 'dormezvous', 'other'];
+const counts = Object.fromEntries(referrerBuckets.map((r) => [r, { researcher: 0, hunter: 0, gatherer: 0, gifter: 0, total: 0 }]));
+
+for (const [sid, events] of sessions) {
+  const fp = fingerprint(events);
+  if (fp.persona === 'unknown') continue;
+  const ref = bucketReferrer(events[0].referrer);
+  counts[ref][fp.persona]++;
+  counts[ref].total++;
+}
+```
+
+- [ ] **Step 2: Normalize to a `Record<referrer, Record<persona, prob>>`**
+
+Cohorts with <30 labeled sessions fall back to the uniform prior (don't bias on noise).
+
+- [ ] **Step 3: Emit as a TypeScript const that the engine imports directly**
+
+```ts
+// src/lib/signals/sleepcountry-referrer-priors.ts (generated)
+export const SLEEPCOUNTRY_REFERRER_PRIORS: Record<string, PersonaProbs | null> = {
+  internal:  { researcher: 0.45, hunter: 0.10, gatherer: 0.30, gifter: 0.15 },
+  direct:    { researcher: 0.30, hunter: 0.20, gatherer: 0.40, gifter: 0.10 },
+  google:    { researcher: 0.55, hunter: 0.15, gatherer: 0.20, gifter: 0.10 },
+  facebook:  { researcher: 0.40, hunter: 0.30, gatherer: 0.20, gifter: 0.10 },
+  instagram: null, // <30 labeled — fall back to uniform
+  // ... etc, with provenance comment showing the support count
+};
+```
+
+The script writes the file directly. `git diff` is the audit trail.
+
+- [ ] **Step 4: Commit (script + generated file, no DB changes)**
+
+```bash
+git add scripts/analytics/derive-referrer-priors.mjs src/lib/signals/sleepcountry-referrer-priors.ts
+git commit -m "feat(analytics): referrer-keyed persona priors derived from sleepcountry sessions"
+```
+
+## Task 2.2: Wire the prior into inference.ts
+
+**Files:**
+- Modify: `src/lib/signals/inference.ts` (cold-start branch)
+- Modify: `src/lib/signals/request.ts` (pass referrer through)
+
+- [ ] **Step 1: Extract referrer at request time**
+
+In `createStoreFromRequest` (or equivalent), bucket the `Referer` header using the same enum as the derive script. Pass it through to `infer()` as part of the existing context.
+
+- [ ] **Step 2: Use the prior at cold start**
+
+In `infer()`, before the rule loop:
+
+```ts
+import { SLEEPCOUNTRY_REFERRER_PRIORS } from './sleepcountry-referrer-priors';
+
+if (signalCount === 0 && brandId === 'sleepcountry') {
+  const prior = SLEEPCOUNTRY_REFERRER_PRIORS[referrerBucket] ?? null;
+  if (prior) {
+    probabilities = { ...prior };
+    debugReason = `seeded from sleepcountry referrer prior (${referrerBucket})`;
+  }
+}
+```
+
+Other brands continue to use the uniform default.
+
+- [ ] **Step 3: Surface in dev panel**
+
+The InferenceEnginePanel already shows the current persona probability vector. Add a one-line "primed by: facebook" tag when the prior was applied.
+
+- [ ] **Step 4: Build, deploy, smoke**
+
+```bash
+VITE_BRAND_ID=sleepcountry npm run build
+npx wrangler deploy --env sleepcountry
+curl -H 'Referer: https://www.facebook.com/' 'https://aisles-demo-4.<workers.dev>/?dev=1' -i | head -20
+```
+
+The cold-start persona vector should be biased per the derived prior.
+
+- [ ] **Step 5: Commit + push**
+
+```bash
+git add src/lib/signals/inference.ts src/lib/signals/request.ts
+git commit -m "feat(engine): seed sleepcountry persona prior from entry referrer"
+git push
+```
+
+## Task 2.3 (optional): Holdout sanity check
+
+Skip the full 80/20 holdout from the original plan — at this scale and discriminating power, the protocol is overkill. Instead, run a quick check: of the 1,235 google-referrer sessions, what fraction were fingerprinted as researcher? If the ratio matches the prior we shipped (within ~5pp), the rule is internally consistent. Document one-liner in ADR-011.
+
+---
+
+## Original Stream 2 design (deprecated, kept for reference)
+
+The original `cohort_priors` Neon table approach is preserved below for traceability. **Do not implement** — Stream 2 (downgraded) supersedes.
 
 ## Task 2.1: Derive cohort priors
 
