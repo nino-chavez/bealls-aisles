@@ -42,6 +42,11 @@ export function embeddingModel() {
 
 export function gatewayProviderOptions(persona: string, categorySlug: string, feature = 'layout') {
 	if (useCfAig) {
+		// Anthropic's beta `output_config.format` doesn't accept `oneOf`,
+		// which our discriminated-union layout schemas compile to. Force
+		// the AI SDK's `jsonTool` mode — uses Anthropic's tool-use API,
+		// which supports our schema. Vercel AI Gateway transparently
+		// rewrites; going direct via baseURL needs the explicit hint.
 		return {
 			headers: {
 				'cf-aig-metadata': JSON.stringify({
@@ -49,6 +54,9 @@ export function gatewayProviderOptions(persona: string, categorySlug: string, fe
 					persona,
 					category: categorySlug,
 				}),
+			},
+			providerOptions: {
+				anthropic: { structuredOutputMode: 'jsonTool' as const },
 			},
 		};
 	}

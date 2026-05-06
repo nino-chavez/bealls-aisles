@@ -13,8 +13,10 @@ vars = { BRAND_ID = "bealls", CF_AIG_GATEWAY_ID = "aisles-bealls" }
 
 [env.bealls-fl]
 name = "aisles-demo-2"
-vars = { BRAND_ID = "bealls-fl", CF_AIG_GATEWAY_ID = "aisles-bealls-fl" }
+# BRAND_ID values match BRANDS dict keys in src/lib/brand/config.ts (no hyphens).
+# Wrangler env name keeps the hyphenated form for CLI ergonomics.
+vars = { BRAND_ID = "beallsflorida", CF_AIG_GATEWAY_ID = "aisles-bealls-fl" }
 
 [env.home-centric]
 name = "aisles-demo-3"
-vars = { BRAND_ID = "home-centric", CF_AIG_GATEWAY_ID = "aisles-hc" }
+vars = { BRAND_ID = "homecentric", CF_AIG_GATEWAY_ID = "aisles-hc" }

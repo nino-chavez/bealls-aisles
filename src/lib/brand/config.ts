@@ -373,11 +373,21 @@ const BRANDS: Record<string, BrandConfig> = {
 	},
 };
 
-/** Get the active brand config based on BRAND_ID env var */
+/**
+ * Get the active brand config.
+ *
+ * Resolution order:
+ *   1. import.meta.env.VITE_BRAND_ID — Vite inlines this at build time.
+ *      For Cloudflare Workers (where process.env is not auto-populated
+ *      from bindings), per-brand builds are required: set VITE_BRAND_ID
+ *      before `npm run build` for each Worker env.
+ *   2. process.env.BRAND_ID — Node scripts (enrichment, seeding) and
+ *      Vercel Functions where process.env is populated.
+ *   3. Default 'bealls'.
+ */
 export function getBrand(): BrandConfig {
-	// In SvelteKit, use import.meta.env; in Node scripts, use process.env
 	const brandId =
-		(typeof import.meta !== 'undefined' && import.meta.env?.VITE_BRAND_ID) ||
+		(typeof import.meta !== 'undefined' && (import.meta as { env?: Record<string, string | undefined> }).env?.VITE_BRAND_ID) ||
 		(typeof process !== 'undefined' && process.env?.BRAND_ID) ||
 		'bealls';
 
