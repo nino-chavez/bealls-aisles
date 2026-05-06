@@ -204,7 +204,7 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 			model: layoutModel(),
 			output: Output.object({ schema: layoutSchema }),
 			prompt,
-			providerOptions: gatewayProviderOptions(persona, categorySlug),
+			...gatewayProviderOptions(persona, categorySlug),
 		});
 		// `aiResult.output` is loosely typed because `getLayoutSchemaForSurface`
 		// returns `ZodTypeAny` (the schema shape varies by surface). Cast to

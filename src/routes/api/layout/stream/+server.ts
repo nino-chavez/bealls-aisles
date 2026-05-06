@@ -117,7 +117,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 			model: layoutModel(),
 			output: Output.object({ schema: layoutSchema }),
 			prompt,
-			providerOptions: gatewayProviderOptions(persona, categorySlug),
+			...gatewayProviderOptions(persona, categorySlug),
 		});
 
 		const encoder = new TextEncoder();

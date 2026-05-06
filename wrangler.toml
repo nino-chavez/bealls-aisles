@@ -1,0 +1,20 @@
+name = "aisles-demo"
+main = ".svelte-kit/cloudflare/_worker.js"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = ".svelte-kit/cloudflare"
+binding = "ASSETS"
+
+[env.bealls]
+name = "aisles-demo-1"
+vars = { BRAND_ID = "bealls", CF_AIG_GATEWAY_ID = "aisles-bealls" }
+
+[env.bealls-fl]
+name = "aisles-demo-2"
+vars = { BRAND_ID = "bealls-fl", CF_AIG_GATEWAY_ID = "aisles-bealls-fl" }
+
+[env.home-centric]
+name = "aisles-demo-3"
+vars = { BRAND_ID = "home-centric", CF_AIG_GATEWAY_ID = "aisles-hc" }
