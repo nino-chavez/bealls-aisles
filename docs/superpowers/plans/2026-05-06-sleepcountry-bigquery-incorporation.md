@@ -2,9 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Use Sleep Country's BigQuery-derived event log (29,874 events / 11,633 sessions / 7-week window, sanitized + hashed) to (1) calibrate the Aisles inference engine against ground-truth shopper behavior, (2) seed cohort-aware persona priors at session start, and (3) ship a dev-mode "session replay" feature that lets demo audiences watch the engine react to real anonymized shopper journeys in real time.
+**Goal:** Use Sleep Country's BigQuery-derived event log (29,870 events / 11,630 sessions / 7-week window, sanitized + hashed) to (1) calibrate the Aisles inference engine against ground-truth shopper behavior, (2) seed cohort-aware persona priors at session start, and (3) ship a dev-mode "session replay" feature that lets demo audiences watch the engine react to real anonymized shopper journeys in real time.
 
-**Architecture:** Three workstreams, ordered by dependency. **Stream 1 (calibration)** is offline-only — produces a report and an ADR; no runtime change. It establishes the persona-fingerprinting heuristic that streams 2 and 3 reuse. **Stream 2 (cohort priors)** modifies the engine's persona-inference cold start: a new Neon table holds priors per `(referrer, utm, postal-prefix, hour-bucket)` cluster; `inference.ts` reads it before applying signal rules. **Stream 3 (session replay)** is foundation+engine cross-cutting — a curated subset of real sessions becomes a fixture, a Svelte component in the dev toolbar drives navigation + signal emission to replay them, the existing inference and AI-layout pipeline reacts as if the events were live.
+**Architecture:** Three workstreams, ordered by dependency. **Stream 1 (calibration)** is offline-only — produces a report and an ADR; no runtime change. It establishes the persona-fingerprinting heuristic that streams 2 and 3 reuse. **Stream 2 (cohort priors)** modifies the engine's persona-inference cold start: a new Neon table holds priors per `(referrer, postal-prefix, hour-bucket)` cluster; `inference.ts` reads it before applying signal rules. **Stream 3 (session replay)** is foundation+engine cross-cutting — a curated subset of real sessions becomes a fixture, a Svelte component in the dev toolbar drives navigation + signal emission to replay them, the existing inference and AI-layout pipeline reacts as if the events were live.
+
+> **2026-05-06 schema update:** The privacy-filtered CSV dropped UTM columns (`utm_source`, `utm_medium`, `utm_campaign`). Working schema: `event, session_id_hashed, timestamp_hour, referrer_domain, request_path, postal_prefix`. Plan has been amended throughout: cohort key dropped to `(referrer × postal_prefix × hour_bucket)`; hunter heuristic re-grounded on referrer + cart funnel instead of `utm_medium=cpc`; replay fixture and replay engine no longer attach UTM params. `referrer_domain` remains the paid-vs-organic-vs-direct discriminator (`facebook.com`, `instagram.com`, `google.com`, `internal`, `dormezvous.com`, `(direct)`).
 
 **Tech stack:** Node scripts for offline analysis (Stream 1), Neon Postgres + small modification to `src/lib/signals/inference.ts` (Stream 2), Svelte 5 component + `src/lib/signals/emitter.ts` integration + JSON fixture (Stream 3). No new runtime dependencies.
 
@@ -39,8 +41,9 @@ git commit -m "chore: gitignore data/ for production-derived analytics"
 - [ ] **Step 2: Copy the CSV in**
 
 ```bash
-cp /Users/nino.chavez/Downloads/sleepcountry_sanitized_filtered.csv data/sleepcountry-events.csv
-wc -l data/sleepcountry-events.csv  # expect 29875 (29874 events + 1 header)
+cp "/Users/nino.chavez/Downloads/sleepcountry_sanitized_filtered (1).csv" data/sleepcountry-events.csv
+wc -l data/sleepcountry-events.csv  # expect 29871 (29870 events + 1 header)
+head -1 data/sleepcountry-events.csv  # expect: event,session_id_hashed,timestamp_hour,referrer_domain,request_path,postal_prefix
 ```
 
 - [ ] **Step 3: Place the report HTML alongside for reference**
@@ -72,7 +75,7 @@ cp /Users/nino.chavez/Downloads/sleepcountry_report.html data/sleepcountry-repor
 Persona definitions for sleep retail (per ADR-005 + sleepcountry brand prompt — adjusted for domain):
 
 - **Researcher (high-stakes purchase, comparison-driven):** session has ≥3 `SEARCH_PRODUCT` events OR ≥4 distinct `PRODUCT_PAGE_VIEWED` paths in different mattress brand sub-paths (`/products/sealy-*`, `/products/tempur-*`, `/products/bloom-*`).
-- **Hunter (sale-watching, direct intent):** session entered via paid UTM (`utm_medium=cpc`) AND has ≥1 `PRODUCT_PAGE_VIEWED` AND has ≥1 cart event (`SHOPPER_CART_*`) within the same session.
+- **Hunter (sale-watching, direct intent):** session entered via a paid-social referrer (`facebook.com` / `instagram.com`) OR landed directly on a `/products/...` PDP from any referrer, AND has ≥1 cart event (`SHOPPER_CART_*`) within the session. Without UTM medium we can't separate paid from organic social cleanly; fall back to "social-domain referrer with cart funnel engagement" as the hunter signature.
 - **Gatherer (browsing, low intent):** session has `SHOPPER_PAGE_VIEWED` events spanning ≥3 distinct top-level paths (`/mattresses`, `/bedding`, `/pillows`, `/`) AND zero cart events.
 - **Gifter (specific small-ticket purchase):** session ends in `SHOPPER_CHECKOUT_COMPLETED` AND only viewed products in `/bedding`, `/pillows`, or `/accessories` paths (not `/mattresses`).
 - **Unknown:** doesn't match any. Expected to be the largest bucket — most sessions won't have enough events to fingerprint.
@@ -95,7 +98,7 @@ for await (const row of streamCsv('data/sleepcountry-events.csv')) {
 For each session, run the fingerprinting and write to `data/sleepcountry-fingerprinted.jsonl` (one session per line):
 
 ```jsonl
-{"session_id":"b3feb531...","persona":"researcher","confidence":0.8,"event_count":7,"entry":{"referrer":"google.com","utm_source":"facebook","utm_medium":"cpc","postal_prefix":"L6T","hour":12},"evidence":["3 SEARCH_PRODUCT events","4 distinct mattress brand pages"]}
+{"session_id":"b3feb531...","persona":"researcher","confidence":0.8,"event_count":7,"entry":{"referrer":"google.com","postal_prefix":"L6T","hour":12},"evidence":["3 SEARCH_PRODUCT events","4 distinct mattress brand pages"]}
 ```
 
 - [ ] **Step 4: Commit**
@@ -121,7 +124,7 @@ Add a `--summary` flag that re-reads the JSONL and prints persona counts. Expect
 |---|---|---|
 | Unknown | 60-75% | Most short sessions — single page view, no signal. |
 | Researcher | 15-25% | Heavy search + multi-PDP signature. |
-| Hunter | 5-10% | UTM-direct-to-cart sessions. |
+| Hunter | 5-10% | Social-referrer-to-cart sessions. |
 | Gatherer | 5-10% | Multi-category browse. |
 | Gifter | 1-5% | Small-ticket-only checkout. |
 
@@ -214,7 +217,7 @@ _(Table of rule name × support × predicted persona × actual persona × verdic
 ## Recommendations
 - KILL: rules whose precision is at or below the persona's base rate
 - REWEIGHT: rules whose direction is right but magnitude is off
-- ADD: behavioral patterns the existing rules miss (e.g., "Bloom prospecting UTM" → researcher)
+- ADD: behavioral patterns the existing rules miss (e.g., "session arrives from `instagram.com` and immediately searches a brand name" → researcher)
 ```
 
 - [ ] **Step 2: Write ADR-011**
@@ -276,19 +279,18 @@ This task is sized as 0.5 day if surgery is needed, 0 days if not.
 
 - [ ] **Step 1: Define cohort dimensions**
 
-Each session has an entry context: `(referrer_domain, utm_source, utm_medium, postal_prefix, hour_of_day)`. Bucket dimensions:
-- `referrer`: enum of `internal`, `google`, `meta_paid`, `instagram`, `youtube`, `dormezvous` (sister brand), `other`
-- `utm_medium`: `cpc | organic | direct | other`
+Each session has an entry context: `(referrer_domain, postal_prefix, hour_of_day)`. Bucket dimensions:
+- `referrer`: enum of `internal`, `google`, `facebook`, `instagram`, `youtube`, `dormezvous` (sister brand), `direct` (no referrer), `other`. Without `utm_medium` we conflate organic and paid social inside `facebook` / `instagram` — accept the noise; the persona priors will absorb whichever skew dominates the cohort.
 - `postal_prefix`: keep as-is (3-char FSA) but only if it has ≥30 sessions; otherwise bucket as `other`
 - `hour_bucket`: `morning (6-11)`, `afternoon (12-17)`, `evening (18-22)`, `late (23-5)`
 
 - [ ] **Step 2: Aggregate persona distribution per cohort**
 
-For each unique cohort tuple `(referrer × utm_medium × postal_prefix × hour_bucket)`:
+For each unique cohort tuple `(referrer × postal_prefix × hour_bucket)`:
 - Count sessions with that entry context
 - Of those, count sessions per fingerprinted persona (excluding "unknown")
 - Compute `prior[persona] = personaCount / totalLabeled` for the cohort
-- Smooth: cohorts with <20 labeled sessions fall back to the parent dimension's prior (drop postal_prefix → drop hour_bucket → drop utm_medium → uniform)
+- Smooth: cohorts with <20 labeled sessions fall back to the parent dimension's prior (drop postal_prefix → drop hour_bucket → drop referrer → uniform)
 
 - [ ] **Step 3: Output `data/sleepcountry-cohort-priors.json`**
 
@@ -298,7 +300,7 @@ For each unique cohort tuple `(referrer × utm_medium × postal_prefix × hour_b
   "default": { "researcher": 0.35, "hunter": 0.25, "gatherer": 0.30, "gifter": 0.10 },
   "cohorts": [
     {
-      "match": { "referrer": "meta_paid", "utm_medium": "cpc" },
+      "match": { "referrer": "facebook" },
       "support": 565,
       "prior": { "researcher": 0.55, "hunter": 0.30, "gatherer": 0.10, "gifter": 0.05 }
     },
@@ -328,8 +330,6 @@ CREATE TABLE IF NOT EXISTS cohort_priors (
   id SERIAL PRIMARY KEY,
   brand_id TEXT NOT NULL,
   match_referrer TEXT,
-  match_utm_medium TEXT,
-  match_utm_source TEXT,
   match_postal_prefix TEXT,
   match_hour_bucket TEXT,
   prior_researcher REAL NOT NULL,
@@ -340,7 +340,7 @@ CREATE TABLE IF NOT EXISTS cohort_priors (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX cohort_priors_brand_match ON cohort_priors (brand_id, match_referrer, match_utm_medium, match_postal_prefix, match_hour_bucket);
+CREATE INDEX cohort_priors_brand_match ON cohort_priors (brand_id, match_referrer, match_postal_prefix, match_hour_bucket);
 ```
 
 NULL match columns are wildcards. Most-specific match wins (count of non-null match columns).
@@ -372,7 +372,7 @@ await sql`INSERT INTO cohort_priors (brand_id, prior_researcher, prior_hunter, p
 
 // per-cohort priors
 for (const c of data.cohorts) {
-  await sql`INSERT INTO cohort_priors (brand_id, match_referrer, match_utm_medium, match_postal_prefix, match_hour_bucket, prior_researcher, prior_hunter, prior_gatherer, prior_gifter, support) VALUES (...)`;
+  await sql`INSERT INTO cohort_priors (brand_id, match_referrer, match_postal_prefix, match_hour_bucket, prior_researcher, prior_hunter, prior_gatherer, prior_gifter, support) VALUES (...)`;
 }
 ```
 
@@ -398,8 +398,6 @@ Expected: `sleepcountry | <cohort count + 1>`.
 // src/lib/server/db.ts
 export async function getCohortPrior(brandId: string, ctx: {
   referrer?: string;
-  utmMedium?: string;
-  utmSource?: string;
   postalPrefix?: string;
   hourBucket?: string;
 }) {
@@ -407,13 +405,11 @@ export async function getCohortPrior(brandId: string, ctx: {
   const rows = await sql`
     SELECT prior_researcher, prior_hunter, prior_gatherer, prior_gifter,
            (CASE WHEN match_referrer IS NULL THEN 0 ELSE 1 END +
-            CASE WHEN match_utm_medium IS NULL THEN 0 ELSE 1 END +
             CASE WHEN match_postal_prefix IS NULL THEN 0 ELSE 1 END +
             CASE WHEN match_hour_bucket IS NULL THEN 0 ELSE 1 END) AS specificity
     FROM cohort_priors
     WHERE brand_id = ${brandId}
       AND (match_referrer IS NULL OR match_referrer = ${ctx.referrer ?? null})
-      AND (match_utm_medium IS NULL OR match_utm_medium = ${ctx.utmMedium ?? null})
       AND (match_postal_prefix IS NULL OR match_postal_prefix = ${ctx.postalPrefix ?? null})
       AND (match_hour_bucket IS NULL OR match_hour_bucket = ${ctx.hourBucket ?? null})
     ORDER BY specificity DESC, support DESC
@@ -432,7 +428,7 @@ export async function getCohortPrior(brandId: string, ctx: {
 
 - [ ] **Step 2: `request.ts` extracts entry context**
 
-When `createStoreFromRequest` is called, derive the entry context from request headers (Referer), URL params (utm_*), cookies (postal_prefix may already be in `aisles_postal`), and the current hour. Bucket per the same scheme used in Task 2.1.
+When `createStoreFromRequest` is called, derive the entry context from the request `Referer` header (bucket via the same enum as Task 2.1), the `aisles_postal` cookie (if present), and the current hour. UTM params are no longer in the cohort key.
 
 - [ ] **Step 3: `inference.ts` cold start uses the prior**
 
@@ -447,7 +443,7 @@ VITE_BRAND_ID=sleepcountry npm run build
 npx wrangler deploy --env sleepcountry
 ```
 
-Open `aisles-demo-4.biq.workers.dev/?dev=1&utm_source=facebook&utm_medium=cpc` — the inference panel should show a researcher-biased prior even before any clicks.
+Open `aisles-demo-4.biq.workers.dev/?dev=1` with a fake `Referer: https://www.facebook.com/` (use the dev-toolbar referrer override, or `curl -H 'Referer: https://www.facebook.com/' ...`). The inference panel should show a researcher-biased prior even before any clicks.
 
 - [ ] **Step 5: Commit + push**
 
@@ -509,7 +505,7 @@ When dev mode is on, the existing Inference Engine panel gets a new "Replay" sec
 ```
 
 When the operator clicks Replay:
-1. The browser navigates to the session's entry path (e.g., `/category/mattresses?utm_source=facebook&utm_medium=cpc`)
+1. The browser navigates to the session's entry path (e.g., `/category/mattresses`) with a synthesized referrer header passed through to the server (via a `?_replay_ref=facebook.com` query param the server reads in dev mode)
 2. The fixture's events fire in sequence with realistic delays (compressed: actual minutes → seconds)
 3. Each event goes through the existing `/api/signals` endpoint, the inference engine reacts, the panel updates
 4. Page navigations occur programmatically (`goto()`) at the appropriate event times
@@ -552,9 +548,6 @@ For each picked session, write a hand-curated `label` and `narrative` line. Save
     "entry": {
       "path": "/products/bloom-air-mattress.html",
       "referrer": "instagram.com",
-      "utm_source": "facebook",
-      "utm_medium": "cpc",
-      "utm_campaign": "meta-mof-prospecting-bloom",
       "postal_prefix": "L6T"
     },
     "events": [
@@ -619,11 +612,12 @@ export function startReplay(id: string) {
   const session = sessions.find((s) => s.id === id);
   if (!session) return;
 
-  // Navigate to entry path with UTM params attached
+  // Navigate to entry path with synthesized referrer attached.
+  // The server-side request handler reads `_replay_ref` in dev mode and treats it as the
+  // session's effective Referer for cohort-prior lookup. UTM params are no longer in scope.
   const url = new URL(session.entry.path, window.location.origin);
-  if (session.entry.utm_source) url.searchParams.set('utm_source', session.entry.utm_source);
-  if (session.entry.utm_medium) url.searchParams.set('utm_medium', session.entry.utm_medium);
-  if (session.entry.utm_campaign) url.searchParams.set('utm_campaign', session.entry.utm_campaign);
+  if (session.entry.referrer) url.searchParams.set('_replay_ref', session.entry.referrer);
+  if (session.entry.postal_prefix) url.searchParams.set('_replay_postal', session.entry.postal_prefix);
   goto(url.pathname + url.search);
 
   active = { session, nextEventIdx: 0, startedAt: Date.now(), timer: null };
@@ -754,7 +748,7 @@ npx wrangler deploy --env sleepcountry
 - [ ] **Step 1: Open `aisles-demo-4.biq.workers.dev/?dev=1`, expand the dev panel**
 
 Pick "Researcher comparing 4 Bloom mattresses". Click Replay. Expected:
-- Browser navigates to `/category/mattresses?utm_source=facebook&utm_medium=cpc&...`
+- Browser navigates to `/category/mattresses?_replay_ref=instagram.com&_replay_postal=L6T`
 - Within 5 seconds: persona inference shifts toward researcher (the Stream 2 cohort prior should already be biased that way; signal rules then reinforce)
 - AI layout for `/category/mattresses` regenerates with researcher-styled copy
 - Page navigates to product pages as the events fire
