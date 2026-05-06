@@ -3,6 +3,11 @@ main = ".svelte-kit/cloudflare/_worker.js"
 compatibility_date = "2026-05-01"
 compatibility_flags = ["nodejs_compat"]
 
+# BigCommerce Testing CF account — shared with bc-subscriptions and other
+# internal prototypes. Pins resources to this account regardless of which
+# token is auth'd locally.
+account_id = "5e70ef24285491bd02b61d0a485bef9c"
+
 [assets]
 directory = ".svelte-kit/cloudflare"
 binding = "ASSETS"
