@@ -803,10 +803,11 @@ curl -sI "https://<hc-domain>/store-locator?zip=33486" | head
 - [ ] **R4: Investigate the issue on the Worker side without DNS pressure.**
 - [ ] **R5: Append rollback entry to `cutover-runbook.md` with timestamps + cause.**
 
-**Alternate rollback (no DNS change):** flip the env var on the Worker:
+**Alternate rollback (no DNS change):** modify `wrangler.toml` and deploy:
+1. In `wrangler.toml`, remove or comment out `CF_AIG_GATEWAY_ID` for the target brand (forces `ai-model.ts` to fall through to Vercel gateway path).
+2. Set the legacy Vercel AI Gateway key and deploy:
 ```bash
-npx wrangler secret put AI_GATEWAY_API_KEY --env <brand>  # set to the legacy Vercel AI Gateway key
-npx wrangler secret delete CF_AIG_GATEWAY_ID --env <brand>  # forces ai-model.ts to fall through to Vercel gateway path
+npx wrangler secret put AI_GATEWAY_API_KEY --env <brand>
 npx wrangler deploy --env <brand>
 ```
 This keeps the Worker serving traffic but reverts the AI gateway to Vercel — useful if the issue is gateway-specific not Worker-specific.
@@ -882,6 +883,11 @@ const cfAig = useCfAig
 export function layoutModel() {
 	if (useCfAig && cfAig) return cfAig('claude-haiku-4-5-20251001');
 	return directAnthropic('claude-haiku-4-5-20251001');
+}
+
+export function embeddingModel() {
+	if (useCfAig && cfAig) return cfAig.textEmbeddingModel('voyage-3');
+	return directAnthropic.textEmbeddingModel('voyage-3');
 }
 
 export function gatewayProviderOptions(persona: string, categorySlug: string, feature = 'layout') {

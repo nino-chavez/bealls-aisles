@@ -516,7 +516,7 @@ CF AI Gateway dashboard: was the request logged with token usage? Streaming requ
 Open `src/routes/api/layout/stream/+server.ts`. Replace the AI SDK Response helper with a direct `new Response(...)` from the `textStream` async iterator:
 
 ```ts
-const result = streamText({ model, prompt, /* ... */ });
+const result = streamText({ model: layoutModel(), prompt, ...gatewayProviderOptions(persona, categorySlug, 'layout-stream') });
 const stream = new ReadableStream({
 	async start(controller) {
 		const encoder = new TextEncoder();
