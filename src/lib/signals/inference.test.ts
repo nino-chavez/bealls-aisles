@@ -21,6 +21,7 @@ const defaults: InferenceContext = {
 	deviceType: 'desktop',
 	hourOfDay: 10, // Saturday morning
 	dayOfWeek: 6,  // Saturday
+	brandId: 'bealls',
 	storedPersona: null,
 	storedCategory: null,
 	visitCount: 0,
@@ -269,6 +270,101 @@ console.log('\nEdge: Entropy is maximal on cold start, lower on strong signal');
 		'Sharp signal certainty > cold certainty',
 		sharp.certainty > cold.certainty,
 		`sharp=${sharp.certainty.toFixed(3)}, cold=${cold.certainty.toFixed(3)}`,
+	);
+}
+
+// ─── ADR-011: sleepcountry per-brand calibration ───────────────────
+
+console.log('\nADR-011: sleepcountry referrer-keyed cold-start prior');
+{
+	const fb = infer(ctx({ brandId: 'sleepcountry', referrer: 'https://m.facebook.com/' }));
+	assert(
+		'facebook → hunter primary',
+		fb.primary === 'hunter',
+		`primary=${fb.primary} probs=${JSON.stringify(fb.probabilities)}`,
+	);
+	assert(
+		'priorSource records the brand-referrer match',
+		fb.priorSource?.type === 'brand-referrer' && fb.priorSource.referrerBucket === 'facebook',
+		`priorSource=${JSON.stringify(fb.priorSource)}`,
+	);
+
+	const internal = infer(ctx({ brandId: 'sleepcountry', referrer: 'internal' }));
+	assert(
+		'internal → researcher primary',
+		internal.primary === 'researcher',
+		`primary=${internal.primary} probs=${JSON.stringify(internal.probabilities)}`,
+	);
+
+	// other brands ignore the table entirely
+	const beallsFb = infer(ctx({ brandId: 'bealls', referrer: 'https://m.facebook.com/' }));
+	assert(
+		'bealls is unaffected by sleepcountry table',
+		beallsFb.priorSource === undefined,
+		`priorSource=${JSON.stringify(beallsFb.priorSource)}`,
+	);
+}
+
+console.log('\nADR-011: per-brand rule overrides for sleepcountry');
+{
+	// referrer-social: sleepcountry should lift hunter; bealls should lift gatherer
+	const sleepcSocial = infer(ctx({
+		brandId: 'sleepcountry',
+		referrer: 'https://www.instagram.com/',
+	}));
+	const beallsSocial = infer(ctx({
+		brandId: 'bealls',
+		referrer: 'https://www.instagram.com/',
+	}));
+	assert(
+		'sleepcountry instagram → hunter > gatherer',
+		sleepcSocial.probabilities.hunter > sleepcSocial.probabilities.gatherer,
+		`hunter=${sleepcSocial.probabilities.hunter.toFixed(2)} gatherer=${sleepcSocial.probabilities.gatherer.toFixed(2)}`,
+	);
+	assert(
+		'bealls instagram → gatherer > hunter',
+		beallsSocial.probabilities.gatherer > beallsSocial.probabilities.hunter,
+		`hunter=${beallsSocial.probabilities.hunter.toFixed(2)} gatherer=${beallsSocial.probabilities.gatherer.toFixed(2)}`,
+	);
+
+	// in-session-search: sleepcountry should drop the hunter half
+	const searchSc = infer(ctx({ brandId: 'sleepcountry', searchCount: 3 }));
+	const searchBealls = infer(ctx({ brandId: 'bealls', searchCount: 3 }));
+	const scSearchRule = searchSc.ruleMatches.find((m) => m.ruleName === 'in-session-search');
+	const beallsSearchRule = searchBealls.ruleMatches.find((m) => m.ruleName === 'in-session-search');
+	assert(
+		'sleepcountry in-session-search lifts only researcher',
+		!!scSearchRule && !scSearchRule.adjustment.hunter && (scSearchRule.adjustment.researcher ?? 0) > 0,
+		`adjustment=${JSON.stringify(scSearchRule?.adjustment)}`,
+	);
+	assert(
+		'bealls in-session-search lifts both hunter and researcher',
+		!!beallsSearchRule && !!beallsSearchRule.adjustment.hunter && !!beallsSearchRule.adjustment.researcher,
+		`adjustment=${JSON.stringify(beallsSearchRule?.adjustment)}`,
+	);
+
+	// single-category-focus: sleepcountry → researcher; bealls → hunter
+	const focusSc = infer(ctx({
+		brandId: 'sleepcountry',
+		categoryViewCount: 3,
+		uniqueCategoriesViewed: ['mattresses'],
+	}));
+	const focusBealls = infer(ctx({
+		brandId: 'bealls',
+		categoryViewCount: 3,
+		uniqueCategoriesViewed: ['women'],
+	}));
+	const scFocusRule = focusSc.ruleMatches.find((m) => m.ruleName === 'single-category-focus');
+	const beallsFocusRule = focusBealls.ruleMatches.find((m) => m.ruleName === 'single-category-focus');
+	assert(
+		'sleepcountry single-category-focus lifts researcher',
+		!!scFocusRule && !scFocusRule.adjustment.hunter && (scFocusRule.adjustment.researcher ?? 0) > 0,
+		`adjustment=${JSON.stringify(scFocusRule?.adjustment)}`,
+	);
+	assert(
+		'bealls single-category-focus lifts hunter',
+		!!beallsFocusRule && (beallsFocusRule.adjustment.hunter ?? 0) > 0,
+		`adjustment=${JSON.stringify(beallsFocusRule?.adjustment)}`,
 	);
 }
 

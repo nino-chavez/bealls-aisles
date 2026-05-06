@@ -26,9 +26,11 @@ import {
 	type PersonaProbabilities,
 	type PersonaScoreAdjustment,
 	type Persona,
+	type PriorSource,
 	type RuleMatch,
 } from './types';
 import learnedWeights from './learned-weights.json';
+import { SLEEPCOUNTRY_REFERRER_PRIORS, bucketReferrer } from './sleepcountry-referrer-priors';
 
 // ─── Learned weights (optional empirical override) ─────────────────
 //
@@ -120,11 +122,20 @@ const rules: InferenceRule[] = [
 
 	// Referrer signals
 	{
+		// ADR-011 §1: in sleep retail, social referrers are paid-social
+		// purchase-intent traffic (hunter), not inspiration browsing (gatherer).
+		// Off-price-apparel default keeps the original gatherer lift.
 		name: 'referrer-social',
 		weight: 0.7,
 		evaluate: (ctx) => {
 			if (!ctx.referrer) return null;
 			const r = ctx.referrer.toLowerCase();
+			if (ctx.brandId === 'sleepcountry') {
+				if (/facebook|instagram/.test(r)) {
+					return { hunter: 0.3, urgency: 0.15 };
+				}
+				return null;
+			}
 			if (/pinterest|instagram|houzz/.test(r)) {
 				return { gatherer: 0.3 };
 			}
@@ -278,10 +289,16 @@ const rules: InferenceRule[] = [
 		},
 	},
 	{
+		// ADR-011 §2: hunter half is wrong direction in sleep retail (1.4% precision
+		// vs 95.0% for researcher across 1,005 fires). Sleep shoppers who search
+		// are comparison-shopping a high-stakes purchase, not refining a known target.
 		name: 'in-session-search',
 		weight: 0.6,
 		evaluate: (ctx) => {
 			if (ctx.searchCount < 2) return null;
+			if (ctx.brandId === 'sleepcountry') {
+				return { researcher: 0.25 };
+			}
 			// Multiple searches in one session = refining what they want (hunter or researcher)
 			return { hunter: 0.15, researcher: 0.15 };
 		},
@@ -336,10 +353,15 @@ const rules: InferenceRule[] = [
 		},
 	},
 	{
+		// ADR-011 §3: in sleep retail, sticking to one category (e.g. only mattresses)
+		// is researcher comparison-shopping, not hunter focus. n=21 in calibration.
 		name: 'single-category-focus',
 		weight: 0.5,
 		evaluate: (ctx) => {
 			if (ctx.categoryViewCount < 3 || ctx.uniqueCategoriesViewed.length > 1) return null;
+			if (ctx.brandId === 'sleepcountry') {
+				return { researcher: 0.15 };
+			}
 			// Multiple views but all in one category = focused intent
 			return { hunter: 0.2 };
 		},
@@ -440,14 +462,34 @@ const PRIOR_STRENGTH = 0.3;
  */
 const TEMPERATURE = 0.5;
 
-function logPriorFor(currentCategory: string): PersonaProbabilities {
-	const prior = priorFor(currentCategory);
+/** Floor for prior probabilities before Math.log to keep -Infinity out of the posterior. */
+const PRIOR_EPS = 0.01;
+
+function logProbs(p: PersonaProbabilities, strength: number): PersonaProbabilities {
 	return {
-		gatherer: Math.log(prior.gatherer) * PRIOR_STRENGTH,
-		hunter: Math.log(prior.hunter) * PRIOR_STRENGTH,
-		researcher: Math.log(prior.researcher) * PRIOR_STRENGTH,
-		gifter: Math.log(prior.gifter) * PRIOR_STRENGTH,
+		gatherer: Math.log(Math.max(p.gatherer, PRIOR_EPS)) * strength,
+		hunter: Math.log(Math.max(p.hunter, PRIOR_EPS)) * strength,
+		researcher: Math.log(Math.max(p.researcher, PRIOR_EPS)) * strength,
+		gifter: Math.log(Math.max(p.gifter, PRIOR_EPS)) * strength,
 	};
+}
+
+function logPriorFor(currentCategory: string): PersonaProbabilities {
+	return logProbs(priorFor(currentCategory), PRIOR_STRENGTH);
+}
+
+/**
+ * If the brand has a referrer-keyed prior table (currently sleepcountry only —
+ * see ADR-011 §7 and src/lib/signals/sleepcountry-referrer-priors.ts), look up
+ * the prior for ctx.referrer. Returns null when brand has no table, the bucket
+ * has no entry, or labeled support was below threshold.
+ */
+function brandReferrerPrior(ctx: InferenceContext): { prior: PersonaProbabilities; bucket: string } | null {
+	if (ctx.brandId !== 'sleepcountry') return null;
+	const bucket = bucketReferrer(ctx.referrer);
+	const prior = SLEEPCOUNTRY_REFERRER_PRIORS[bucket];
+	if (!prior) return null;
+	return { prior, bucket };
 }
 
 /** Shannon entropy of a probability distribution, in nats. */
@@ -486,10 +528,19 @@ function softmax(logs: PersonaProbabilities, temperature: number): PersonaProbab
 }
 
 export function infer(ctx: InferenceContext): PersonaInference {
-	// Accumulate the unnormalized log-posterior. Start from the damped log-prior
-	// conditioned on the current category; each matching rule adds its weighted
-	// log-likelihood-ratio.
-	const logPosterior: PersonaProbabilities = { ...logPriorFor(ctx.currentCategory) };
+	// Accumulate the unnormalized log-posterior. Start from the damped log-prior:
+	// if the brand has a referrer-keyed prior table (ADR-011), use that; otherwise
+	// fall back to the category-conditional prior. Each matching rule then adds
+	// its weighted log-likelihood-ratio.
+	let priorSource: PriorSource | undefined;
+	let logPosterior: PersonaProbabilities;
+	const brandPrior = brandReferrerPrior(ctx);
+	if (brandPrior) {
+		logPosterior = logProbs(brandPrior.prior, PRIOR_STRENGTH);
+		priorSource = { type: 'brand-referrer', brandId: ctx.brandId, referrerBucket: brandPrior.bucket };
+	} else {
+		logPosterior = { ...logPriorFor(ctx.currentCategory) };
+	}
 	let priceSensitivity = 0;
 	let urgency = 0;
 	let familiarityWithStore = ctx.visitCount > 1 ? 0.1 : 0;
@@ -575,6 +626,7 @@ export function infer(ctx: InferenceContext): PersonaInference {
 		lastUpdated: Date.now(),
 		dominantSource,
 		ruleMatches,
+		priorSource,
 	};
 }
 

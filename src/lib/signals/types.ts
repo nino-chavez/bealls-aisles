@@ -87,6 +87,17 @@ export interface RuleMatch {
 	reason: string;
 }
 
+/**
+ * Records when the cold-start prior was sourced from a brand-specific table
+ * (e.g. SLEEPCOUNTRY_REFERRER_PRIORS) instead of the default category prior.
+ * Surfaced in the dev panel as "primed by: facebook (n=362)".
+ */
+export interface PriorSource {
+	type: 'brand-referrer';
+	brandId: string;
+	referrerBucket: string;
+}
+
 export interface PersonaInference {
 	probabilities: PersonaProbabilities;
 	primary: Persona;
@@ -102,6 +113,8 @@ export interface PersonaInference {
 	lastUpdated: number;
 	dominantSource: SignalSource;
 	ruleMatches: RuleMatch[];
+	/** Where the cold-start prior came from, if not the default category prior. */
+	priorSource?: PriorSource;
 }
 
 // ─── Inference Rules ───────────────────────────────────────────────
@@ -137,6 +150,8 @@ export interface InferenceContext {
 	deviceType: 'mobile' | 'tablet' | 'desktop';
 	hourOfDay: number;
 	dayOfWeek: number; // 0 = Sunday
+	/** Active brand id (e.g. "bealls", "sleepcountry"). Drives per-brand rule overrides per ADR-011. */
+	brandId: string;
 	// Cross-session signals (from cookies)
 	storedPersona: Persona | null;
 	storedCategory: string | null;

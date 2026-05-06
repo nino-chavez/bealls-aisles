@@ -15,6 +15,7 @@ import type {
 	InferenceContext,
 	Persona,
 } from './types';
+import { getBrand } from '$lib/brand/config';
 export class SignalStore {
 	readonly sessionId: string;
 	private events: SignalEvent[] = [];
@@ -196,6 +197,7 @@ export class SignalStore {
 			deviceType,
 			hourOfDay,
 			dayOfWeek,
+			brandId: getBrand().id,
 			storedPersona: this.storedPersona,
 			storedCategory: this.storedCategory,
 			visitCount: this.visitCount,

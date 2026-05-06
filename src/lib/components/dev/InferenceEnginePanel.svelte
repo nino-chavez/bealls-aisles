@@ -76,6 +76,9 @@
 					{pct(inf.confidence)} confidence gap)
 					· Source: <strong>{inf.dominantSource}</strong>
 					· Signals: {inf.signalCount}
+					{#if inf.priorSource}
+						· <span class="hit">primed by: {inf.priorSource.referrerBucket}</span>
+					{/if}
 					{#if inf.shift.detected}
 						· <span class="warn">SHIFT: {inf.shift.from} → {inf.primary}</span>
 					{/if}

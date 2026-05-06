@@ -86,6 +86,7 @@ console.log('\nStore: inference result matches direct construction');
 		deviceType: 'desktop',
 		hourOfDay: 10,
 		dayOfWeek: 6,
+		brandId: 'bealls',
 		storedPersona: 'gatherer',
 		storedCategory: 'living-room',
 		visitCount: 3,
