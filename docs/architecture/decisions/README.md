@@ -15,6 +15,7 @@ Append-only log of load-bearing runtime architecture decisions. See `../../metho
 | [007](007-section-authoring-model.md) | Section authoring model (named insertion zones with typed contract) | Accepted | 2026-04-30 | foundation + admin + cross-layer |
 | [008](008-tag-as-retrieval-signal.md) | Semantic tags as a first-class retrieval signal | Accepted | 2026-05-01 | engine + foundation + cross-layer |
 | [010](010-cloudflare-parallel-deploy.md) | Cloudflare Workers + AI Gateway as parallel deploy target | Accepted | 2026-05-05 | foundation + engine |
+| [011](011-sleepcountry-rule-calibration.md) | Sleep retail calibration of the persona-inference rule set | Accepted | 2026-05-06 | engine |
 
 ## Pending (drafts)
 
