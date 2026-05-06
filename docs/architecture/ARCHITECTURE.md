@@ -30,13 +30,13 @@
 │                    ECOMM APP FOUNDATION                           │
 │  Catalog (BigCommerce GraphQL) · Cart · Checkout · Account        │
 │  Search · Locator · Static templates · Renderer                   │
-│              (SvelteKit + Vercel deployment)                      │
+│   (SvelteKit · Vercel + Cloudflare Workers parallel deploys)      │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
 ### Layer responsibilities
 
-**Engine.** Receives request context (URL surface, persona signals, picks, rules). Selects surface-typed schema and prompt. Calls AI Gateway (Haiku 4.5 primary, Sonnet 4.6 fallback). Validates output against schema. Returns composed layout JSON to the foundation renderer. Caches by `(brandId, surface, persona, picks-hash, rule-version)`.
+**Engine.** Receives request context (URL surface, persona signals, picks, rules). Selects surface-typed schema and prompt. Calls AI Gateway — Vercel AI Gateway on the Vercel deploy, Cloudflare AI Gateway on the Cloudflare deploy (Haiku 4.5 primary, Sonnet 4.6 fallback). Validates output against schema. Returns composed layout JSON to the foundation renderer. Caches by `(brandId, surface, persona, picks-hash, rule-version)`.
 
 **Foundation.** Renders composed layouts via the component library. Owns runtime state primitives the engine never composes: cart, checkout flow, account, search results, locator. Owns static templates: PDP gallery scaffold, checkout step structure, account dashboard frame. Surfaces signals upstream (page view, dwell, picks, cart events) for the engine's inference.
 

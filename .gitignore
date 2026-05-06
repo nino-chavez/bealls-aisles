@@ -13,3 +13,4 @@ validation/
 **/.DS_Store
 .dev.vars
 .wrangler/
+wrangler.log

@@ -1,12 +1,14 @@
-# Cloudflare + Cloudflare AI Gateway — Migration Plan
+# Cloudflare + Cloudflare AI Gateway — Deployment Plan (was: Migration Plan)
+
+> **Reframe note (2026-05-05):** This plan was authored as a migration with a Vercel→Cloudflare cutover, but the project owner reframed it mid-execution to a **parallel-deploy** model. Both stacks now run simultaneously on separate domains; nothing decommissions. See [ADR-010](../../architecture/decisions/010-cloudflare-parallel-deploy.md). Tasks T7 (DNS prep), T8 (per-brand cutover), T9 (14-day soak), and T10 (Vercel decommission) are **N/A** under the parallel-deploy framing — see annotations on each task. T0–T6 still apply as written and are largely complete; T8.B and T8.C are reframed as simple `wrangler deploy + smoke` steps.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Cut over Aisles from Vercel + Vercel AI Gateway to Cloudflare Workers + Cloudflare AI Gateway, across all three brand deployments (Bealls, Bealls Florida, Home Centric), with per-brand DNS flip and a two-week rollback window. The migration completes when (1) all three brand domains resolve to Cloudflare, (2) Vercel projects are decommissioned, (3) `@sveltejs/adapter-vercel` and `@ai-sdk/gateway` are removed from the codebase, and (4) ADR-009 + supporting doc updates are merged.
+**Goal (revised):** Stand up Cloudflare Workers + Cloudflare AI Gateway as a **parallel deploy target** alongside the existing Vercel deploys. The work completes when (1) all three brand Workers are deployed to their internal domains with smoke checks executed and logged in `docs/operations/deployment-log.md`, (2) ADR-010 is merged, (3) supporting doc updates are merged. **No Vercel decommission, no DNS cutover, no soak windows.**
 
 **Architecture:** Two-layer change. **Foundation:** SvelteKit adapter swap (`adapter-vercel` → `adapter-cloudflare` 7.2.x), three Workers deploying off `main` via Wrangler envs (replacing three Vercel projects), GitHub Actions CI/CD. **Engine:** All four AI routes (`/api/layout`, `/api/layout/stream`, `/api/refine`, `/api/suggest`) plus the enrichment script route through CF AI Gateway via `createAnthropic({ baseURL })` on the maintained `@ai-sdk/anthropic` provider — no new SDK package, no stale deps. The runtime env flag `useCfAig` in `ai-model.ts` (introduced during the spike) becomes the in-Worker rollback lever — flip env to revert to Vercel AI Gateway path without redeploy. Neon Postgres and Upstash Redis stay external (HTTP, no changes). Three-brand `BRAND_ID` env model preserved in Wrangler `[env.*]` blocks.
 
-**Cutover strategy:** Parallel-deploy + per-brand DNS flip with progressive rollout — Bealls first (smallest blast radius), then Bealls FL (48h soak), then Home Centric (most complex due to content mode). Each brand has a 48-hour soak window between flips. Vercel projects remain on standby for two weeks post-final-flip; at T+14 days they are deleted and `@sveltejs/adapter-vercel`/`@ai-sdk/gateway` removed from `package.json`.
+**Cutover strategy: N/A (superseded by parallel-deploy).** The original strategy was per-brand DNS flip with 48h soaks and Vercel decommission. Under the parallel-deploy framing, all three Workers stand up on internal domains, are smoke-tested, and stay live alongside Vercel indefinitely. No DNS pressure, no soak windows.
 
 **Tech Stack:**
 - Adapter: `@sveltejs/adapter-cloudflare` ^7.2.8
@@ -693,7 +695,9 @@ git commit -m "docs(observability): cloudflare dashboards + alert thresholds for
 
 ---
 
-## Task 7: DNS preparation — TTL drop
+## Task 7: DNS preparation — TTL drop  ~~[N/A — superseded by parallel-deploy, ADR-010]~~
+
+> **Skipped under the parallel-deploy framing.** No DNS records on existing brand domains were modified. Cloudflare Workers reach the public via separate internal domains (`*-cf.internal.signal-x.dev`) — see `docs/operations/deployment-domains.md`. Original task content preserved below for historical trace; do not execute.
 
 **Files:**
 - Create: `docs/operations/dns-cutover.md` (per-brand DNS state and step-by-step)
@@ -723,13 +727,26 @@ git commit -m "docs(ops): dns cutover plan with ttl drop schedule"
 
 ---
 
-## Task 8: Per-brand cutover
+## Task 8: Per-brand deployment  ~~[reframed — was "Per-brand cutover"]~~
 
 **Files:** none — operational steps only.
 
-**Sequence:** Bealls → 48h soak → Bealls FL → 48h soak → Home Centric.
+> **Reframed under parallel-deploy (ADR-010).** No traffic cutover, no soaks. Each brand is just `wrangler deploy --env <brand>` + custom-domain mapping + smoke checks per `docs/operations/deployment-log.md`. Order doesn't matter and brands can be deployed concurrently. The original A1–A7 / R1–R5 procedure below contains useful smoke-check details — keep those steps, ignore the rollback runbook (R-steps) and 48h soak gates.
 
-Each brand follows the same procedure. Run T8.A, T8.B, T8.C sequentially with the soak between.
+**Procedure per brand (replaces the original A1–A7):**
+
+1. `wrangler deploy --env <brand>` (one of: `bealls`, `bealls-fl`, `home-centric`)
+2. Map custom internal domain in Cloudflare dashboard (Workers → trigger → custom domain)
+3. Execute the full smoke procedure from `docs/operations/deployment-log.md` against the live URL — this includes the 4-step curl checks AND the Playwright streaming test
+4. Append a row to the deployment log table with date, action, **actual** smoke status, and notes
+5. Done. No soak gate before deploying the next brand.
+
+**Status:**
+- [x] Bealls — Worker deployed, custom domain mapped (smoke pending operator validation per deployment log)
+- [ ] Bealls FL — `wrangler deploy --env bealls-fl` then smoke
+- [ ] Home Centric — `wrangler deploy --env home-centric` then smoke (include `/store-locator?zip=33486` check — content mode)
+
+(Original A1–A7 + R1–R5 sections preserved below for trace; the R-rollback subroutine is not used under parallel-deploy.)
 
 ### T8.A: Cutover Bealls (`aisles-demo-1`)
 
@@ -814,7 +831,9 @@ This keeps the Worker serving traffic but reverts the AI gateway to Vercel — u
 
 ---
 
-## Task 9: Two-week soak
+## Task 9: Two-week soak  ~~[N/A — superseded by parallel-deploy, ADR-010]~~
+
+> **Skipped.** A soak window exists to catch bugs before rollback gets hard. With both stacks live in parallel and Cloudflare on internal domains only, there's nothing to roll back from. Operator can choose to keep the Cloudflare deploys live indefinitely or tear them down at any time without external impact. Original task content preserved below for trace.
 
 **Files:** none — observation only.
 
@@ -838,7 +857,9 @@ Default: decommission. Extend if there's any unresolved issue.
 
 ---
 
-## Task 10: Decommission Vercel + remove dependencies
+## Task 10: Decommission Vercel + remove dependencies  ~~[N/A — superseded by parallel-deploy, ADR-010]~~
+
+> **Skipped.** Vercel stays as the parallel deploy target. `@sveltejs/adapter-vercel` was removed from this branch in commit `2874919` before the reframe — that removal is acknowledged but not extended. To restore parallel build capability from the same branch, future work would re-add the Vercel adapter and gate adapter selection by env. Tracked as the open question in ADR-010. Original task content preserved below for trace; do not execute.
 
 **Files:**
 - Modify: `package.json` (remove `@sveltejs/adapter-vercel`, `@ai-sdk/gateway`)
@@ -937,7 +958,9 @@ git commit -m "chore(deploy): remove vercel adapter + ai-gateway after migration
 
 ---
 
-## Task 11: ADR + cross-doc updates
+## Task 11: ADR + cross-doc updates  [reframed — completed as ADR-010]
+
+> **Reframed under parallel-deploy.** ADR-010 (`docs/architecture/decisions/010-cloudflare-parallel-deploy.md`) replaces the originally-planned ADR-009 (slot 009 was already reserved per the ADR README). Cross-doc updates target the parallel-deploy framing, not a Vercel-replacement framing. The original step list below is largely preserved but ARCHITECTURE.md / multi-brand.md / CLAUDE.md were updated to reflect parallel deploys, not adapter replacement. T10 dep-removal steps are explicitly N/A (see T10 annotation).
 
 **Files:**
 - Create: `docs/architecture/decisions/009-deploy-target-cloudflare.md`
@@ -1051,7 +1074,9 @@ git commit -m "docs: ADR-009 deploy target cloudflare + cross-doc updates"
 
 ---
 
-## Task 12: PR + merge to main
+## Task 12: PR + merge to main  ~~[Deferred — branch strategy decision pending]~~
+
+> **Deferred.** Per the project owner's decision (2026-05-05), the work stays on the `worktree-spike-cloudflare-portkey` branch for now. Cloudflare deploys come from this branch via manual `workflow_dispatch`. The branch-strategy fork (long-lived deploy branch vs merge-to-main with restored Vercel adapter) is the open question in ADR-010 and will be resolved separately. Original task content preserved below for trace; do not execute until branch strategy is decided.
 
 **Files:** none — branch operations only.
 

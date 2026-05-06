@@ -1,25 +1,48 @@
 name: Deploy to Cloudflare Workers
 
+# Manual-only until branch strategy is decided (per ADR-010). The original
+# `push: branches: [main]` trigger was removed because the Cloudflare-only
+# branch (worktree-spike-cloudflare-portkey) currently doesn't have
+# adapter-vercel and would break Vercel auto-deploys if merged to main.
+# Re-enable a push trigger once the deploy-source branch is finalized.
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      brand:
+        description: Brand to deploy (or "all")
+        required: true
+        default: all
+        type: choice
+        options: [all, bealls, bealls-fl, home-centric]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         env: ['bealls', 'bealls-fl', 'home-centric']
     steps:
       - uses: actions/checkout@v4
+      - name: Skip non-selected brands
+        if: github.event.inputs.brand != 'all' && github.event.inputs.brand != matrix.env
+        run: |
+          echo "Dispatch targeted ${{ github.event.inputs.brand }}; skipping ${{ matrix.env }}"
+          exit 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
       - run: npm ci
       - run: npm run check
       - run: npm run build
+      - name: Verify Worker bundle size
+        run: |
+          bytes=$(gzip -c .svelte-kit/cloudflare/_worker.js | wc -c)
+          echo "Worker bundle: $((bytes / 1024)) KB compressed"
+          if [ "$bytes" -gt 10485760 ]; then
+            echo "::error::Bundle exceeds 10 MB limit"; exit 1
+          fi
       - name: Deploy to Cloudflare
         uses: cloudflare/wrangler-action@v3
         with:

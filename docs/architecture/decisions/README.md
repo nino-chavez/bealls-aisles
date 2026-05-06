@@ -14,6 +14,7 @@ Append-only log of load-bearing runtime architecture decisions. See `../../metho
 | [006](006-surface-typed-schemas.md) | Surface-typed schemas (split LayoutSchema → 6) | Accepted | 2026-04-30 | engine |
 | [007](007-section-authoring-model.md) | Section authoring model (named insertion zones with typed contract) | Accepted | 2026-04-30 | foundation + admin + cross-layer |
 | [008](008-tag-as-retrieval-signal.md) | Semantic tags as a first-class retrieval signal | Accepted | 2026-05-01 | engine + foundation + cross-layer |
+| [010](010-cloudflare-parallel-deploy.md) | Cloudflare Workers + AI Gateway as parallel deploy target | Accepted | 2026-05-05 | foundation + engine |
 
 ## Pending (drafts)
 

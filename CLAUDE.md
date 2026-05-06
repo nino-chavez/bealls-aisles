@@ -78,9 +78,12 @@ See `docs/methodology/METHODOLOGY.md` for full conventions.
 ## Repository specifics
 
 - Working dir: `/Users/nino/Workspace/dev/wip/bealls-aisles`. The parent `aisles-storefront` is the upstream multi-brand demo (Haven/Volt/Ember) — different repo, different work.
-- Three Vercel projects deploy off `main`: `aisles-demo-1` (Bealls), `aisles-demo-2` (Bealls Florida), `aisles-demo-3` (Home Centric). Aliases: `aisles-demo-{N}-signal-x-studio-labs.vercel.app`.
-- Brand selected via `BRAND_ID` env var.
-- Stack: SvelteKit 2 / Svelte 5 (runes) / Tailwind v4 / Vercel AI SDK v6 + AI Gateway / BigCommerce GraphQL Storefront / Neon Postgres (enrichment) / Upstash Redis (layout cache).
+- **Two parallel deploy targets** (per ADR-010):
+  - **Vercel** (production demos, off `main`): `aisles-demo-1` (Bealls), `aisles-demo-2` (Bealls Florida), `aisles-demo-3` (Home Centric). Aliases: `aisles-demo-{N}-signal-x-studio-labs.vercel.app`.
+  - **Cloudflare Workers** (off the working branch, currently `worktree-spike-cloudflare-portkey`): same three brands on `*-cf.internal.signal-x.dev` internal domains via Wrangler envs. AI calls route through three Cloudflare AI Gateways (`aisles-bealls`, `aisles-bealls-fl`, `aisles-hc`).
+- Brand selected via `BRAND_ID` env var (set in Vercel env or Wrangler `[env.*].vars`).
+- Stack: SvelteKit 2 / Svelte 5 (runes) / Tailwind v4 / `ai` v6 + `@ai-sdk/anthropic` (routed through Vercel AI Gateway or Cloudflare AI Gateway depending on target) / BigCommerce GraphQL Storefront / Neon Postgres (enrichment) / Upstash Redis (layout cache).
+- AI gateway selection: env-flag seam in `src/lib/server/ai-model.ts` (`useCfAig` / `useVercelGateway`). See `docs/operations/deployment-domains.md` and `docs/operations/deployment-log.md`.
 
 ---
 

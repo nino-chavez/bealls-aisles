@@ -6,15 +6,15 @@
 
 ## Overview
 
-A single Aisles codebase serves multiple brands. Brand selection is controlled by the `BRAND_ID` environment variable. Each brand gets its own Vercel project, BigCommerce channel (storefront mode) or content set (content mode), and visual identity, but shares all application code, AI logic, and infrastructure patterns.
+A single Aisles codebase serves multiple brands. Brand selection is controlled by the `BRAND_ID` environment variable. Each brand has its own deploy targets, BigCommerce channel (storefront mode) or content set (content mode), and visual identity, but shares all application code, AI logic, and infrastructure patterns.
 
-The three brands in this fork demonstrate the breadth of the system, including the storefront vs. content mode split (see [ADR-005](decisions/005-storefront-vs-content-modes.md)):
+Two parallel deploy targets per brand (per [ADR-010](decisions/010-cloudflare-parallel-deploy.md)):
 
-| Brand | Domain | Mode | BC Channel | Vercel Project |
-|---|---|---|---|---|
-| bealls | Off-price family apparel, home, gifts | storefront | Channel 1846324 | `aisles-demo-1` |
-| Bealls Florida | Coastal apparel and lifestyle | storefront | Channel 1846321 | `aisles-demo-2` |
-| Home Centric | Home decor (in-store discovery) | content | n/a (content set) | `aisles-demo-3` |
+| Brand | Domain | Mode | BC Channel | Vercel project | Cloudflare Worker |
+|---|---|---|---|---|---|
+| bealls | Off-price family apparel, home, gifts | storefront | Channel 1846324 | `aisles-demo-1` | `aisles-demo-1` → `bealls-cf.internal.signal-x.dev` |
+| Bealls Florida | Coastal apparel and lifestyle | storefront | Channel 1846321 | `aisles-demo-2` | `aisles-demo-2` → `bealls-fl-cf.internal.signal-x.dev` |
+| Home Centric | Home decor (in-store discovery) | content | n/a (content set) | `aisles-demo-3` | `aisles-demo-3` → `hc-cf.internal.signal-x.dev` |
 
 ---
 
@@ -29,7 +29,7 @@ const brandId =
   'bealls';
 ```
 
-- **Vercel Functions (server-side)**: reads `BRAND_ID`
+- **Server-side (Vercel Functions or Cloudflare Workers)**: reads `BRAND_ID`. On Cloudflare, set in `wrangler.toml` `[env.<brand>].vars`. On Vercel, set in the project's env config.
 - **Vite/client-side**: reads `VITE_BRAND_ID` (must be prefixed for Vite to expose it)
 - **Node scripts** (enrichment, seeding): reads `BRAND_ID` from `process.env`
 
