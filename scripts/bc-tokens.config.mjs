@@ -44,6 +44,12 @@ export const BRAND_TOKENS = [
 		envKey: 'BEALLSFLORIDA_STOREFRONT_TOKEN',
 		origins: [DEV_ORIGIN, 'https://aisles-demo-2-signal-x-studio-labs.vercel.app'],
 	},
+	{
+		brand: 'sleepcountry',
+		channelId: 1, // Demo channel, BC sample/Stencil platform; activated 2026-05-06
+		envKey: 'SLEEPCOUNTRY_STOREFRONT_TOKEN',
+		origins: [DEV_ORIGIN, 'https://aisles-demo-4.biq.workers.dev'],
+	},
 ];
 
 /** Token lifetime in seconds (1 year — matches prior issuance). */

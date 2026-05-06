@@ -1,0 +1,445 @@
+{
+	"brand": "sleepcountry",
+	"categoryPrefix": "SleepCountry",
+	"skuPrefix": "SC-",
+	"channelId": 1,
+	"treeId": 1,
+	"_meta": {
+		"sourcedFrom": "Synthetic catalog modeled after sleepcountry.ca product mix and Canadian sleep-retail price points (2026-05-06). Real product images sourced from Unsplash to avoid IP issues.",
+		"persona_coverage": {
+			"researcher_strong": "Mattresses are high-stakes purchases — heavy comparison, spec depth, firmness/coil/material differentiation",
+			"hunter_strong": "Sale-priced mattresses + boxed brands cover the sale-watcher",
+			"gatherer_strong": "Bedding ensembles, sheets, throws cover the bedroom-refresh shopper",
+			"gifter_present": "Pillows, sheet sets, mattress protectors at clear gift price points"
+		}
+	},
+	"categories": [
+		{ "name": "Mattresses", "description": "Mattresses for every sleep style — memory foam, hybrid, latex, and pocket-coil. From compact-and-affordable to luxury sleep system.", "sort_order": 1 },
+		{ "name": "Pillows", "description": "Match a pillow to your sleep position and preference — back, side, stomach, or combination sleepers.", "sort_order": 2 },
+		{ "name": "Bedding", "description": "Sheets, duvet covers, comforters, and accent pieces. Cotton, percale, sateen, and linen weaves.", "sort_order": 3 },
+		{ "name": "Bed Frames", "description": "Platform beds, adjustable bases, and storage frames. Built to last as long as your mattress.", "sort_order": 4 },
+		{ "name": "Accessories", "description": "Mattress protectors, toppers, sheet sets, and sleep accessories — the layers that make a great sleep system.", "sort_order": 5 }
+	],
+	"products": [
+		{
+			"name": "Sealy Posturepedic Hybrid Plush — Queen",
+			"sku": "SC-MAT-001",
+			"price": 1799,
+			"sale_price": 1499,
+			"weight": 75,
+			"category": "Mattresses",
+			"brand": "Sealy",
+			"description": "<p>The Posturepedic Plush Hybrid combines individually-wrapped pocket coils with a layer of cooling memory foam for pressure-point relief without the sink. 13-inch profile, medium-plush feel — best for back and side sleepers under 230 lbs. 10-year warranty.</p><ul><li>Firmness: Medium-Plush (4/10)</li><li>Construction: Hybrid (pocket coil + memory foam)</li><li>Profile: 13 inches</li><li>Best for: Back &amp; side sleepers</li><li>Warranty: 10 years</li></ul>",
+			"custom_fields": [
+				{ "name": "Firmness", "value": "Medium-Plush (4/10)" },
+				{ "name": "Construction", "value": "Hybrid (pocket coil + memory foam)" },
+				{ "name": "Cooling", "value": "Yes — gel-infused foam" },
+				{ "name": "Trial", "value": "100-night comfort guarantee" }
+			]
+		},
+		{
+			"name": "Tempur-Pedic ProAdapt Medium — Queen",
+			"sku": "SC-MAT-002",
+			"price": 3499,
+			"weight": 110,
+			"category": "Mattresses",
+			"brand": "Tempur-Pedic",
+			"description": "<p>The ProAdapt Medium delivers Tempur-Pedic's signature precise body contouring with a balanced feel that suits most sleepers. Multiple TEMPUR® material layers absorb motion completely — your partner can move without disturbing you. 12-inch profile, 10-year warranty.</p><ul><li>Firmness: Medium (5/10)</li><li>Construction: All-foam (TEMPUR-APR®)</li><li>Profile: 12 inches</li><li>Motion isolation: Excellent</li><li>Warranty: 10 years</li></ul>",
+			"custom_fields": [
+				{ "name": "Firmness", "value": "Medium (5/10)" },
+				{ "name": "Construction", "value": "All-foam (TEMPUR-APR)" },
+				{ "name": "Cooling", "value": "Yes — TEMPUR-CM+ cover" },
+				{ "name": "Trial", "value": "100-night comfort guarantee" }
+			]
+		},
+		{
+			"name": "Stearns & Foster Estate Plush Pillow Top — King",
+			"sku": "SC-MAT-003",
+			"price": 2899,
+			"weight": 145,
+			"category": "Mattresses",
+			"brand": "Stearns & Foster",
+			"description": "<p>Hand-built luxury hybrid with IntelliCoil® support and a generous pillow-top of cashmere-blend foam. The Estate Plush Pillow Top is for sleepers who prefer a soft, sink-into-the-mattress feel without losing alignment support. 16-inch profile.</p><ul><li>Firmness: Plush (3/10)</li><li>Construction: Hybrid with cashmere pillow top</li><li>Profile: 16 inches</li><li>Best for: Side sleepers, plush-feel preference</li><li>Warranty: 10 years</li></ul>",
+			"custom_fields": [
+				{ "name": "Firmness", "value": "Plush (3/10)" },
+				{ "name": "Construction", "value": "Hybrid (IntelliCoil + cashmere)" },
+				{ "name": "Edge Support", "value": "Reinforced" },
+				{ "name": "Profile", "value": "16 inches" }
+			]
+		},
+		{
+			"name": "Beautyrest Black Hybrid C-Class — Queen",
+			"sku": "SC-MAT-004",
+			"price": 2499,
+			"weight": 95,
+			"category": "Mattresses",
+			"brand": "Beautyrest",
+			"description": "<p>The Beautyrest Black Hybrid C-Class is built for combination sleepers who change positions through the night. T3 Pocketed Coil® technology delivers pinpoint support; charcoal-infused memory foam regulates temperature. Medium-firm balanced feel.</p><ul><li>Firmness: Medium-Firm (6/10)</li><li>Construction: Hybrid (T3 Pocketed Coil + memory foam)</li><li>Profile: 14 inches</li><li>Cooling: Charcoal-infused foam</li><li>Warranty: 10 years</li></ul>",
+			"custom_fields": [
+				{ "name": "Firmness", "value": "Medium-Firm (6/10)" },
+				{ "name": "Construction", "value": "Hybrid (T3 Coil + memory foam)" },
+				{ "name": "Cooling", "value": "Charcoal-infused" }
+			]
+		},
+		{
+			"name": "Endy Mattress — Queen",
+			"sku": "SC-MAT-005",
+			"price": 1199,
+			"weight": 72,
+			"category": "Mattresses",
+			"brand": "Endy",
+			"description": "<p>Canadian-made bed-in-a-box with three layers of pressure-relieving foam. Open-cell top layer breathes well; high-density base layer holds its shape over years of use. 10-inch profile — works on any platform or slatted base.</p><ul><li>Firmness: Medium (5/10)</li><li>Construction: All-foam (3-layer)</li><li>Profile: 10 inches</li><li>Made in: Canada</li><li>Trial: 100 nights</li></ul>",
+			"custom_fields": [
+				{ "name": "Origin", "value": "Made in Canada" },
+				{ "name": "Construction", "value": "All-foam, bed-in-a-box" },
+				{ "name": "Firmness", "value": "Medium (5/10)" }
+			]
+		},
+		{
+			"name": "Casper Original Foam — Queen",
+			"sku": "SC-MAT-006",
+			"price": 1099,
+			"sale_price": 949,
+			"weight": 68,
+			"category": "Mattresses",
+			"brand": "Casper",
+			"description": "<p>The original Casper, redesigned. Three-zone support targets your hips, lower back, and shoulders independently. 11-inch all-foam profile, ships compressed in a box. Best for the budget-conscious sleeper who still wants a name-brand mattress.</p><ul><li>Firmness: Medium (5/10)</li><li>Construction: All-foam, zone support</li><li>Profile: 11 inches</li><li>Trial: 100 nights</li></ul>",
+			"custom_fields": [
+				{ "name": "Construction", "value": "Zoned all-foam" },
+				{ "name": "Firmness", "value": "Medium (5/10)" },
+				{ "name": "Bed-in-a-box", "value": "Yes" }
+			]
+		},
+		{
+			"name": "Sealy Posturepedic Firm — Twin",
+			"sku": "SC-MAT-007",
+			"price": 799,
+			"weight": 45,
+			"category": "Mattresses",
+			"brand": "Sealy",
+			"description": "<p>Entry-price Posturepedic with a firm, supportive feel. Reinforced edge support and targeted lumbar zone. Ideal for kids' rooms, guest rooms, or sleepers who prefer a firmer surface. 10-year warranty.</p><ul><li>Firmness: Firm (7/10)</li><li>Construction: Innerspring</li><li>Profile: 10 inches</li><li>Size: Twin</li></ul>",
+			"custom_fields": [
+				{ "name": "Firmness", "value": "Firm (7/10)" },
+				{ "name": "Best For", "value": "Kids' rooms, guest beds" }
+			]
+		},
+		{
+			"name": "Silk & Snow Hybrid — King",
+			"sku": "SC-MAT-008",
+			"price": 1799,
+			"weight": 105,
+			"category": "Mattresses",
+			"brand": "Silk & Snow",
+			"description": "<p>Canadian-designed hybrid mattress with individually-wrapped coils, organic cotton cover, and a layer of natural latex. 12-inch profile balances the bounce of latex with the contouring of memory foam. 15-year warranty.</p><ul><li>Firmness: Medium-Firm (6/10)</li><li>Construction: Hybrid (coil + latex + foam)</li><li>Profile: 12 inches</li><li>Cover: Organic cotton</li><li>Warranty: 15 years</li></ul>",
+			"custom_fields": [
+				{ "name": "Construction", "value": "Hybrid with natural latex" },
+				{ "name": "Cover", "value": "Organic cotton" },
+				{ "name": "Origin", "value": "Designed in Canada" }
+			]
+		},
+		{
+			"name": "Tempur-Pedic Cloud Pillow",
+			"sku": "SC-PIL-001",
+			"price": 119,
+			"weight": 3,
+			"category": "Pillows",
+			"brand": "Tempur-Pedic",
+			"description": "<p>Adaptive memory-foam pillow that conforms to your head and neck. The Cloud version is softer than Tempur's classic — best for stomach and back sleepers who want gentle support without bounce-back.</p>",
+			"custom_fields": [
+				{ "name": "Best For", "value": "Stomach + back sleepers" },
+				{ "name": "Material", "value": "TEMPUR memory foam" }
+			]
+		},
+		{
+			"name": "Down Alternative Hotel Pillow — Pair",
+			"sku": "SC-PIL-002",
+			"price": 89,
+			"sale_price": 69,
+			"weight": 4,
+			"category": "Pillows",
+			"brand": "Sleep Country",
+			"description": "<p>Set of two down-alternative pillows with a brushed cotton cover. Hypoallergenic poly-cluster fill mimics the loft of down without the allergens. Standard or Queen size.</p>",
+			"custom_fields": [
+				{ "name": "Set", "value": "Pair (2 pillows)" },
+				{ "name": "Fill", "value": "Down alternative (hypoallergenic)" }
+			]
+		},
+		{
+			"name": "Cooling Gel Memory Foam Pillow",
+			"sku": "SC-PIL-003",
+			"price": 149,
+			"weight": 3,
+			"category": "Pillows",
+			"brand": "Sleep Country",
+			"description": "<p>Memory-foam pillow with phase-change gel layer that wicks heat. Designed for hot sleepers and side-sleepers — the contoured shape supports neck alignment.</p>",
+			"custom_fields": [
+				{ "name": "Cooling", "value": "Phase-change gel layer" },
+				{ "name": "Best For", "value": "Hot sleepers, side sleepers" }
+			]
+		},
+		{
+			"name": "Premium White Down Pillow — King",
+			"sku": "SC-PIL-004",
+			"price": 249,
+			"weight": 4,
+			"category": "Pillows",
+			"brand": "Sleep Country",
+			"description": "<p>Hutterite white down pillow with 700 fill power. Responsibly-sourced down, double-stitched ticking, and a 100% cotton cover. King size — the indulgent upgrade for a master bedroom.</p>",
+			"custom_fields": [
+				{ "name": "Fill Power", "value": "700" },
+				{ "name": "Material", "value": "Hutterite white down" },
+				{ "name": "Origin", "value": "Responsibly sourced" }
+			]
+		},
+		{
+			"name": "Adjustable Bamboo Charcoal Pillow",
+			"sku": "SC-PIL-005",
+			"price": 79,
+			"weight": 3,
+			"category": "Pillows",
+			"brand": "Sleep Country",
+			"description": "<p>Adjustable shredded memory foam pillow with bamboo charcoal infusion. Unzip the cover and remove fill to dial in your preferred loft. Naturally odor-resistant. Machine-washable cover.</p>",
+			"custom_fields": [
+				{ "name": "Adjustable", "value": "Yes — removable fill" },
+				{ "name": "Care", "value": "Machine-washable cover" }
+			]
+		},
+		{
+			"name": "Egyptian Cotton 600-TC Sheet Set — Queen",
+			"sku": "SC-BED-001",
+			"price": 199,
+			"sale_price": 149,
+			"weight": 5,
+			"category": "Bedding",
+			"brand": "Sleep Country",
+			"description": "<p>Long-staple Egyptian cotton, 600 thread count, sateen weave. Set includes flat sheet, fitted sheet (16-inch deep pocket), and two pillowcases. Smooth, cool, and gets softer with each wash.</p>",
+			"custom_fields": [
+				{ "name": "Material", "value": "100% Egyptian cotton" },
+				{ "name": "Thread Count", "value": "600" },
+				{ "name": "Weave", "value": "Sateen" },
+				{ "name": "Set", "value": "Flat + fitted + 2 pillowcases" }
+			]
+		},
+		{
+			"name": "Linen Duvet Cover — King",
+			"sku": "SC-BED-002",
+			"price": 299,
+			"weight": 6,
+			"category": "Bedding",
+			"brand": "Sleep Country",
+			"description": "<p>Stonewashed Belgian linen duvet cover with hidden-button closure. Breathes well in summer, layers warmly in winter. Wrinkles by design — the casual-luxury bedding standard.</p>",
+			"custom_fields": [
+				{ "name": "Material", "value": "Belgian linen" },
+				{ "name": "Closure", "value": "Hidden buttons" },
+				{ "name": "Care", "value": "Machine washable" }
+			]
+		},
+		{
+			"name": "All-Season Microfiber Comforter — Queen",
+			"sku": "SC-BED-003",
+			"price": 129,
+			"weight": 4,
+			"category": "Bedding",
+			"brand": "Sleep Country",
+			"description": "<p>Mid-weight microfiber comforter rated for year-round use. Box-stitched fill prevents shifting. Hypoallergenic, machine-washable, and comes in white or grey.</p>",
+			"custom_fields": [
+				{ "name": "Fill", "value": "Microfiber, box-stitched" },
+				{ "name": "Season", "value": "All-season" }
+			]
+		},
+		{
+			"name": "Percale Cotton Sheet Set — King",
+			"sku": "SC-BED-004",
+			"price": 169,
+			"weight": 5,
+			"category": "Bedding",
+			"brand": "Sleep Country",
+			"description": "<p>Crisp percale cotton with a hotel-feel finish. 400 thread count — breathable, cool, and durable. Best for hot sleepers who don't want sateen's silkier feel.</p>",
+			"custom_fields": [
+				{ "name": "Material", "value": "100% cotton" },
+				{ "name": "Thread Count", "value": "400" },
+				{ "name": "Weave", "value": "Percale" }
+			]
+		},
+		{
+			"name": "Hutterite White Down Duvet — Queen, Year-Round",
+			"sku": "SC-BED-005",
+			"price": 599,
+			"weight": 7,
+			"category": "Bedding",
+			"brand": "Sleep Country",
+			"description": "<p>Year-round weight Hutterite white down duvet with 650 fill power. Box-baffled construction prevents fill migration. Cotton sateen shell, double-stitched. Made in Canada.</p>",
+			"custom_fields": [
+				{ "name": "Fill Power", "value": "650" },
+				{ "name": "Construction", "value": "Box-baffled" },
+				{ "name": "Origin", "value": "Made in Canada" }
+			]
+		},
+		{
+			"name": "Bamboo-Lyocell Sheet Set — Queen",
+			"sku": "SC-BED-006",
+			"price": 159,
+			"weight": 5,
+			"category": "Bedding",
+			"brand": "Sleep Country",
+			"description": "<p>Bamboo-lyocell blend with a silky, cool-to-touch finish. Naturally moisture-wicking and antimicrobial. Best for hot sleepers and night-sweat sufferers.</p>",
+			"custom_fields": [
+				{ "name": "Material", "value": "Bamboo-lyocell blend" },
+				{ "name": "Best For", "value": "Hot sleepers" }
+			]
+		},
+		{
+			"name": "Velvet Throw Blanket — Sage",
+			"sku": "SC-BED-007",
+			"price": 89,
+			"weight": 3,
+			"category": "Bedding",
+			"brand": "Sleep Country",
+			"description": "<p>Crushed-velvet throw blanket in muted sage. Mid-weight, drapes well over the foot of the bed or a reading chair. Machine-washable.</p>",
+			"custom_fields": [
+				{ "name": "Material", "value": "Polyester velvet" },
+				{ "name": "Size", "value": "50\" x 60\"" }
+			]
+		},
+		{
+			"name": "Heated Mattress Pad — Queen",
+			"sku": "SC-BED-008",
+			"price": 219,
+			"weight": 6,
+			"category": "Bedding",
+			"brand": "Sleep Country",
+			"description": "<p>Dual-zone heated mattress pad with 10-hour timer and 20 heat settings. Each side controls independently — the answer to one partner running cold and the other running hot. Auto-shutoff and washable.</p>",
+			"custom_fields": [
+				{ "name": "Zones", "value": "Dual-zone" },
+				{ "name": "Settings", "value": "20 heat levels, 10-hour timer" },
+				{ "name": "Care", "value": "Machine washable" }
+			]
+		},
+		{
+			"name": "Adjustable Power Base — Queen",
+			"sku": "SC-FRM-001",
+			"price": 1299,
+			"sale_price": 999,
+			"weight": 95,
+			"category": "Bed Frames",
+			"brand": "Sleep Country",
+			"description": "<p>Wireless-remote adjustable bed base. Independent head-and-foot positioning, zero-gravity preset, USB charging ports, and under-bed lighting. Compatible with most mattresses up to 14 inches.</p>",
+			"custom_fields": [
+				{ "name": "Positions", "value": "Head + foot independent, zero-gravity preset" },
+				{ "name": "Extras", "value": "USB ports, under-bed light" },
+				{ "name": "Compatible", "value": "Mattresses up to 14\"" }
+			]
+		},
+		{
+			"name": "Upholstered Platform Bed — Queen, Charcoal",
+			"sku": "SC-FRM-002",
+			"price": 749,
+			"weight": 105,
+			"category": "Bed Frames",
+			"brand": "Sleep Country",
+			"description": "<p>Tufted-headboard platform bed in charcoal performance fabric. Slatted base — no box spring needed. Sturdy hardwood frame, white-glove delivery available.</p>",
+			"custom_fields": [
+				{ "name": "Material", "value": "Performance fabric, hardwood frame" },
+				{ "name": "Box Spring", "value": "Not needed" },
+				{ "name": "Color", "value": "Charcoal" }
+			]
+		},
+		{
+			"name": "Storage Platform Bed — Queen, Walnut",
+			"sku": "SC-FRM-003",
+			"price": 899,
+			"weight": 145,
+			"category": "Bed Frames",
+			"brand": "Sleep Country",
+			"description": "<p>Solid-walnut platform bed with four under-mattress storage drawers — two per side. Hidden hydraulic lift on the headboard reveals additional storage. The answer to small bedrooms.</p>",
+			"custom_fields": [
+				{ "name": "Material", "value": "Solid walnut" },
+				{ "name": "Storage", "value": "4 drawers + headboard lift" }
+			]
+		},
+		{
+			"name": "Metal Bed Frame — Twin",
+			"sku": "SC-FRM-004",
+			"price": 199,
+			"weight": 35,
+			"category": "Bed Frames",
+			"brand": "Sleep Country",
+			"description": "<p>Powder-coated steel bed frame for twin mattresses. No tools required for assembly. 12-inch under-bed clearance for storage bins. Best for kids' rooms, guest rooms, dorms.</p>",
+			"custom_fields": [
+				{ "name": "Material", "value": "Powder-coated steel" },
+				{ "name": "Assembly", "value": "Tool-free" },
+				{ "name": "Clearance", "value": "12 inches" }
+			]
+		},
+		{
+			"name": "Waterproof Mattress Protector — Queen",
+			"sku": "SC-ACC-001",
+			"price": 99,
+			"weight": 2,
+			"category": "Accessories",
+			"brand": "Sleep Country",
+			"description": "<p>Cotton-terry top with a thin polyurethane membrane that's completely waterproof but invisibly thin — no crinkle, no plastic feel. Required to keep your mattress warranty valid.</p>",
+			"custom_fields": [
+				{ "name": "Top", "value": "Cotton terry" },
+				{ "name": "Waterproof", "value": "Yes (PU membrane)" },
+				{ "name": "Care", "value": "Machine washable" }
+			]
+		},
+		{
+			"name": "Memory Foam Mattress Topper — Queen, 3\"",
+			"sku": "SC-ACC-002",
+			"price": 299,
+			"sale_price": 229,
+			"weight": 22,
+			"category": "Accessories",
+			"brand": "Sleep Country",
+			"description": "<p>3-inch memory foam topper that softens a too-firm mattress or extends the life of a mid-life one. Gel-infused for cooling. Open-cell foam breathes well. Bamboo-blend cover, removable.</p>",
+			"custom_fields": [
+				{ "name": "Thickness", "value": "3 inches" },
+				{ "name": "Material", "value": "Gel-infused memory foam" },
+				{ "name": "Cover", "value": "Bamboo blend, removable" }
+			]
+		},
+		{
+			"name": "Weighted Blanket — 15 lbs, Grey",
+			"sku": "SC-ACC-003",
+			"price": 149,
+			"weight": 15,
+			"category": "Accessories",
+			"brand": "Sleep Country",
+			"description": "<p>Glass-bead weighted blanket, 15 lbs. Designed for adults 130-180 lbs (~10% body weight is the recommended starting point). Removable cotton-jersey duvet cover, machine-washable.</p>",
+			"custom_fields": [
+				{ "name": "Weight", "value": "15 lbs" },
+				{ "name": "Best For", "value": "Adults 130-180 lbs" },
+				{ "name": "Cover", "value": "Cotton jersey, removable" }
+			]
+		},
+		{
+			"name": "Silk Sleep Mask",
+			"sku": "SC-ACC-004",
+			"price": 39,
+			"weight": 1,
+			"category": "Accessories",
+			"brand": "Sleep Country",
+			"description": "<p>100% mulberry silk sleep mask with adjustable elastic strap. Light-blocking, gentle on skin. Comes in a small drawstring pouch — travels well.</p>",
+			"custom_fields": [
+				{ "name": "Material", "value": "100% mulberry silk" },
+				{ "name": "Adjustable", "value": "Yes" }
+			]
+		},
+		{
+			"name": "Sound Machine — White Noise + 16 Sounds",
+			"sku": "SC-ACC-005",
+			"price": 79,
+			"weight": 2,
+			"category": "Accessories",
+			"brand": "Sleep Country",
+			"description": "<p>White-noise machine with 16 looped sounds — rain, ocean, fan, brown noise, pink noise, and more. 30/60/90-minute timers. USB-powered. The answer to noisy neighbours and city windows.</p>",
+			"custom_fields": [
+				{ "name": "Sounds", "value": "16 looped sounds" },
+				{ "name": "Timer", "value": "30/60/90 min" },
+				{ "name": "Power", "value": "USB" }
+			]
+		}
+	]
+}

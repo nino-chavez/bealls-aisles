@@ -20,3 +20,10 @@ vars = { BRAND_ID = "beallsflorida", CF_AIG_GATEWAY_ID = "aisles-bealls-fl" }
 [env.home-centric]
 name = "aisles-demo-3"
 vars = { BRAND_ID = "homecentric", CF_AIG_GATEWAY_ID = "aisles-hc" }
+
+[env.sleepcountry]
+name = "aisles-demo-4"
+# Reuses the same cdfqf9k6zf store as bealls/beallsflorida — but BC products
+# are isolated by categoryPrefix='SleepCountry' (see brand/config.ts) so the
+# brand-scoped seeder cannot reach Bealls/BF/HC products.
+vars = { BRAND_ID = "sleepcountry", CF_AIG_GATEWAY_ID = "aisles-sleepcountry" }

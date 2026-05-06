@@ -78,7 +78,7 @@ export interface BrandConfig {
 	 * - 'standard' (default): regular price → sale price strikethrough
 	 * - 'off-price': "Comparable value $X" label + "You save X%" badge (Bealls family pattern)
 	 */
-	pricingStyle?: 'standard' | 'off-price';
+	pricingStyle?: 'standard' | 'off-price' | 'premium';
 
 }
 
@@ -369,6 +369,88 @@ const BRANDS: Record<string, BrandConfig> = {
 				],
 			},
 		},
+
+	},
+
+	sleepcountry: {
+		id: 'sleepcountry',
+		name: 'Sleep Country',
+		tagline: 'Why buy a mattress anywhere else?',
+		domain: 'mattresses, pillows, bedding, and sleep accessories',
+		footerNote: 'Sleep Country is a demo storefront powered by Aisles. Real catalog data sourced from sleepcountry.ca via JSON-LD.',
+
+		bc: {
+			channelId: 1, // Demo channel on cdfqf9k6zf, activated 2026-05-06 for sleepcountry
+			categoryPrefix: 'SleepCountry',
+		},
+
+		categories: {
+			'mattresses': { bcName: 'SleepCountry Mattresses', displayName: 'Mattresses', tileImage: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800&q=80&auto=format&fit=crop' },
+			'pillows': { bcName: 'SleepCountry Pillows', displayName: 'Pillows', tileImage: 'https://images.unsplash.com/photo-1631049552240-59c37f38802b?w=800&q=80&auto=format&fit=crop' },
+			'bedding': { bcName: 'SleepCountry Bedding', displayName: 'Sheets & Bedding', tileImage: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&q=80&auto=format&fit=crop' },
+			'bed-frames': { bcName: 'SleepCountry Bed Frames', displayName: 'Bed Frames', tileImage: 'https://images.unsplash.com/photo-1505691938895-1758d7feb511?w=800&q=80&auto=format&fit=crop' },
+			'accessories': { bcName: 'SleepCountry Accessories', displayName: 'Sleep Accessories', tileImage: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=800&q=80&auto=format&fit=crop' },
+		},
+
+		// Sleep Country's brand uses a calm midnight-blue / cloud-white palette
+		// — sleep-science / wellness positioning rather than off-price urgency.
+		theme: {
+			primary: '#1a3a5c',         // midnight blue
+			secondary: '#2c5780',       // mid blue
+			accent: '#e85d24',          // Sleep Country signature orange (CTAs / sale)
+			surfaceBg: '#ffffff',
+			surfaceFg: '#0f1a2c',
+			surfaceCard: '#ffffff',
+			surfaceCardFg: '#0f1a2c',
+			surfaceMuted: '#f4f6fa',
+			surfaceMutedFg: '#475569',
+			surfaceBorder: '#e2e8f0',
+			fontDisplay: "'Inter', system-ui, sans-serif",
+			fontBody: "'Inter', system-ui, sans-serif",
+			fontMono: "ui-monospace, Menlo, monospace",
+		},
+
+		googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
+
+		homepage: {
+			heroHeadline: 'Better sleep starts here',
+			heroBody: 'Canada\'s mattress experts. Try mattresses risk-free for 100 nights, with free delivery and old-mattress removal across the country.',
+			heroImage: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=1920&q=80&auto=format&fit=crop',
+			editorialHeadline: 'Sleep is personal. So is the right mattress.',
+			editorialBody: 'Our experts spend more time with mattresses than anyone else in Canada. Use that experience — match comfort preferences, body type, and sleep position to the right brand and model.',
+			valueProps: [
+				{ title: '100-night comfort guarantee', body: 'Try it for up to 100 nights. If it\'s not the right fit, exchange it — no restocking fee, no pressure.' },
+				{ title: 'Free delivery + old mattress removal', body: 'Free contactless delivery anywhere in Canada. We\'ll haul away the old one too.' },
+				{ title: 'Expert sleep advisors', body: 'Visit any of 280+ stores or chat online — match your sleep position, body type, and preferences to the right mattress.' },
+			],
+		},
+
+		prompt: {
+			storeName: 'Sleep Country',
+			storeDescription: "Canada's mattress retailer specializing in mattresses, pillows, bedding, and sleep accessories — known for expert in-store sleep advisors and a 100-night comfort guarantee",
+			productDomain: 'mattresses, pillows, bedding, and sleep accessories',
+			personaDefinitions: {
+				gatherer: 'Refreshing the bedroom — looking at sheets, comforters, throw pillows, accent pieces. Open to inspiration imagery, room moodboards, bedding ensembles. Less about the mattress, more about how the bed feels and looks.',
+				hunter: 'Sale-watching on a big-ticket purchase. Tracking Black Friday, Boxing Day, end-of-quarter mattress promos. Knows brands and models, waiting for the right price on a specific item. Wants clearance filters, sale price callouts, time-limited offers.',
+				researcher: 'High-stakes mattress decision. Comparing firmness levels, coil counts, foam densities, edge support, motion isolation, materials (memory foam vs latex vs hybrid). Reads reviews, watches comparison videos, narrows to 2-3 finalists before visiting a store. Wants spec depth, expert callouts, and "best for back pain / side sleepers / hot sleepers" guidance.',
+				gifter: 'Buying for a child\'s first apartment, a new home, a retiring parent. Sheets, pillows, mattress protectors as gifts; rarely the mattress itself. Wants safe, broad-appeal selections at clear price points.',
+			},
+			voiceGuidance: 'Calm, expert, considered. Sleep is a wellness purchase, not an off-price hustle. Lead with science and fit, not urgency. Use language like "match," "fit," "support," "comfort preference" — not "amazing deal" or "act fast." When highlighting price, frame as value relative to longevity ("a great mattress is a 10-year investment") not as a discount ratio. Brand voice is "trusted advisor," not "off-price retailer." Reference the 100-night comfort guarantee where it earns its mention — never as filler. Canadian English (colour, programme) where natural.',
+		},
+
+		incentives: {
+			freeShippingThresholdMinor: 0, // free delivery on every mattress, no threshold
+			loyalty: {
+				programId: 'sleep-rewards',
+				programName: 'Sleep Country Rewards',
+				unit: 'points',
+				tiers: [
+					{ name: 'Member', unitsRequired: 0 },
+				],
+			},
+		},
+
+		pricingStyle: 'premium',
 
 	},
 };
