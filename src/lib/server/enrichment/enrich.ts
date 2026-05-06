@@ -9,8 +9,7 @@
 
 import 'dotenv/config';
 import { neon } from '@neondatabase/serverless';
-import { createAnthropic } from '@ai-sdk/anthropic';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+import { enrichmentModel, embeddingModel } from '$lib/server/ai-model';
 import { generateText, Output, embedMany } from 'ai';
 import { z } from 'zod';
 
@@ -31,8 +30,7 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 if (!OPENROUTER_API_KEY) throw new Error('OPENROUTER_API_KEY required');
 
 const sql = neon(DATABASE_URL);
-const anthropic = createAnthropic({ apiKey: ANTHROPIC_API_KEY });
-const openrouter = createOpenRouter({ apiKey: OPENROUTER_API_KEY });
+// Handled by ai-model.ts
 
 const ENRICHMENT_MODEL_FULL = 'anthropic/claude-sonnet-4-20250514';
 
@@ -177,7 +175,7 @@ Generate semantic tags that capture how someone might search for this product by
 
 	const start = Date.now();
 	const { output, usage } = await generateText({
-		model: anthropic('claude-sonnet-4-20250514'),
+		model: enrichmentModel(),
 		output: Output.object({ schema: EnrichmentSchema }),
 		prompt,
 	});
@@ -300,7 +298,7 @@ async function main() {
 
 	try {
 		const { embeddings } = await embedMany({
-			model: openrouter.textEmbeddingModel('openai/text-embedding-3-small'),
+			model: embeddingModel(),
 			values: embeddingTexts,
 		});
 
