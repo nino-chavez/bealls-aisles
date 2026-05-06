@@ -14,3 +14,6 @@ validation/
 .dev.vars
 .wrangler/
 wrangler.log
+
+# Production-derived analytics data (anonymized but not for repo)
+data/
