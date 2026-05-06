@@ -5,15 +5,55 @@
 	import LayoutBuildingState from '$lib/components/LayoutBuildingState.svelte';
 	import ZoneRenderer from '$lib/foundation/ZoneRenderer.svelte';
 	import Button from '$lib/components/primitives/Button.svelte';
+	import { setDevInference, clearDevInference, PERSONA_OVERRIDE_EVENT, type PersonaOverrideDetail } from '$lib/stores/dev-inference.svelte';
+	import { page } from '$app/stores';
 
 	let { data }: { data: PageData } = $props();
 
 	let aiLayout = $state<Layout | null>(null);
+	let aiMeta = $state<{ generationTimeMs: number; persona: string; cacheHit?: boolean } | null>(null);
 	let aiError = $state<string | null>(null);
 	let isLoadingAI = $state(true);
+	let overridePersona = $state<string | null>(null);
+	let manualOverride = $state(false);
+
+	const currentPersona = $derived(overridePersona ?? data.persona ?? 'gatherer');
 
 	$effect(() => {
-		fetchHomeLayout(data.persona, data.probabilities);
+		fetchHomeLayout(currentPersona, data.probabilities);
+	});
+
+	// Listen for persona override from the global Inference Engine panel.
+	$effect(() => {
+		const handle = (e: Event) => {
+			const detail = (e as CustomEvent<PersonaOverrideDetail>).detail;
+			if (detail.persona === null) {
+				manualOverride = false;
+				overridePersona = null;
+			} else {
+				manualOverride = true;
+				overridePersona = detail.persona;
+			}
+		};
+		window.addEventListener(PERSONA_OVERRIDE_EVENT, handle);
+		return () => window.removeEventListener(PERSONA_OVERRIDE_EVENT, handle);
+	});
+
+	// Populate the dev-inference store when dev mode is on.
+	$effect(() => {
+		const devMode = $page.data.devMode === true;
+		if (!devMode || !data.inference) return;
+		setDevInference({
+			surface: 'Home',
+			inference: data.inference,
+			aiMeta,
+			aiError,
+			sessionContext: null,
+			sessionCost: null,
+			currentPersona,
+			manualOverride,
+		});
+		return () => clearDevInference();
 	});
 
 	async function fetchHomeLayout(persona: string, probabilities: typeof data.probabilities) {
@@ -27,8 +67,10 @@
 			});
 			if (!res.ok) throw new Error(`AI layout returned ${res.status}`);
 			const json = await res.json();
-			if (json.layout) aiLayout = json.layout;
-			else throw new Error(json.error || 'no layout');
+			if (json.layout) {
+				aiLayout = json.layout;
+				aiMeta = json.meta ?? null;
+			} else throw new Error(json.error || 'no layout');
 		} catch (e) {
 			aiError = e instanceof Error ? e.message : 'Unknown error';
 			console.warn('Home AI layout failed, using static fallback:', aiError);

@@ -6,6 +6,7 @@
 	import EmptyRescue from '$lib/components/EmptyRescue.svelte';
 	import type { Layout } from '$lib/schema/layout';
 	import { getBrand } from '$lib/brand/config';
+	import { setDevInference, clearDevInference } from '$lib/stores/dev-inference.svelte';
 
 	let { data }: { data: PageData } = $props();
 	let refinedLayout = $state<Layout | null>(null);
@@ -14,6 +15,22 @@
 		slug,
 		name: c.displayName,
 	}));
+
+	// Populate dev-inference store for the global panel.
+	$effect(() => {
+		if (!data.devMode || !data.inference) return;
+		setDevInference({
+			surface: `Search — "${data.query ?? ''}"`,
+			inference: data.inference,
+			aiMeta: null,
+			aiError: null,
+			sessionContext: null,
+			sessionCost: null,
+			currentPersona: data.persona ?? data.inference.primary,
+			manualOverride: false,
+		});
+		return () => clearDevInference();
+	});
 </script>
 
 <svelte:head>

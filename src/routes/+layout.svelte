@@ -8,6 +8,7 @@
 	import CartDrawer from '$lib/components/CartDrawer.svelte';
 	import PicksTray from '$lib/components/PicksTray.svelte';
 	import DevToolbar from '$lib/components/dev/DevToolbar.svelte';
+	import InferenceEnginePanel from '$lib/components/dev/InferenceEnginePanel.svelte';
 	import Toast from '$lib/components/primitives/Toast.svelte';
 	import StructuredData from '$lib/components/primitives/StructuredData.svelte';
 	import { organizationLd, websiteLd } from '$lib/seo/jsonld';
@@ -175,6 +176,7 @@
 		/>
 	{/if}
 	<DevToolbar />
+	<InferenceEnginePanel />
 	<Toast />
 	<StructuredData data={orgLd} />
 	<StructuredData data={siteLd} />

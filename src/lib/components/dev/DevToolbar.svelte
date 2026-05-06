@@ -19,6 +19,8 @@
 	} from '$lib/stores/dev-mode.svelte';
 	import { getBrand } from '$lib/brand/config';
 
+	const COLLAPSE_KEY = 'aisles:dev-toolbar-collapsed';
+
 	let mounted = $state(false);
 	let collapsed = $state(false);
 	// Track whether dev was ever activated in this session. Once true, the
@@ -29,9 +31,24 @@
 
 	onMount(() => {
 		initDevMode();
+		try {
+			collapsed = localStorage.getItem(COLLAPSE_KEY) === '1';
+		} catch {
+			collapsed = false;
+		}
 		mounted = true;
 		if (isDevMode()) everActive = true;
 	});
+
+	function toggleCollapsed() {
+		collapsed = !collapsed;
+		try {
+			if (collapsed) localStorage.setItem(COLLAPSE_KEY, '1');
+			else localStorage.removeItem(COLLAPSE_KEY);
+		} catch {
+			// localStorage unavailable — accept ephemeral state
+		}
+	}
 
 	const brand = getBrand();
 	const active = $derived(mounted && isDevMode());
@@ -49,16 +66,27 @@
 </script>
 
 {#if mounted && everActive}
-	<div class="aisles-dev-toolbar" class:collapsed class:dimmed={!active}>
+	{#if collapsed}
+		<button
+			type="button"
+			class="aisles-dev-toolbar-tab"
+			class:dimmed={!active}
+			onclick={toggleCollapsed}
+			title="Expand dev toolbar"
+		>
+			<span class="dot" class:dot-off={!active}></span>
+			<span class="tab-label">Dev</span>
+		</button>
+	{:else}
+	<div class="aisles-dev-toolbar" class:dimmed={!active}>
 		<div class="header">
 			<span class="dot" class:dot-off={!active}></span>
 			<span class="title">Dev</span>
-			<button type="button" class="collapse" onclick={() => (collapsed = !collapsed)}>
-				{collapsed ? '▸' : '▾'}
+			<button type="button" class="collapse" onclick={toggleCollapsed} title="Collapse to tab">
+				▾
 			</button>
 		</div>
-		{#if !collapsed}
-			<div class="body">
+		<div class="body">
 				<button
 					type="button"
 					class="fresh-toggle"
@@ -123,8 +151,8 @@
 					</a>
 				</div>
 			</div>
-		{/if}
 	</div>
+	{/if}
 {/if}
 
 <style>
@@ -151,6 +179,44 @@
 
 	.aisles-dev-toolbar.dimmed:hover {
 		opacity: 1;
+	}
+
+	.aisles-dev-toolbar-tab {
+		position: fixed;
+		bottom: 16px;
+		right: 16px;
+		z-index: 9999;
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 6px 12px;
+		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		color: #f4f4f5;
+		background: #18181b;
+		border: 1px solid #27272a;
+		border-radius: 4px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+		cursor: pointer;
+		transition: opacity 0.15s ease, border-color 0.15s ease;
+	}
+
+	.aisles-dev-toolbar-tab:hover {
+		border-color: #3f3f46;
+	}
+
+	.aisles-dev-toolbar-tab.dimmed {
+		opacity: 0.6;
+	}
+
+	.aisles-dev-toolbar-tab.dimmed:hover {
+		opacity: 1;
+	}
+
+	.tab-label {
+		font-weight: 600;
 	}
 
 	.dot.dot-off {

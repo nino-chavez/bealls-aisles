@@ -2,7 +2,6 @@
 	import type { PageData } from './$types';
 	import type { Layout } from '$lib/schema/layout';
 	import type { PersonaInference } from '$lib/signals/types';
-	import { PERSONAS } from '$lib/signals/types';
 	import LayoutRenderer from '$lib/components/layouts/LayoutRenderer.svelte';
 	import FilterStrip from '$lib/components/primitives/FilterStrip.svelte';
 	import SortSelector from '$lib/components/primitives/SortSelector.svelte';
@@ -15,6 +14,7 @@
 	import RefinementChat from '$lib/components/RefinementChat.svelte';
 	import { picksContextForPrompt } from '$lib/stores/picks.svelte';
 	import { getEmitter } from '$lib/signals/emitter';
+	import { setDevInference, clearDevInference, PERSONA_OVERRIDE_EVENT, type PersonaOverrideDetail } from '$lib/stores/dev-inference.svelte';
 
 	let { data }: { data: PageData } = $props();
 	const isContentMode = $derived(data.contentMode === true);
@@ -94,6 +94,39 @@
 
 		window.addEventListener('aisles-inference-update', handleInferenceUpdate);
 		return () => window.removeEventListener('aisles-inference-update', handleInferenceUpdate);
+	});
+
+	// Listen for persona-override events from the global InferenceEnginePanel.
+	$effect(() => {
+		const handleOverride = (e: Event) => {
+			const detail = (e as CustomEvent<PersonaOverrideDetail>).detail;
+			if (detail.persona === null) {
+				manualOverride = false;
+				overridePersona = null;
+			} else {
+				overridePersona = detail.persona;
+				manualOverride = true;
+			}
+		};
+		window.addEventListener(PERSONA_OVERRIDE_EVENT, handleOverride);
+		return () => window.removeEventListener(PERSONA_OVERRIDE_EVENT, handleOverride);
+	});
+
+	// Populate the dev-inference store so the global InferenceEnginePanel
+	// can render with this page's inference state. Cleared on unmount.
+	$effect(() => {
+		if (isContentMode || !data.devMode || !data.inference) return;
+		setDevInference({
+			surface: `PLP — ${data.category?.name ?? data.category?.slug ?? '?'}`,
+			inference: data.inference,
+			aiMeta,
+			aiError,
+			sessionContext: data.sessionContext ?? null,
+			sessionCost,
+			currentPersona,
+			manualOverride,
+		});
+		return () => clearDevInference();
 	});
 
 	async function fetchLayout(persona: string) {
@@ -236,10 +269,6 @@
 		return () => window.removeEventListener('scroll', handleScroll);
 	});
 
-	/** Format a probability as a percentage string */
-	function pct(n: number): string {
-		return `${Math.round(n * 100)}%`;
-	}
 </script>
 
 <svelte:head>
@@ -259,172 +288,16 @@
 	/>
 {:else}
 <div class="mx-auto max-w-7xl px-6 py-8">
-	<!-- Dev mode panel -->
-	{#if data.devMode && data.inference}
-		{@const inf = data.inference}
-		<div class="mb-6 rounded-sm border border-accent/30 bg-accent/5 p-4">
-			<div class="flex items-center justify-between">
-				<div>
-					<p class="text-xs font-medium uppercase tracking-wider text-accent">Dev Mode — Inference Engine</p>
-					<p class="mt-1 text-sm text-surface-muted-fg">
-						Primary: <span class="font-semibold text-surface-fg">{currentPersona}</span>
-						({pct(inf.probabilities[inf.primary])} prob, {pct(inf.confidence)} confidence gap)
-						&middot; Source: <span class="font-medium">{inf.dominantSource}</span>
-						&middot; Signals: {inf.signalCount}
-						{#if inf.shift.detected}
-							&middot; <span class="font-semibold text-warning">SHIFT: {inf.shift.from} &rarr; {inf.primary}</span>
-						{/if}
-						{#if aiMeta}
-							&middot; Layout in {aiMeta.generationTimeMs}ms
-							{#if aiMeta.cacheHit}
-								&middot; <span class="font-medium text-accent">CACHE HIT</span>
-							{/if}
-						{/if}
-						{#if aiError}
-							&middot; <span class="text-error">Fallback: {aiError}</span>
-						{/if}
-					</p>
-
-					<!-- Probability vector bar -->
-					<div class="mt-2 flex items-center gap-3 text-xs">
-						{#each PERSONAS as p}
-							<div class="flex items-center gap-1.5">
-								<span class="font-medium {p === inf.primary ? 'text-surface-fg' : 'text-surface-muted-fg'}">{p}</span>
-								<div class="h-1.5 w-16 rounded-full bg-surface-muted">
-									<div
-										class="h-full rounded-full {p === inf.primary ? 'bg-accent' : 'bg-surface-muted-fg/40'}"
-										style="width: {inf.probabilities[p] * 100}%"
-									></div>
-								</div>
-								<span class="tabular-nums text-surface-muted-fg">{pct(inf.probabilities[p])}</span>
-							</div>
-						{/each}
-					</div>
-
-					<!-- Modifiers -->
-					<div class="mt-1.5 flex gap-3 text-xs text-surface-muted-fg">
-						<span>price sensitivity: {pct(inf.modifiers.priceSensitivity)}</span>
-						<span>urgency: {pct(inf.modifiers.urgency)}</span>
-						<span>familiarity: {pct(inf.modifiers.familiarityWithStore)}</span>
-					</div>
-
-					<!-- Session API Cost -->
-					{#if sessionCost}
-						<div class="mt-1.5 flex gap-3 text-xs">
-							<span class="text-surface-muted-fg">Session cost: <span class="font-mono font-medium text-surface-fg">${sessionCost.totalCost.toFixed(4)}</span></span>
-							<span class="text-surface-muted-fg">{sessionCost.generations} generations</span>
-							<span class="text-surface-muted-fg">{sessionCost.tokens.toLocaleString()} tokens</span>
-							<span class="text-surface-muted-fg">cache: {sessionCost.cacheHitRate}%</span>
-						</div>
-					{/if}
-
-					{#if data.sessionContext}
-						<p class="mt-1.5 text-xs text-surface-muted-fg">
-							Visit #{data.sessionContext.visitCount}
-							{#if data.sessionContext.storedPersona}
-								&middot; Previous: {data.sessionContext.storedPersona} on {data.sessionContext.storedCategory}
-							{/if}
-							{#if data.sessionContext.searchQuery}
-								&middot; Query: "{data.sessionContext.searchQuery}"
-							{/if}
-							{#if inf.shift.trigger}
-								&middot; Shift trigger: {inf.shift.trigger}
-							{/if}
-						</p>
-					{/if}
-				</div>
-
-				<!-- Persona toggle — all 4 personas + reset -->
-				<div class="flex flex-col gap-1.5">
-					{#each PERSONAS as persona}
-						<button
-							onclick={() => { overridePersona = persona; manualOverride = true; }}
-							class="rounded-sm px-3 py-1 text-xs font-medium transition-colors
-								{currentPersona === persona
-									? 'bg-accent text-white'
-									: 'border border-surface-border text-surface-muted-fg hover:text-surface-fg'}"
-						>
-							{persona.charAt(0).toUpperCase() + persona.slice(1)}
-						</button>
-					{/each}
-					{#if manualOverride}
-						<button
-							onclick={() => { manualOverride = false; overridePersona = null; }}
-							class="mt-1 rounded-sm px-3 py-1 text-[10px] font-medium text-surface-muted-fg hover:text-surface-fg"
-							title="Resume inference-driven persona"
-						>
-							↻ Reset to inferred
-						</button>
-					{/if}
-				</div>
+	<!-- Inference Engine panel is now mounted globally from +layout.svelte
+	     and reads from the dev-inference store populated above. -->
+	{#if data.devMode && aiLayout}
+		<details class="mb-4">
+			<summary class="cursor-pointer text-xs text-accent hover:underline">View AI reasoning & schema</summary>
+			<div class="mt-2 rounded-sm bg-surface-card p-3">
+				<p class="text-sm text-surface-muted-fg"><strong>Reasoning:</strong> {aiLayout.reasoning}</p>
+				<pre class="mt-2 max-h-64 overflow-auto rounded-sm bg-neutral-950 p-3 text-xs text-neutral-300">{JSON.stringify(aiLayout, null, 2)}</pre>
 			</div>
-
-			<!-- Show AI reasoning and raw schema -->
-			{#if aiLayout}
-				<details class="mt-3">
-					<summary class="cursor-pointer text-xs text-accent hover:underline">View AI reasoning & schema</summary>
-					<div class="mt-2 rounded-sm bg-surface-card p-3">
-						<p class="text-sm text-surface-muted-fg"><strong>Reasoning:</strong> {aiLayout.reasoning}</p>
-						<pre class="mt-2 max-h-64 overflow-auto rounded-sm bg-neutral-950 p-3 text-xs text-neutral-300">{JSON.stringify(aiLayout, null, 2)}</pre>
-					</div>
-				</details>
-			{/if}
-
-			<!-- Signal breakdown — which rules fired and why -->
-			{#if inf.ruleMatches?.length > 0}
-				<details class="mt-2" open>
-					<summary class="cursor-pointer text-xs text-accent hover:underline">Signal breakdown ({inf.ruleMatches.length} rules fired)</summary>
-					<div class="mt-2 overflow-x-auto">
-						<table class="w-full text-xs">
-							<thead>
-								<tr class="border-b border-surface-border text-left text-surface-muted-fg">
-									<th class="pb-1 pr-3">Rule</th>
-									<th class="pb-1 pr-3">Reason</th>
-									<th class="pb-1 pr-3">Weight</th>
-									<th class="pb-1">Score Impact</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each inf.ruleMatches as match}
-									<tr class="border-b border-surface-border/50">
-										<td class="py-1.5 pr-3 font-mono text-surface-fg">{match.ruleName}</td>
-										<td class="py-1.5 pr-3 text-surface-muted-fg">{match.reason}</td>
-										<td class="py-1.5 pr-3 tabular-nums text-surface-muted-fg">{match.weight.toFixed(1)}</td>
-										<td class="py-1.5">
-											{#each ['gatherer', 'hunter', 'researcher', 'gifter'] as p}
-												{#if (match.adjustment as any)[p]}
-													<span class="mr-1.5 rounded-sm px-1 py-0.5 text-[10px] font-medium
-														{p === inf.primary ? 'bg-accent/15 text-accent' : 'bg-surface-muted text-surface-muted-fg'}">
-														{p}: +{((match.adjustment as any)[p] * match.weight).toFixed(2)}
-													</span>
-												{/if}
-											{/each}
-											{#if match.adjustment.priceSensitivity}
-												<span class="mr-1.5 rounded-sm bg-warning/10 px-1 py-0.5 text-[10px] text-warning">price +{(match.adjustment.priceSensitivity * match.weight).toFixed(2)}</span>
-											{/if}
-											{#if match.adjustment.urgency}
-												<span class="mr-1.5 rounded-sm bg-error/10 px-1 py-0.5 text-[10px] text-error">urgency +{(match.adjustment.urgency * match.weight).toFixed(2)}</span>
-											{/if}
-											{#if match.adjustment.familiarityWithStore}
-												<span class="rounded-sm bg-info/10 px-1 py-0.5 text-[10px] text-info">familiarity +{(match.adjustment.familiarityWithStore * match.weight).toFixed(2)}</span>
-											{/if}
-										</td>
-									</tr>
-								{/each}
-							</tbody>
-						</table>
-					</div>
-				</details>
-			{:else}
-				<p class="mt-2 text-xs text-surface-muted-fg">No inference rules fired — using base prior (gatherer: 0.3, hunter: 0.2, researcher: 0.2, gifter: 0.1)</p>
-			{/if}
-
-			<!-- Raw inference JSON (collapsed) -->
-			<details class="mt-2">
-				<summary class="cursor-pointer text-xs text-accent hover:underline">View raw inference JSON</summary>
-				<pre class="mt-2 max-h-48 overflow-auto rounded-sm bg-neutral-950 p-3 text-xs text-neutral-300">{JSON.stringify(inf, null, 2)}</pre>
-			</details>
-		</div>
+		</details>
 	{/if}
 
 	<!-- Filter + sort foundation strip — deterministic UI above the AI grid.
