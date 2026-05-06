@@ -1,0 +1,229 @@
+[
+  {
+    "id": "researcher-mattress-comparison",
+    "label": "Researcher: comparing 4 Kingsdown mattresses",
+    "narrative": "Real shopper landed on a Kingsdown PDP and toggled across 4 sibling models in 8 minutes — classic deep-comparison researcher behavior. The engine should pick this up after the second PDP and shift to researcher.",
+    "groundTruthPersona": "researcher",
+    "sourceSessionId": "8429862f3e4bb8b7",
+    "entry": {
+      "path": "/category/mattresses",
+      "referrer": "internal"
+    },
+    "events": [
+      { "atSecondsFromStart": 0, "type": "VIEW_CATEGORY", "category": "mattresses", "label": "Mattresses" },
+      { "atSecondsFromStart": 3, "type": "VIEW_PRODUCT", "productLabel": "Kingsdown Silent Partner X1" },
+      { "atSecondsFromStart": 7, "type": "VIEW_PRODUCT", "productLabel": "Kingsdown Silent Partner X1F" },
+      { "atSecondsFromStart": 11, "type": "VIEW_PRODUCT", "productLabel": "Kingsdown Silent Partner X3" },
+      { "atSecondsFromStart": 15, "type": "VIEW_PRODUCT", "productLabel": "Kingsdown Silent Partner X1F" },
+      { "atSecondsFromStart": 19, "type": "VIEW_PRODUCT", "productLabel": "Kingsdown Silent Partner X2" },
+      { "atSecondsFromStart": 23, "type": "SEARCH", "query": "memory foam comparison" },
+      { "atSecondsFromStart": 27, "type": "VIEW_PRODUCT", "productLabel": "Casper Hybrid Mattress" }
+    ]
+  },
+  {
+    "id": "researcher-search-driven",
+    "label": "Researcher: search-driven mattress study",
+    "narrative": "Anonymous shopper kicked off with 4 in-site searches before opening any PDPs — methodical comparison shopper. Watch the search count drive a researcher lift even before product views accumulate.",
+    "groundTruthPersona": "researcher",
+    "sourceSessionId": "e722cf75efa45ba9",
+    "entry": {
+      "path": "/",
+      "referrer": "internal"
+    },
+    "events": [
+      { "atSecondsFromStart": 0, "type": "VIEW_CATEGORY", "category": "mattresses", "label": "Home" },
+      { "atSecondsFromStart": 3, "type": "SEARCH", "query": "queen mattress" },
+      { "atSecondsFromStart": 7, "type": "SEARCH", "query": "memory foam vs hybrid" },
+      { "atSecondsFromStart": 11, "type": "SEARCH", "query": "best hybrid mattress 2025" },
+      { "atSecondsFromStart": 15, "type": "SEARCH", "query": "casper vs endy" },
+      { "atSecondsFromStart": 19, "type": "VIEW_PRODUCT", "productLabel": "Casper Original Foam — Queen" },
+      { "atSecondsFromStart": 24, "type": "VIEW_PRODUCT", "productLabel": "Endy Mattress — Queen" },
+      { "atSecondsFromStart": 28, "type": "VIEW_PRODUCT", "productLabel": "Silk & Snow Hybrid — King" }
+    ]
+  },
+  {
+    "id": "researcher-from-google",
+    "label": "Researcher: Google → mattress study",
+    "narrative": "Entered from a Google search, watch the cold-start prior already lean researcher (87% from calibration, n=46). Engine confirms with deep PDP exploration.",
+    "groundTruthPersona": "researcher",
+    "entry": {
+      "path": "/category/mattresses",
+      "referrer": "google.com"
+    },
+    "events": [
+      { "atSecondsFromStart": 0, "type": "VIEW_CATEGORY", "category": "mattresses", "label": "Mattresses" },
+      { "atSecondsFromStart": 4, "type": "VIEW_PRODUCT", "productLabel": "Sealy Posturepedic Hybrid Plush" },
+      { "atSecondsFromStart": 9, "type": "VIEW_PRODUCT", "productLabel": "Tempur-Pedic ProAdapt Medium" },
+      { "atSecondsFromStart": 14, "type": "SEARCH", "query": "tempur-pedic warranty" },
+      { "atSecondsFromStart": 18, "type": "VIEW_PRODUCT", "productLabel": "Tempur-Pedic ProAdapt Medium" },
+      { "atSecondsFromStart": 23, "type": "VIEW_PRODUCT", "productLabel": "Stearns & Foster Estate Plush" }
+    ]
+  },
+  {
+    "id": "hunter-meta-prospect-bedding",
+    "label": "Hunter: Facebook ad → bedding cart",
+    "narrative": "Real shopper from a Meta paid-social ad landed directly on a comforter set PDP and stuck with it across 7 page views. Engine should pin hunter immediately from the facebook prior (99% from calibration, n=362).",
+    "groundTruthPersona": "hunter",
+    "sourceSessionId": "c7aafda3c2730749",
+    "entry": {
+      "path": "/category/bedding",
+      "referrer": "facebook.com"
+    },
+    "events": [
+      { "atSecondsFromStart": 0, "type": "VIEW_CATEGORY", "category": "bedding", "label": "Bedding" },
+      { "atSecondsFromStart": 3, "type": "VIEW_PRODUCT", "productLabel": "Nautica Fleetville Quilt Set" },
+      { "atSecondsFromStart": 7, "type": "VIEW_PRODUCT", "productLabel": "Beco Home Atticus Comforter Set" },
+      { "atSecondsFromStart": 11, "type": "VIEW_PRODUCT", "productLabel": "Nautica Fleetville Quilt Set" },
+      { "atSecondsFromStart": 15, "type": "VIEW_PRODUCT", "productLabel": "Nautica Jettison Quilt Set" },
+      { "atSecondsFromStart": 19, "type": "ADD_TO_CART", "productLabel": "Nautica Fleetville Quilt Set" }
+    ]
+  },
+  {
+    "id": "hunter-meta-prospect-mattress",
+    "label": "Hunter: Facebook ad → mattress purchase intent",
+    "narrative": "Meta ad clicker locked on the Casper Wave Hybrid Snow Plush — repeated views, no comparison shopping. The 'social referrer + PDP entry' rule fires immediately.",
+    "groundTruthPersona": "hunter",
+    "sourceSessionId": "0dbdeaedc5b54a31",
+    "entry": {
+      "path": "/category/mattresses",
+      "referrer": "facebook.com"
+    },
+    "events": [
+      { "atSecondsFromStart": 0, "type": "VIEW_CATEGORY", "category": "mattresses", "label": "Mattresses" },
+      { "atSecondsFromStart": 3, "type": "VIEW_PRODUCT", "productLabel": "Casper Wave Hybrid Snow Plush" },
+      { "atSecondsFromStart": 7, "type": "VIEW_PRODUCT", "productLabel": "Casper Wave Hybrid Snow Plush" },
+      { "atSecondsFromStart": 11, "type": "VIEW_PRODUCT", "productLabel": "Kingsdown Silent Partner X3" },
+      { "atSecondsFromStart": 15, "type": "VIEW_PRODUCT", "productLabel": "Sealy Posturepedic Lainey" },
+      { "atSecondsFromStart": 19, "type": "ADD_TO_CART", "productLabel": "Casper Wave Hybrid Snow Plush" }
+    ]
+  },
+  {
+    "id": "hunter-instagram-duvet",
+    "label": "Hunter: Instagram ad → repeat duvet PDP",
+    "narrative": "Instagram-driven shopper repeated the same duvet PDP 5 times — saw the ad, came back to convert. Hunter prior should hold throughout (instagram 100% hunter from calibration, n=103).",
+    "groundTruthPersona": "hunter",
+    "sourceSessionId": "144f624e37aec204",
+    "entry": {
+      "path": "/category/bedding",
+      "referrer": "instagram.com"
+    },
+    "events": [
+      { "atSecondsFromStart": 0, "type": "VIEW_CATEGORY", "category": "bedding", "label": "Bedding" },
+      { "atSecondsFromStart": 3, "type": "VIEW_PRODUCT", "productLabel": "Swift Home Floral Ruched Duvet Cover Set" },
+      { "atSecondsFromStart": 7, "type": "VIEW_PRODUCT", "productLabel": "Swift Home Floral Ruched Duvet Cover Set" },
+      { "atSecondsFromStart": 11, "type": "VIEW_PRODUCT", "productLabel": "Swift Home Floral Ruched Duvet Cover Set" },
+      { "atSecondsFromStart": 15, "type": "VIEW_PRODUCT", "productLabel": "Swift Home Floral Ruched Duvet Cover Set" }
+    ]
+  },
+  {
+    "id": "gatherer-multi-category",
+    "label": "Gatherer: pillows → mattresses → frames",
+    "narrative": "Browsing-mode shopper covered 3 distinct categories in one session — pillows, mattresses, bed frames. The broad-category-browsing rule (91.7% gatherer precision in calibration) fires after the third category.",
+    "groundTruthPersona": "gatherer",
+    "sourceSessionId": "8322140df55ef214",
+    "entry": {
+      "path": "/category/pillows",
+      "referrer": "internal"
+    },
+    "events": [
+      { "atSecondsFromStart": 0, "type": "VIEW_CATEGORY", "category": "pillows", "label": "Pillows" },
+      { "atSecondsFromStart": 4, "type": "VIEW_PRODUCT", "productLabel": "Tempur-Pedic Cloud Pillow" },
+      { "atSecondsFromStart": 8, "type": "VIEW_CATEGORY", "category": "mattresses", "label": "Mattresses" },
+      { "atSecondsFromStart": 12, "type": "VIEW_PRODUCT", "productLabel": "Casper Wave Hybrid Snow Plush" },
+      { "atSecondsFromStart": 16, "type": "VIEW_CATEGORY", "category": "bed-frames", "label": "Bed Frames" },
+      { "atSecondsFromStart": 20, "type": "VIEW_PRODUCT", "productLabel": "Hush L300 Lifestyle Adjustable Base" },
+      { "atSecondsFromStart": 24, "type": "VIEW_PRODUCT", "productLabel": "Zeus Split Adjustable Base" }
+    ]
+  },
+  {
+    "id": "gatherer-furniture-to-soft",
+    "label": "Gatherer: bed frame → bedding crossing",
+    "narrative": "Shopper crossed from furniture into bedding with no commitment to either — exploration without intent. Three category transitions, no cart events.",
+    "groundTruthPersona": "gatherer",
+    "sourceSessionId": "67ed0e3a465bbea7",
+    "entry": {
+      "path": "/category/bed-frames",
+      "referrer": "internal"
+    },
+    "events": [
+      { "atSecondsFromStart": 0, "type": "VIEW_CATEGORY", "category": "bed-frames", "label": "Bed Frames" },
+      { "atSecondsFromStart": 4, "type": "VIEW_PRODUCT", "productLabel": "Upholstered Platform Bed — Charcoal" },
+      { "atSecondsFromStart": 8, "type": "VIEW_CATEGORY", "category": "bedding", "label": "Bedding" },
+      { "atSecondsFromStart": 12, "type": "VIEW_CATEGORY", "category": "mattresses", "label": "Mattresses" },
+      { "atSecondsFromStart": 16, "type": "VIEW_PRODUCT", "productLabel": "Kingsdown Silent Partner X2" }
+    ]
+  },
+  {
+    "id": "gatherer-dormez-cross-traffic",
+    "label": "Gatherer: sister-brand → multi-category browse",
+    "narrative": "Crossed from Dormez-vous (sister brand) into Sleep Country, looking at Bloom-brand mattresses then drifted across accessories and bedding. Curious browser, no signal of buying intent.",
+    "groundTruthPersona": "gatherer",
+    "sourceSessionId": "4aa1cabf3bb7d711",
+    "entry": {
+      "path": "/category/mattresses",
+      "referrer": "dormezvous.com"
+    },
+    "events": [
+      { "atSecondsFromStart": 0, "type": "VIEW_CATEGORY", "category": "mattresses", "label": "Mattresses" },
+      { "atSecondsFromStart": 4, "type": "VIEW_PRODUCT", "productLabel": "Endy Mattress — Queen" },
+      { "atSecondsFromStart": 8, "type": "VIEW_CATEGORY", "category": "accessories", "label": "Accessories" },
+      { "atSecondsFromStart": 12, "type": "VIEW_CATEGORY", "category": "bedding", "label": "Bedding" },
+      { "atSecondsFromStart": 16, "type": "VIEW_PRODUCT", "productLabel": "Waterproof Mattress Protector" },
+      { "atSecondsFromStart": 20, "type": "VIEW_PRODUCT", "productLabel": "Egyptian Cotton 600-TC Sheet Set" }
+    ]
+  },
+  {
+    "id": "gifter-pillow-checkout",
+    "label": "Gifter: pillow set → checkout",
+    "narrative": "Direct-to-checkout flow on a pillow PDP — small-ticket non-mattress purchase, classic gifter signature. Checkout event flips primary to gifter.",
+    "groundTruthPersona": "gifter",
+    "sourceSessionId": "63f6a1fffb26b327",
+    "entry": {
+      "path": "/category/pillows",
+      "referrer": "internal"
+    },
+    "events": [
+      { "atSecondsFromStart": 0, "type": "VIEW_CATEGORY", "category": "pillows", "label": "Pillows" },
+      { "atSecondsFromStart": 3, "type": "VIEW_PRODUCT", "productLabel": "Orthex Somnia 3 Ergonomic Back Sleeper Pillow" },
+      { "atSecondsFromStart": 7, "type": "VIEW_PRODUCT", "productLabel": "Orthex Somnia 3 Ergonomic Back Sleeper Pillow" },
+      { "atSecondsFromStart": 11, "type": "ADD_TO_CART", "productLabel": "Orthex Somnia 3 Ergonomic Back Sleeper Pillow" },
+      { "atSecondsFromStart": 15, "type": "CHECKOUT" }
+    ]
+  },
+  {
+    "id": "gifter-comforter-set",
+    "label": "Gifter: comforter set → checkout",
+    "narrative": "Direct purchase of a Beco Home comforter set — non-mattress, small-ticket, completed checkout. Researcher signals never accrue (only one product line viewed).",
+    "groundTruthPersona": "gifter",
+    "sourceSessionId": "6fce7ae47e75e09f",
+    "entry": {
+      "path": "/category/bedding",
+      "referrer": "internal"
+    },
+    "events": [
+      { "atSecondsFromStart": 0, "type": "VIEW_CATEGORY", "category": "bedding", "label": "Bedding" },
+      { "atSecondsFromStart": 3, "type": "VIEW_PRODUCT", "productLabel": "Beco Home Atticus Comforter Set" },
+      { "atSecondsFromStart": 7, "type": "VIEW_PRODUCT", "productLabel": "Beco Home Atticus Comforter Set" },
+      { "atSecondsFromStart": 11, "type": "VIEW_PRODUCT", "productLabel": "Beco Home Atticus Comforter Set" },
+      { "atSecondsFromStart": 15, "type": "ADD_TO_CART", "productLabel": "Beco Home Atticus Comforter Set" },
+      { "atSecondsFromStart": 19, "type": "CHECKOUT" }
+    ]
+  },
+  {
+    "id": "gifter-duvet-set",
+    "label": "Gifter: bamboo duvet → checkout",
+    "narrative": "Bedding-only checkout — bamboo duvet cover set. The checkout-with-only-non-mattress-PDPs signature is the gifter heuristic; engine should land there.",
+    "groundTruthPersona": "gifter",
+    "sourceSessionId": "012f155fd054ebb3",
+    "entry": {
+      "path": "/category/bedding",
+      "referrer": "internal"
+    },
+    "events": [
+      { "atSecondsFromStart": 0, "type": "VIEW_CATEGORY", "category": "bedding", "label": "Bedding" },
+      { "atSecondsFromStart": 3, "type": "VIEW_PRODUCT", "productLabel": "Bamboo Nights Duvet Cover Set" },
+      { "atSecondsFromStart": 7, "type": "ADD_TO_CART", "productLabel": "Bamboo Nights Duvet Cover Set" },
+      { "atSecondsFromStart": 11, "type": "CHECKOUT" }
+    ]
+  }
+]

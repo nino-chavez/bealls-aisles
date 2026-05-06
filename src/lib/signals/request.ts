@@ -63,9 +63,18 @@ export async function createStoreFromRequest(ctx: RequestContext): Promise<{ sto
 		viewport,
 	};
 
+	// Dev-mode session replay (see src/lib/dev/session-replay.svelte.ts).
+	// `?_replay_ref=facebook.com` synthesizes a referrer so the cold-start prior
+	// fires as if the shopper actually arrived from that domain. Only honored
+	// when the request is in dev mode (?dev=1 or DEV cookie/header) so prod
+	// can't be tricked.
+	const replayRef = ctx.url.searchParams.get('_replay_ref');
+	const inDev = ctx.url.searchParams.has('dev') || ctx.cookies.get('aisles_dev') === '1';
+	const effectiveReferrer = (inDev && replayRef) || ctx.request.headers.get('referer') || null;
+
 	// Emit request.pageview
 	store.emit('request.pageview', 'request', {
-		referrer: ctx.request.headers.get('referer') || null,
+		referrer: effectiveReferrer,
 		utm_source: ctx.url.searchParams.get('utm_source') || null,
 		utm_medium: ctx.url.searchParams.get('utm_medium') || null,
 		utm_campaign: ctx.url.searchParams.get('utm_campaign') || null,

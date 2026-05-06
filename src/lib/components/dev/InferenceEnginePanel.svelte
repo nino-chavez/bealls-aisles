@@ -10,6 +10,7 @@
 	import { isDevMode, initDevMode } from '$lib/stores/dev-mode.svelte';
 	import { getDevInference, dispatchPersonaOverride } from '$lib/stores/dev-inference.svelte';
 	import { PERSONAS } from '$lib/signals/types';
+	import SessionReplayPicker from './SessionReplayPicker.svelte';
 
 	const COLLAPSE_KEY = 'aisles:dev-inference-collapsed';
 
@@ -191,6 +192,8 @@
 					<summary>▸ View raw inference JSON</summary>
 					<pre>{JSON.stringify(inf, null, 2)}</pre>
 				</details>
+
+				<SessionReplayPicker />
 			</div>
 		{/if}
 	</div>
