@@ -1,113 +1,78 @@
 {
-	"voice": "brian",
-	"model": "eleven_multilingual_v2",
-	"defaultHoldSeconds": 0.5,
-	"_notes": {
-		"audience": "Builders shipping AI features into BigCommerce ecommerce stores",
-		"frame": "Reference implementation, not product pitch. Patterns over file paths. Plain English over schema field names.",
-		"voice_choice": "brian — American narrator. Tuned generate.mjs settings: stability 0.7, similarity 0.8, style 0.0 (default-ish, no theatrical variation).",
-		"runtime_target": "~7-8 min, ~50-80 words per scene, hold 0.4-0.6s",
-		"tts_field": "Optional per-scene override for narration only. Used here for 'Bealls' → 'Bells' pronunciation while the visible caption keeps the correct brand spelling.",
-		"em_dashes": "Used sparingly — ElevenLabs reads em-dashes as long pauses, so reserve them for genuine breaks; prefer commas and periods for flow."
-	},
-	"scenes": [
-		{
-			"image": "bealls-01-home-clean.png",
-			"title": "An AI-composed BigCommerce storefront",
-			"caption": "This is Bealls, a real off-price retailer on BigCommerce. Looks like a normal storefront. Hero, featured products, shop-by-category, free-shipping bar. Nothing on screen says AI. That's the point. Every pattern in this reel ships to a BC storefront today.",
-			"tts": "This is Bells, a real off-price retailer on BigCommerce. Looks like a normal storefront. Hero, featured products, shop-by-category, free-shipping bar. Nothing on screen says AI. That's the point. Every pattern in this reel ships to a BC storefront today."
-		},
-		{
-			"image": "bealls-02-dev-instrumentation.png",
-			"title": "Dev instrumentation, in real time",
-			"caption": "Flip the dev flag on a category page. Two halves of one tool, both visible at once. Per-zone badges label every AI-composed section: editorial header, product grid, merchandising strip, each tagged with its zone, its data source, and the persona inferred for this session. The floating panel pinned in the corner shows session context at a glance: active brand, generations counter, a legend mapping each block's color to its source. This is what real-time observability looks like when you build it for AI features instead of bolting it on later. A single environment flag gates visibility, so the store never exposes it to shoppers."
-		},
-		{
-			"image": "bealls-04-fresh-regen.png",
-			"title": "Bypass the cache, watch it regenerate",
-			"caption": "Add a second flag to force a live regeneration. The next request misses cache, hits the AI Gateway, and regenerates. The dev panel logs the new trace. Around five seconds for a cold composition through Vercel AI Gateway. The faster model runs first, the stronger model handles the hard cases. Sections stream in as they validate, so the editorial header shows up before the page is fully assembled. Slightly wrong layout in a hundred milliseconds beats perfect layout in eight seconds."
-		},
-		{
-			"image": "bealls-05-observe.png",
-			"title": "The operator dashboard",
-			"caption": "The full operator surface. Signal timeline on the left shows every request, navigation, interaction, and refinement event with timestamps. Persona vector top-right. The math is Bayesian. Every signal shifts the confidence score and compounds across the session. Below: rule firings, generation logs, token counts. This is how you debug an AI feature in production. Not 'trust the model.' Every decision traceable to a signal, a rule, a layout choice."
-		},
-		{
-			"image": "bealls-06-refinement-chat.png",
-			"title": "Refine the layout by talking to it",
-			"caption": "Open the refinement chat. Type a constraint. 'Under fifty dollars, casual.' The page recomposes into a denser grid with the price-rail leading. Open the dashboard. The persona vector flashed. Hunter just jumped from twenty-five to forty-one percent. Two rules fired. The chat doesn't replace the layout, it constrains the next composition. Each message compounds. The chat is one self-contained component that posts a constraint, the engine recomposes, and explanation copy comes back. Same pattern works on any surface you ship."
-		},
-		{
-			"image": "bealls-07-return-continuity.png",
-			"title": "Cross-session continuity",
-			"caption": "Close the tab. Come back later. Same shopper, new session. The dashboard shows three new signals: same category revisit, repeat visitor pattern, returning apparel shopper. The cold-start prior shifts. Hunter is at forty-five percent before any behavior in this session. The layout isn't a fresh start. It's the Bayesian accumulation across visits. Your existing BC merchant has order history, session cookies, customer IDs. Pipe them in as additional signal types. The engine doesn't care where the input comes from."
-		},
-		{
-			"image": "bealls-08-plp-latitude.png",
-			"title": "Medium latitude, category page",
-			"caption": "Category page. Medium composition latitude. The scaffold is fixed: filter rail, breadcrumb, pagination, search bar. Static and unchanging. The body zones, the editorial header, the product grid, the merchandising strip, those are AI-composed. The schema declares exactly which zones the AI can fill. It cannot touch the filter rail or pagination. Composition is bounded by the schema's type contract."
-		},
-		{
-			"image": "bealls-09-pdp-latitude.png",
-			"title": "Narrow latitude, product page",
-			"caption": "Product page. Narrow latitude. Almost everything is foundation: gallery, title, variant selector, add-to-cart, description, reviews. Mandatory and ordered. The AI gets three named insertion points: below the gallery, below the description, and at the cross-sell position. That's it. The reason: product pages convert. You don't want creative composition where the add-to-cart button might disappear. Wide for home, medium for category, narrow for product, fixed for checkout."
-		},
-		{
-			"image": "bealls-10-cart-latitude.png",
-			"title": "Fixed latitude, cart",
-			"caption": "Cart. Fixed latitude. Line items, summary, shipping calculator, code entry, all foundation. The AI gets exactly one slot, last-chance upsells, and a few message overrides for promo and trust copy. The principle: don't break checkout. Personalize the upsells, the trust copy, the urgency framing. Don't reorder the steps. Don't touch the payment fields. Engine and foundation have a clear seam."
-		},
-		{
-			"image": "bealls-11-p0-blocks.png",
-			"title": "The block catalog",
-			"caption": "Every shipped block in the catalog. Thirty-six components: editorial headers, hero products, price rails, store-pickup strips, themed merchandising rows, last-chance upsells, trust strips, email capture, coupon strips, brand spotlights. The AI doesn't generate UI. It picks from this vocabulary. The schema is a closed list. Every layout the AI can produce is an element of this finite set. Your AI can only output what your schema defines."
-		},
-		{
-			"image": "bealls-12-code-beat.png",
-			"title": "Schema-bound generation in code",
-			"caption": "Here's what that looks like. Zod schemas define the block union. The gateway enforces the schema at the call boundary using structured output mode. Either the model produces a valid layout or the call fails. Invalid schema, no partial result. Vercel's gateway routes the request: faster model as primary, stronger model as fallback. Validation enforced at the API boundary, not after the fact. Schema-constrained output is the boundary between prototype and production."
-		},
-		{
-			"image": "bealls-13-brand-config.png",
-			"title": "Brands as configuration",
-			"caption": "Every brand is one configuration file. BigCommerce channel, category map, design tokens, persona definitions, voice guidance, incentive structure. The prompt construction reads from it. The renderer reads from it. The cache key includes the brand. Multi-tenancy through configuration, not through forking the codebase. A new brand on this stack: write the file, deploy a new project, set the brand environment variable. That's the checklist.",
-			"tts": "Every brand is one configuration file. BigCommerce channel, category map, design tokens, persona definitions, voice guidance, incentive structure. The prompt construction reads from it. The renderer reads from it. The cache key includes the brand. Multi-tenancy through configuration, not through forking the codebase. A new brand on this stack: write the file, deploy a new project, set the brand environment variable. That's the checklist."
-		},
-		{
-			"image": "bealls-14-brand-swap.png",
-			"title": "Same engine, three brands",
-			"caption": "Same codebase. Three brands. Bealls: wine accent, family-shopper voice. Bealls Florida: teal, coastal, sun-soaked. HomeCentric: a different operating model entirely. HomeCentric has no online catalog. Brick-and-mortar only. The same composition engine renders content-mode surfaces: locator-led, editorial, no add-to-cart. One engine, two operating models. The configuration file determines which surfaces exist for which brand.",
-			"tts": "Same codebase. Three brands. Bells: wine accent, family-shopper voice. Bells Florida: teal, coastal, sun-soaked. HomeCentric: a different operating model entirely. HomeCentric has no online catalog. Brick-and-mortar only. The same composition engine renders content-mode surfaces: locator-led, editorial, no add-to-cart. One engine, two operating models. The configuration file determines which surfaces exist for which brand."
-		},
-		{
-			"image": "bealls-15-voucherify-cart.png",
-			"title": "Marketplace apps as inputs",
-			"caption": "BigCommerce marketplace apps integrate the same way. This cart drawer has a Voucherify discount applied. The merchant configured the campaign in Voucherify. The engine reads those rules through the Voucherify API and surfaces them as a typed JSON protocol. One incentive contract that both the shopper UI and any AI shopping agent can consume. One source of truth, two consumers. Your marketplace integrations become typed inputs to the AI surface."
-		},
-		{
-			"image": "bealls-16-cost-meter.png",
-			"title": "What it costs",
-			"caption": "Cost. The dashboard tracks token usage and dollar cost per generation through the gateway. This whole session: fourteen generations, three cache misses, eleven hits, cost less than two cents. With ninety-percent cache hit rate at scale and the faster model as primary, sub-cent per page view at scale. The economics work. AI features die in production not because they don't work, but because nobody knew what they cost until the bill arrived."
-		},
-		{
-			"image": "bealls-17-adjacent-inputs.png",
-			"title": "What else you can feed it",
-			"caption": "Where this goes. Today the engine reads four signal types: what page you're on, how you got there, what you interacted with, and what constraints you've typed. Your BigCommerce stack already has more. Order history through the BC Admin API. Customer cohorts from your data warehouse. Clean product attributes from any feed manager. Each one is a new signal type in the same pipeline. Same inference engine, same accumulation logic. The engine doesn't care where the signal comes from. It just needs a typed input."
-		},
-		{
-			"image": "bealls-18-returning-shopper.png",
-			"title": "Returning shopper, warm cold-start",
-			"caption": "What that unlocks. Returning shopper. Bought kids' shoes six months ago through your BC store. The Admin API tells the engine. The cold-start isn't cold. The engine knows family-shopper persona at sixty percent confidence before this session has fired a single behavioral signal. The layout is already tuned. The refinement chat starts pre-loaded with relevant constraints. That's not future-state speculation. That's a webhook handler you'd write in an afternoon."
-		},
-		{
-			"image": "bealls-19-beyond-storefront.png",
-			"title": "Beyond the storefront",
-			"caption": "And the engine doesn't have to drive only storefront surfaces. The composition engine consumes signals, infers persona, and generates a typed output. The output today is a page layout. The output tomorrow could be an email variant, a push notification, an SMS copy block, an in-app modal. Same schema contract, different surface. One decisioning layer covers layout, email, push, and SMS. Same observability dashboard. No vendor-per-channel sprawl."
-		},
-		{
-			"image": "bealls-20-builder-takeaway.png",
-			"title": "Pattern, not platform",
-			"caption": "The stack is commodity. The Vercel AI SDK for the model calls. A gateway for routing and fallback. Zod for schema enforcement. Redis for cache, Postgres for enrichment, BigCommerce for catalog. The renderer, the dev overlay, the operator dashboard, all open patterns. Four signals, one storefront, sub-cent per view at scale. The question isn't whether this pattern works. It's which signal you add first."
-		}
-	]
+  "voice": "brian",
+  "model": "eleven_multilingual_v2",
+  "defaultHoldSeconds": 0.6,
+  "pronunciations": {
+    "Bealls Florida": "Bells Florida",
+    "Bealls": "Bells",
+    "BigCommerce": "Big Commerce",
+    "BigQuery": "Big Query"
+  },
+  "scenes": [
+    {
+      "image": "scene-01-four-merchants.png",
+      "title": "Four merchants, one engine",
+      "caption": "Four merchants. Same codebase. Bealls — off-price apparel. Bealls Florida — regional variant. Home Centric — content-mode, no checkout. And Sleep Country — high-stakes mattress retail. Same Aisles repo, same engine, four genuinely different commerce contexts."
+    },
+    {
+      "image": "scene-02a-ai-building.png",
+      "title": "Watch the engine compose",
+      "caption": "Cold load. The shopper hits the page, and the engine starts composing. The dev panel reads the signals as they arrive — hunter at sixty-five percent — and an AI agent is selecting blocks, ordering sections, and writing copy in real time. Five to ten seconds. Not pre-baked. Composed for this shopper."
+    },
+    {
+      "image": "scene-02-hunter-layout.png",
+      "title": "Hunter layout, with provenance",
+      "caption": "Layout settles. Every block tagged. Category-header, product-grid — each one labeled with the engine that produced it and the persona it was composed for. This isn't a template. It's a live composition. The dev panel shows hunter at sixty-five percent, forty-seven point gap, one rule fired, and exactly which blocks the engine chose."
+    },
+    {
+      "image": "scene-03-researcher-layout.png",
+      "title": "Same URL, researcher composition",
+      "caption": "Same URL. Same shopper context. But this time the engine read researcher — seventy-one percent confidence, fifty-five point gap. Different blocks: editorial-header, expanded copy, comparison-friendly grid. Every block tagged with researcher provenance. The engine adapts — same code path, different composition, no developer in the loop."
+    },
+    {
+      "image": "scene-04-observe-session.png",
+      "title": "The engine, observable",
+      "caption": "And this is what engineers see. The Observe dashboard — every signal a shopper emits, the inference state at each tick, the persona probabilities. This is production telemetry. Not a smoke test, not a debug page bolted on. It runs in the same pipeline as the engine."
+    },
+    {
+      "image": "scene-05-observe-logs.png",
+      "title": "When intent shifts, the engine sees it",
+      "caption": "Same dashboard, the moment intent changes. Hunter to researcher — the engine flagged the shift and tells you why. Three rules fired, weights visible, every signal accountable. No black box. If a persona moves, you see exactly which rule moved it."
+    },
+    {
+      "image": "scene-06-bigquery-data.png",
+      "title": "Grounded in real data",
+      "caption": "Where do the persona priors come from? For Sleep Country: eleven thousand real shopper sessions, seven weeks of BigQuery data, anonymized before it left the warehouse. Hashed IDs. Hour-bucketed timestamps. No personal data. Enough signal to calibrate against. No risk to anyone."
+    },
+    {
+      "image": "scene-07-calibration-verdict.png",
+      "title": "Six of ten transferred",
+      "caption": "Then we ran our existing inference rules against that ground truth. Six of ten testable rules transferred from off-price apparel to sleep retail unchanged. Three pointed the wrong direction. A Facebook click in apparel is browsing. In sleep retail, it's paid-social purchase intent. So we corrected three rules — surgical, per-brand. One ADR. Same engine."
+    },
+    {
+      "image": "scene-08-replay-running.png",
+      "title": "Real shoppers, replayed",
+      "caption": "Twelve replay fixtures, each one a real anonymized journey from the BigQuery data. Pick one, hit replay. The events fire through the same signal pipeline production uses. The persona vector updates live. The layout regenerates. Every demo, reproducible. Every claim, traceable to a real session."
+    },
+    {
+      "image": "scene-09-admin-rules.png",
+      "title": "Merchant control — Rules",
+      "caption": "And this is what merchants see. The Aisles admin panel — embedded inside the BigCommerce dashboard. Pin a product. Exclude another. Boost a category. Schedule a seasonal override. Per persona, per category, time-windowed. Merchants don't write code. They curate."
+    },
+    {
+      "image": "scene-10-admin-analytics.png",
+      "title": "Merchant control — Analytics",
+      "caption": "Same panel, the analytics tab. Cost. Cache hit rate. Persona breakdown. Daily generation cost. Merchants own engine health, not just shopper UX. If something starts costing more or hitting cache less, they see it without filing a ticket."
+    },
+    {
+      "image": "scene-11-admin-preview.png",
+      "title": "Merchant control — Preview",
+      "caption": "And the preview tab. Render any persona, any category, any time. Merchants see what shoppers will see — before they ship a rule change. The same composition pipeline as production, with their pending edits applied. Closed loop, no surprise launches."
+    },
+    {
+      "image": "scene-12-close.png",
+      "title": "Calibrated, not heuristic",
+      "caption": "Aisles isn't a product. It's a calibrated engine. Observable for engineers. Controllable for merchants. Grounded in shopper data, not vendor intuition. Same engine, four merchants today. Bring your data, we calibrate the engine."
+    }
+  ]
 }

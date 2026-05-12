@@ -4,17 +4,19 @@
  *
  * Pipeline:
  *   1. Load captions.json
- *   2. For each scene: OpenAI TTS → audio/NN.mp3
+ *   2. For each scene: TTS → audio/NN.mp3 (ElevenLabs preferred, OpenAI fallback)
  *   3. ffprobe each MP3 to get duration
- *   4. ImageMagick: letterbox screenshot + burn caption panel → frames/NN.png
+ *   4. ImageMagick: full-bleed screenshot + burn caption panel → frames/NN.png
  *   5. ffmpeg: per-scene clip (still image + audio + trailing silence) → clips/NN.mp4
  *   6. ffmpeg concat all clips → out/demo-reel.mp4
  *
- * Env:
- *   OPENAI_API_KEY — required. Auto-sourced from ~/Workspace/dev/apps/rally-hq/.env.local if missing.
- *   TTS_VOICE      — optional override (default: captions.voice or 'onyx')
- *   SKIP_TTS       — '1' to reuse existing audio/*.mp3 files (faster iteration)
- *   SKIP_FRAMES    — '1' to reuse existing frames/*.png files
+ * Env (auto-loaded from ./.env or ~/.demo-reel.env if not exported):
+ *   ELEVENLABS_API_KEY — preferred TTS backend
+ *   OPENAI_API_KEY     — fallback TTS backend
+ *   TTS_VOICE          — override captions.voice
+ *   TTS_MODEL          — override captions.model
+ *   SKIP_TTS=1         — reuse existing audio/*.mp3
+ *   SKIP_FRAMES=1      — reuse existing frames/*.png
  */
 
 import fs from 'node:fs';
@@ -33,63 +35,84 @@ const OUT_DIR = path.join(ROOT, 'out');
 for (const d of [AUDIO_DIR, FRAMES_DIR, CLIPS_DIR, OUT_DIR]) fs.mkdirSync(d, { recursive: true });
 
 // ─── env ───────────────────────────────────────────────────────────
-// ─── env ───────────────────────────────────────────────────────────
-// Supports two TTS backends:
-//   1. ElevenLabs (default if ELEVENLABS_API_KEY is set)
-//   2. OpenAI (fallback)
+// Looks up env vars from (in order): process.env, ./.env, ~/.demo-reel.env.
+// Add more search paths via DEMO_REEL_ENV_PATHS=path1:path2.
 
 function loadKey(name, searchPaths = []) {
 	if (process.env[name]) return process.env[name];
 	for (const p of searchPaths) {
-		if (!fs.existsSync(p)) continue;
+		if (!p || !fs.existsSync(p)) continue;
 		const match = fs.readFileSync(p, 'utf-8').match(new RegExp(`^${name}=(.+)$`, 'm'));
 		if (match) return match[1].trim().replace(/^["']|["']$/g, '');
 	}
 	return null;
 }
 
-const rallyEnv = path.resolve(process.env.HOME || '', 'Workspace/dev/apps/rally-hq/.env.local');
-const projectEnvLocal = path.resolve(ROOT, '..', '..', '.env.local');
-const projectEnv = path.resolve(ROOT, '..', '..', '.env');
-const ELEVENLABS_API_KEY = loadKey('ELEVENLABS_API_KEY', [projectEnvLocal, projectEnv, rallyEnv, path.join(ROOT, '.env')]);
-const OPENAI_API_KEY = loadKey('OPENAI_API_KEY', [projectEnvLocal, projectEnv, rallyEnv]);
-const TTS_BACKEND = ELEVENLABS_API_KEY ? 'elevenlabs' : 'openai';
+const extraEnvPaths = (process.env.DEMO_REEL_ENV_PATHS || '').split(':').filter(Boolean);
+const envSearchPaths = [
+	path.join(ROOT, '.env'),
+	path.resolve(process.env.HOME || '', '.demo-reel.env'),
+	...extraEnvPaths,
+];
+
+const ELEVENLABS_API_KEY = loadKey('ELEVENLABS_API_KEY', envSearchPaths);
+const OPENAI_API_KEY = loadKey('OPENAI_API_KEY', envSearchPaths);
+const TTS_BACKEND = ELEVENLABS_API_KEY ? 'elevenlabs' : (OPENAI_API_KEY ? 'openai' : 'silent');
 
 if (!ELEVENLABS_API_KEY && !OPENAI_API_KEY) {
-	throw new Error('Set ELEVENLABS_API_KEY (preferred) or OPENAI_API_KEY for TTS');
+	console.warn('⚠ No TTS key found — generating silent reel (caption-only mode).');
+	console.warn('  Set ELEVENLABS_API_KEY or OPENAI_API_KEY to enable narration.');
 }
 
 // ─── config ────────────────────────────────────────────────────────
 const captions = JSON.parse(fs.readFileSync(path.join(ROOT, 'captions.json'), 'utf-8'));
-const VOICE = process.env.TTS_VOICE || captions.voice || 'coral';
-const TTS_MODEL = process.env.TTS_MODEL || captions.model || 'eleven_multilingual_v2';
+const VOICE = process.env.TTS_VOICE || captions.voice || 'adam';
+const TTS_MODEL = process.env.TTS_MODEL || captions.model || (TTS_BACKEND === 'elevenlabs' ? 'eleven_multilingual_v2' : 'gpt-4o-mini-tts');
 const TTS_INSTRUCTIONS = captions.instructions || null;
 const DEFAULT_HOLD_S = captions.defaultHoldSeconds ?? 0.4;
 
-// ElevenLabs voice IDs — narrator-grade stock voices that work well for
-// technical/builder content. The default is `brian` (deep American narrator)
-// — close to an "engineering podcast" register, low theatrical variance.
+// Pronunciation overrides: brand or jargon spelled in the on-screen caption
+// won't always TTS the way the speaker should pronounce it (e.g. "Bealls" →
+// "Bells", "BigCommerce" → "Big Commerce"). Define `pronunciations` in
+// captions.json as a map of `displayed → spoken`. Applied to caption text
+// just before TTS — the on-screen text is unaffected. Word-boundary,
+// case-insensitive; longest keys are replaced first so multi-word entries
+// ("Bealls Florida") win over single-word entries ("Bealls").
+const PRONUNCIATIONS = captions.pronunciations || {};
+const PRONUNCIATION_KEYS = Object.keys(PRONUNCIATIONS).sort((a, b) => b.length - a.length);
+function applyPronunciations(text) {
+	let out = text;
+	for (const k of PRONUNCIATION_KEYS) {
+		const escaped = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+		out = out.replace(new RegExp(`\\b${escaped}\\b`, 'gi'), PRONUNCIATIONS[k]);
+	}
+	return out;
+}
+
+// ElevenLabs pre-built voice IDs (pass the name, gets resolved to ID).
 const ELEVENLABS_VOICES = {
-	'brian': 'nPczCjzI2devNBz1zQrb',      // American, deep, narrator (default — best for tech demos)
-	'bill': 'pqHfZKP75CvOlQylNhV4',        // American, mature, documentary narrator
-	'daniel': 'onwK4e9ZLuTAKqWW03F9',      // British, authoritative, news-anchor
-	'liam': 'TX3LPaxmHKxFdv7VOQHJ',        // American, articulate, younger
-	'george': 'JBFqnCBsd6RMkjVDRZzb',      // British, warm, narration
-	'rachel': '21m00Tcm4TlvDq8ikWAM',      // American, clear, professional
-	'adam': 'pNInz6obpgDQGcFmaJgB',        // American, deep, confident
-	'josh': 'TxGEqnHWrfWFTfGW9XjX',        // American, conversational
+	'brian': 'nPczCjzI2devNBz1zQrb',       // American, natural cadence — modern software-demo default
+	'daniel': 'onwK4e9ZLuTAKqWW03F9',       // UK professional, common in AI/dev-tool demos
+	'bill': 'pqHfZKP75CvOlQylNhV4',         // American, conversational, modern
+	'george': 'JBFqnCBsd6RMkjVDRZzb',     // British, warm, narration
+	'rachel': '21m00Tcm4TlvDq8ikWAM',     // American, clear — older, neutral
+	'adam': 'pNInz6obpgDQGcFmaJgB',        // American, deep — sounds documentary/trailer, avoid for software demos
+	'josh': 'TxGEqnHWrfWFTfGW9XjX',       // American, conversational
 	'sam': 'yoZ06aMxZJJ28mfd3POQ',         // American, casual
 	'charlie': 'IKne3meq5aSn9XLyUdCD',     // Australian, friendly
 };
 
-// Frame layout: screenshot on top, caption band below — no overlap.
-// Captures are 1440×900; caption band occupies its own 220px region underneath
-// so nothing in the screenshot is ever obscured.
-const SCREENSHOT_W = 1440;
-const SCREENSHOT_H = 900;
+// Landscape 16:10. Default layout is "panel" — the caption band lives
+// alongside the screenshot, not on top of it. Screenshots fit into
+// `VIDEO_W × IMAGE_AREA_H` and are letterboxed if their aspect doesn't
+// match. Set `captionMode: "overlay"` per scene (or via env var
+// DEMO_REEL_CAPTION_MODE=overlay) to opt into the legacy full-bleed
+// behavior — only sensible when the screenshot has intentional empty
+// space at the chosen edge.
+const VIDEO_W = 1440;
+const VIDEO_H = 900;
 const CAPTION_BAND_H = 220;
-const VIDEO_W = SCREENSHOT_W;
-const VIDEO_H = SCREENSHOT_H + CAPTION_BAND_H; // 1120
+const IMAGE_AREA_H = VIDEO_H - CAPTION_BAND_H;
 const CAPTION_PAD_X = 60;
 const CAPTION_PAD_TOP = 22;
 const TITLE_FONT_SIZE = 30;
@@ -97,6 +120,32 @@ const CAPTION_FONT_SIZE = 20;
 const COUNTER_FONT_SIZE = 14;
 const BG_COLOR = '#0a0a0a';
 const ACCENT_COLOR = '#10b981';
+const DEFAULT_CAPTION_MODE = process.env.DEMO_REEL_CAPTION_MODE === 'overlay' ? 'overlay' : 'panel';
+
+// ─── fonts ─────────────────────────────────────────────────────────
+// ImageMagick on macOS doesn't auto-index system fonts, so calls like
+// `-font Helvetica` fail with "unable to read font". Resolve to absolute
+// paths on darwin; fall back to font names on Linux (where fonts-liberation
+// or equivalent is expected per SETUP.md). DEMO_REEL_FONT_REGULAR /
+// DEMO_REEL_FONT_BOLD env vars override either path if the user wants to
+// pick their own.
+
+function resolveFont({ envVar, macPath, linuxName }) {
+	if (process.env[envVar]) return process.env[envVar];
+	if (process.platform === 'darwin' && fs.existsSync(macPath)) return macPath;
+	return linuxName;
+}
+
+const FONT_REGULAR = resolveFont({
+	envVar: 'DEMO_REEL_FONT_REGULAR',
+	macPath: '/System/Library/Fonts/Supplemental/Arial.ttf',
+	linuxName: 'Liberation-Sans',
+});
+const FONT_BOLD = resolveFont({
+	envVar: 'DEMO_REEL_FONT_BOLD',
+	macPath: '/System/Library/Fonts/Supplemental/Arial Bold.ttf',
+	linuxName: 'Liberation-Sans-Bold',
+});
 
 // ─── helpers ───────────────────────────────────────────────────────
 function sh(cmd, args, opts = {}) {
@@ -104,10 +153,9 @@ function sh(cmd, args, opts = {}) {
 }
 
 async function generateTTS(text, outputPath) {
-	if (TTS_BACKEND === 'elevenlabs') {
-		return generateTTS_ElevenLabs(text, outputPath);
-	}
-	return generateTTS_OpenAI(text, outputPath);
+	if (TTS_BACKEND === 'elevenlabs') return generateTTS_ElevenLabs(text, outputPath);
+	if (TTS_BACKEND === 'openai') return generateTTS_OpenAI(text, outputPath);
+	return generateSilent(text, outputPath);
 }
 
 async function generateTTS_ElevenLabs(text, outputPath) {
@@ -123,12 +171,9 @@ async function generateTTS_ElevenLabs(text, outputPath) {
 			text,
 			model_id: TTS_MODEL,
 			voice_settings: {
-				// Tuned for technical narration: high stability for consistent pacing,
-				// no expressive style (which produces erratic cadence on tech content),
-				// modest similarity boost. Closer to ElevenLabs' suggested narrator preset.
-				stability: 0.7,
-				similarity_boost: 0.8,
-				style: 0.0,
+				stability: 0.55,
+				similarity_boost: 0.80,
+				style: 0.25,
 				use_speaker_boost: true,
 			},
 		}),
@@ -161,6 +206,21 @@ async function generateTTS_OpenAI(text, outputPath) {
 	fs.writeFileSync(outputPath, buf);
 }
 
+async function generateSilent(text, outputPath) {
+	// Caption-only mode: produce a short silent MP3 sized to be readable.
+	// Aim ~80ms per character with a 2s floor and 8s ceiling.
+	const seconds = Math.max(2, Math.min(8, text.length * 0.08));
+	execFileSync('ffmpeg', [
+		'-y',
+		'-f', 'lavfi',
+		'-i', `anullsrc=channel_layout=mono:sample_rate=44100`,
+		'-t', seconds.toFixed(2),
+		'-q:a', '9',
+		'-acodec', 'libmp3lame',
+		outputPath,
+	], { stdio: ['ignore', 'inherit', 'inherit'] });
+}
+
 function probeDuration(mp3Path) {
 	const out = sh('ffprobe', [
 		'-v', 'error',
@@ -182,64 +242,72 @@ function buildFrame(scene, index, framePath) {
 	const captionText = scene.caption;
 	const titleText = scene.title;
 
-	// Layout: screenshot occupies the top SCREENSHOT_H pixels (resized to fit width,
-	// preserving aspect, letterboxed if needed). Caption band is a solid region
-	// directly underneath — never overlaps the screenshot.
+	const mode = scene.captionMode || DEFAULT_CAPTION_MODE;
+	const position = scene.captionPosition || 'bottom';
 	const textWidth = VIDEO_W - CAPTION_PAD_X * 2;
-	const captionBandY = SCREENSHOT_H;
+
+	// In panel mode the screenshot occupies VIDEO_W × IMAGE_AREA_H and the
+	// caption band occupies the remaining VIDEO_H - IMAGE_AREA_H. In overlay
+	// mode the screenshot is full-bleed and the band sits on top of it.
+	const imageH = mode === 'panel' ? IMAGE_AREA_H : VIDEO_H;
+	const imageY = mode === 'panel' && position === 'top' ? CAPTION_BAND_H : 0;
+	const captionBandY = mode === 'panel'
+		? (position === 'top' ? 0 : IMAGE_AREA_H)
+		: (position === 'top' ? 0 : VIDEO_H - CAPTION_BAND_H);
+	const accentLineY = position === 'top' ? captionBandY + CAPTION_BAND_H - 2 : captionBandY;
 	const titleY = captionBandY + CAPTION_PAD_TOP;
 	const bodyY = titleY + TITLE_FONT_SIZE + 14;
 
-	const args = [
-		// 1. Screenshot — resize to fit inside SCREENSHOT_W×SCREENSHOT_H (preserve
-		//    aspect, no crop), letterbox extra space with the BG_COLOR. Then place
-		//    on a VIDEO_W×VIDEO_H canvas anchored top so the bottom CAPTION_BAND_H
-		//    remains empty for the caption band.
-		src,
-		'-resize', `${SCREENSHOT_W}x${SCREENSHOT_H}`,
-		'-background', BG_COLOR,
-		'-gravity', 'center',
-		'-extent', `${SCREENSHOT_W}x${SCREENSHOT_H}`,
-		'-gravity', 'north',
-		'-extent', `${VIDEO_W}x${VIDEO_H}`,
+	const bandFill = mode === 'panel' ? '#0a0a0a' : 'rgba(10,10,10,0.88)';
 
-		// 2. Caption band — solid (no transparency, no overlap)
+	const args = [
+		'-size', `${VIDEO_W}x${VIDEO_H}`,
+		`xc:${BG_COLOR}`,
+
+		// Screenshot — fit-to-area maintaining aspect, letterbox to BG_COLOR.
+		'(',
+			src,
+			'-resize', `${VIDEO_W}x${imageH}`,
+			'-background', BG_COLOR,
+			'-gravity', 'center',
+			'-extent', `${VIDEO_W}x${imageH}`,
+		')',
+		'-gravity', 'northwest',
+		'-geometry', `+0+${imageY}`,
+		'-composite',
+
 		'(',
 			'-size', `${VIDEO_W}x${CAPTION_BAND_H}`,
-			`xc:${BG_COLOR}`,
+			`xc:${bandFill}`,
 		')',
 		'-gravity', 'northwest',
 		'-geometry', `+0+${captionBandY}`,
 		'-composite',
 
-		// 3. Emerald hairline at the seam between screenshot and caption band
 		'(',
 			'-size', `${VIDEO_W}x2`,
 			`xc:${ACCENT_COLOR}`,
 		')',
 		'-gravity', 'northwest',
-		'-geometry', `+0+${captionBandY}`,
+		'-geometry', `+0+${accentLineY}`,
 		'-composite',
 
-		// 4. Scene counter — top-right of the caption band
-		'-font', 'Helvetica',
+		'-font', FONT_REGULAR,
 		'-pointsize', String(COUNTER_FONT_SIZE),
 		'-fill', '#737373',
 		'-gravity', 'northeast',
 		'-annotate', `+${CAPTION_PAD_X}+${captionBandY + CAPTION_PAD_TOP + 6}`, progress,
 
-		// 5. Title — bold, left-aligned inside the band
-		'-font', 'Helvetica-Bold',
+		'-font', FONT_BOLD,
 		'-pointsize', String(TITLE_FONT_SIZE),
 		'-fill', '#f5f5f5',
 		'-gravity', 'northwest',
 		'-annotate', `+${CAPTION_PAD_X}+${titleY}`, titleText,
 
-		// 6. Caption body — wrapped via a temp caption: image, composited under the title
 		'(',
 			'-background', 'none',
 			'-fill', '#d4d4d4',
-			'-font', 'Helvetica',
+			'-font', FONT_REGULAR,
 			'-pointsize', String(CAPTION_FONT_SIZE),
 			'-size', `${textWidth}x${CAPTION_BAND_H - (bodyY - captionBandY) - CAPTION_PAD_TOP}`,
 			`caption:${captionText}`,
@@ -283,7 +351,6 @@ async function main() {
 	console.log(`  scenes: ${captions.scenes.length}`);
 	console.log(`  output: ${path.join(OUT_DIR, 'demo-reel.mp4')}\n`);
 
-	// Step 1: TTS
 	console.log('[1/4] Generating TTS audio');
 	for (let i = 0; i < captions.scenes.length; i++) {
 		const scene = captions.scenes[i];
@@ -293,17 +360,12 @@ async function main() {
 			console.log(`  ${idx} cached`);
 			continue;
 		}
-		// `tts` overrides `caption` for narration only — used when the visible
-		// caption needs technical accuracy (a code-style label, a brand
-		// spelling like "Bealls") but the spoken read should differ
-		// (plain English, "Bells" pronunciation).
-		const narration = scene.tts || scene.caption;
-		console.log(`  ${idx} → ${narration.length} chars`);
-		await generateTTS(narration, audioPath);
+		const ttsText = applyPronunciations(scene.caption);
+		console.log(`  ${idx} → ${scene.caption.length} chars${ttsText !== scene.caption ? ' (pronunciation override applied)' : ''}`);
+		await generateTTS(ttsText, audioPath);
 		await new Promise((r) => setTimeout(r, 800));
 	}
 
-	// Step 2: Frames
 	console.log('\n[2/4] Building captioned frames');
 	for (let i = 0; i < captions.scenes.length; i++) {
 		const idx = String(i + 1).padStart(2, '0');
@@ -316,7 +378,6 @@ async function main() {
 		buildFrame(captions.scenes[i], i, framePath);
 	}
 
-	// Step 3: Clips
 	console.log('\n[3/4] Rendering per-scene clips');
 	const clipPaths = [];
 	for (let i = 0; i < captions.scenes.length; i++) {
@@ -331,7 +392,6 @@ async function main() {
 		clipPaths.push(clipPath);
 	}
 
-	// Step 4: Concat
 	console.log('\n[4/4] Concatenating clips');
 	const concatFile = path.join(ROOT, 'concat.txt');
 	fs.writeFileSync(

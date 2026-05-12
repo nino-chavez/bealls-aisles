@@ -1,0 +1,7 @@
+# Generated assets (regenerate with `node generate.mjs`)
+audio/
+frames/
+clips/
+concat.txt
+# Keep out/ if you want the final MP4 in the repo
+# out/

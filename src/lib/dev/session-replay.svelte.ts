@@ -12,7 +12,7 @@
  * really arrived from that referrer.
  */
 
-import { goto } from '$app/navigation';
+import { goto, invalidateAll } from '$app/navigation';
 import { getEmitter } from '$lib/signals/emitter';
 import type { SignalEventType } from '$lib/signals/types';
 
@@ -153,6 +153,7 @@ function scheduleNextEvent(): void {
 
 function fireEvent(evt: ReplayEvent): void {
 	const emitter = getEmitter();
+	let shouldRefresh = false;
 	switch (evt.type) {
 		case 'VIEW_CATEGORY': {
 			if (evt.category) {
@@ -167,14 +168,17 @@ function fireEvent(evt: ReplayEvent): void {
 			// custom_url slugs. The inference engine reacts to the productViewCount
 			// regardless of whether the URL changed.
 			emit(emitter, 'nav.product_view', { productLabel: evt.productLabel });
+			shouldRefresh = true;
 			break;
 		}
 		case 'SEARCH': {
 			emit(emitter, 'nav.search', { query: evt.query });
+			shouldRefresh = true;
 			break;
 		}
 		case 'ADD_TO_CART': {
 			emit(emitter, 'commerce.add_to_cart', { productLabel: evt.productLabel });
+			shouldRefresh = true;
 			break;
 		}
 		case 'CHECKOUT': {
@@ -186,8 +190,16 @@ function fireEvent(evt: ReplayEvent): void {
 		}
 	}
 	// Force flush so the dev panel sees the signal land within ~250ms instead
-	// of waiting for the 5s interval. nav.* events normally batch.
-	queueMicrotask(() => void emitter?.flush());
+	// of waiting for the 5s interval. nav.* events normally batch. Then
+	// invalidateAll so SvelteKit re-runs the page load with the new
+	// server-side persona inference and the storefront visibly re-renders
+	// blocks selected for the now-current persona.
+	queueMicrotask(async () => {
+		await emitter?.flush();
+		if (shouldRefresh) {
+			await invalidateAll();
+		}
+	});
 }
 
 function emit(
