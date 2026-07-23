@@ -1,0 +1,25 @@
+{
+  "meta": {
+    "schemaVersion": 1,
+    "id": "beallsflorida-store",
+    "created": "2026-04-30T00:00:00.000Z",
+    "updated": "2026-04-30T00:00:00.000Z",
+    "author": "Nino Chavez",
+    "version": "1.0.0",
+    "engagement": "bealls-aisles"
+  },
+  "identity": {
+    "name": "Bealls Florida",
+    "tagline": "Florida is a feeling",
+    "mission": "Florida lifestyle brand selling coastal apparel, beach essentials, and resort wear at off-price values. Sunshine state living, casual confidence, multi-generational appeal.",
+    "audience": [
+      "Florida residents 25-65 living the coastal lifestyle",
+      "snowbirds and seasonal visitors",
+      "vacationers and resort-wear shoppers",
+      "multi-generational family shoppers — kids' beachwear to grandparents' weekend casual"
+    ],
+    "personality": ["coastal", "sun-drenched", "lifestyle", "multi-generational", "casual"],
+    "positioning": "The Florida lifestyle store. Sunshine state living never looked so good — at the beach, on the boat, around the pool, on the porch.",
+    "domain": "coastal apparel and lifestyle"
+  }
+}

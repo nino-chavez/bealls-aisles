@@ -1,0 +1,143 @@
+{
+	"voice": "brian",
+	"model": "eleven_multilingual_v2",
+	"defaultHoldSeconds": 0.5,
+	"_notes": {
+		"audience": "Builders shipping AI features into BigCommerce ecommerce stores",
+		"frame": "Reference implementation, not product pitch. Patterns over file paths. Plain English over schema field names.",
+		"voice_choice": "brian — American narrator. Tuned generate.mjs settings: stability 0.7, similarity 0.8, style 0.0 (default-ish, no theatrical variation).",
+		"runtime_target": "~7-8 min, ~50-80 words per scene, hold 0.4-0.6s",
+		"tts_field": "Optional per-scene override for narration only. Used here for 'Bealls' → 'Bells' pronunciation while the visible caption keeps the correct brand spelling.",
+		"em_dashes": "Used sparingly — ElevenLabs reads em-dashes as long pauses, so reserve them for genuine breaks; prefer commas and periods for flow."
+	},
+	"scenes": [
+		{
+			"image": "bealls-01-home-clean.png",
+			"title": "An AI-composed BigCommerce storefront",
+			"caption": "This is Bealls, a real off-price retailer on BigCommerce. Looks like a normal storefront. Hero, featured products, shop-by-category, free-shipping bar. Nothing on screen says AI. That's the point. Every pattern in this reel ships to a BC storefront today.",
+			"tts": "This is Bells, a real off-price retailer on BigCommerce. Looks like a normal storefront. Hero, featured products, shop-by-category, free-shipping bar. Nothing on screen says AI. That's the point. Every pattern in this reel ships to a BC storefront today."
+		},
+		{
+			"images": [
+				"extracted/02a-women-no-dev.png",
+				"extracted/02b-women-with-dev.png",
+				"extracted/02c-scrolled-badges.png"
+			],
+			"title": "Dev instrumentation, in real time",
+			"caption": "Flip the dev flag on a category page. Two halves of one tool, both visible at once. Per-zone badges label every AI-composed section: editorial header, product grid, merchandising strip, each tagged with its zone, its data source, and the persona inferred for this session. The floating panel pinned in the corner shows session context at a glance: active brand, generations counter, a legend mapping each block's color to its source. This is what real-time observability looks like when you build it for AI features instead of bolting it on later. A single environment flag gates visibility, so the store never exposes it to shoppers."
+		},
+		{
+			"image": "extracted/03reason-a.png",
+			"title": "Reasoning at the zone level",
+			"caption": "Below every badge, a sentence. Not metrics. Not hashes. The AI's actual one-line answer to why this zone composed this way: which signals fired, which products it pulled, which voice cue it leaned on. Inline next to the zone you're looking at, not buried in a log file. Explainability lives where the decision lives."
+		},
+		{
+			"images": [
+				"extracted/03a-cached.png",
+				"extracted/03b-mid-loading.png",
+				"extracted/03c-regenerated.png"
+			],
+			"title": "Bypass the cache, watch it regenerate",
+			"caption": "Add a second flag to force a live regeneration. The next request misses cache, hits the AI Gateway, and regenerates. The dev panel logs the new trace. Around five seconds for a cold composition through Vercel AI Gateway. The faster model runs first, the stronger model handles the hard cases. Sections stream in as they validate, so the editorial header shows up before the page is fully assembled. Slightly wrong layout in a hundred milliseconds beats perfect layout in eight seconds."
+		},
+		{
+			"image": "bealls-05-observe.png",
+			"title": "The operator dashboard",
+			"caption": "The full operator surface. Signal timeline on the left shows every request, navigation, interaction, and refinement event with timestamps. Persona vector top-right. The math is Bayesian. Every signal shifts the confidence score and compounds across the session. Below: rule firings, generation logs, token counts. This is how you debug an AI feature in production. Not 'trust the model.' Every decision traceable to a signal, a rule, a layout choice."
+		},
+		{
+			"images": [
+				"extracted/05a-trigger-pill.png",
+				"extracted/05c-typed.png",
+				"extracted/05d-recomposed.png",
+				"extracted/05e-observe.png"
+			],
+			"title": "Refine the layout by talking to it",
+			"caption": "Open the refinement chat. Type a constraint. 'Under fifty dollars, casual.' The page recomposes. Open the dashboard. The persona vector reflects the new signal, rules fire, and a generation is logged. The chat doesn't replace the layout, it constrains the next composition. Each message compounds. The chat is one self-contained component that posts a constraint, the engine recomposes, and explanation copy comes back. Same pattern works on any surface you ship."
+		},
+		{
+			"images": [
+				"extracted/06a-first-visit.png",
+				"extracted/06b-observe-cross-session.png",
+				"extracted/06c-warm-return.png"
+			],
+			"title": "Cross-session continuity",
+			"caption": "Close the tab. Come back later. Same shopper, new session. The dashboard shows the cross-session signals firing: returning visitor in a different category, repeat-visit familiarity, returning apparel shopper. The cold-start prior shifts toward Hunter. The next layout isn't a fresh start; it's the Bayesian accumulation across visits, already a denser grid sorted by price. Your existing BC merchant has order history, session cookies, customer IDs. Pipe them in as additional signal types. The engine doesn't care where the input comes from."
+		},
+		{
+			"image": "bealls-08-plp-latitude.png",
+			"title": "Medium latitude, category page",
+			"caption": "Category page. Medium composition latitude. The scaffold is fixed: filter rail, breadcrumb, pagination, search bar. Static and unchanging. The body zones, the editorial header, the product grid, the merchandising strip, those are AI-composed. The schema declares exactly which zones the AI can fill. It cannot touch the filter rail or pagination. Composition is bounded by the schema's type contract."
+		},
+		{
+			"image": "bealls-09-pdp-latitude.png",
+			"title": "Narrow latitude, product page",
+			"caption": "Product page. Narrow latitude. Almost everything is foundation: gallery, title, variant selector, add-to-cart, description, reviews. Mandatory and ordered. The AI gets three named insertion points: below the gallery, below the description, and at the cross-sell position. That's it. The reason: product pages convert. You don't want creative composition where the add-to-cart button might disappear. Wide for home, medium for category, narrow for product, fixed for checkout."
+		},
+		{
+			"images": [
+				"extracted/09a-cart-page.png",
+				"extracted/09b-cart-scrolled.png",
+				"extracted/09c-cart-summary.png"
+			],
+			"title": "Fixed latitude, cart",
+			"caption": "Cart. Fixed latitude. Line items, free-shipping progress, order summary, promo code entry, all foundation. The AI gets one slot — 'Complete the look' last-chance upsells — and a few message overrides for promo and trust copy. The principle: don't break checkout. Personalize the upsells, the trust copy, the urgency framing. Don't reorder the steps. Don't touch the payment fields. Engine and foundation have a clear seam."
+		},
+		{
+			"image": "bealls-11-p0-blocks.png",
+			"title": "The block catalog",
+			"caption": "Every shipped block in the catalog. Thirty-six components: editorial headers, hero products, price rails, store-pickup strips, themed merchandising rows, last-chance upsells, trust strips, email capture, coupon strips, brand spotlights. The AI doesn't generate UI. It picks from this vocabulary. The schema is a closed list. Every layout the AI can produce is an element of this finite set. Your AI can only output what your schema defines."
+		},
+		{
+			"image": "bealls-12-code-beat.png",
+			"title": "Schema-bound generation in code",
+			"caption": "Here's what that looks like. Zod schemas define the block union. The gateway enforces the schema at the call boundary using structured output mode. Either the model produces a valid layout or the call fails. Invalid schema, no partial result. Vercel's gateway routes the request: faster model as primary, stronger model as fallback. Validation enforced at the API boundary, not after the fact. Schema-constrained output is the boundary between prototype and production."
+		},
+		{
+			"image": "bealls-13-brand-config.png",
+			"title": "Brands as configuration",
+			"caption": "Every brand is one configuration file. BigCommerce channel, category map, design tokens, persona definitions, voice guidance, incentive structure. The prompt construction reads from it. The renderer reads from it. The cache key includes the brand. Multi-tenancy through configuration, not through forking the codebase. A new brand on this stack: write the file, deploy a new project, set the brand environment variable. That's the checklist.",
+			"tts": "Every brand is one configuration file. BigCommerce channel, category map, design tokens, persona definitions, voice guidance, incentive structure. The prompt construction reads from it. The renderer reads from it. The cache key includes the brand. Multi-tenancy through configuration, not through forking the codebase. A new brand on this stack: write the file, deploy a new project, set the brand environment variable. That's the checklist."
+		},
+		{
+			"images": [
+				"extracted/13a-bealls.png",
+				"extracted/13b-bealls-florida.png",
+				"extracted/13c-home-centric.png"
+			],
+			"title": "Same engine, three brands",
+			"caption": "Same codebase. Three brands. Bealls: wine accent, family-shopper voice. Bealls Florida: teal, coastal, sun-soaked. HomeCentric: a different operating model entirely. HomeCentric has no online catalog. Brick-and-mortar only. The same composition engine renders content-mode surfaces: locator-led, editorial, no add-to-cart. One engine, two operating models. The configuration file determines which surfaces exist for which brand.",
+			"tts": "Same codebase. Three brands. Bells: wine accent, family-shopper voice. Bells Florida: teal, coastal, sun-soaked. HomeCentric: a different operating model entirely. HomeCentric has no online catalog. Brick-and-mortar only. The same composition engine renders content-mode surfaces: locator-led, editorial, no add-to-cart. One engine, two operating models. The configuration file determines which surfaces exist for which brand."
+		},
+		{
+			"image": "bealls-15-voucherify-cart.png",
+			"title": "Marketplace apps as inputs",
+			"caption": "BigCommerce marketplace apps integrate the same way. The shopper applies a promo code and the cart picks it up as a typed AppliedCode. With Voucherify or any campaign engine wired in, the merchant defines the rules upstream, the engine reads them as a typed JSON protocol, and one incentive contract serves both the shopper UI and any AI shopping agent on the same surface. One source of truth, two consumers. Your marketplace integrations become typed inputs to the AI surface."
+		},
+		{
+			"image": "bealls-16-cost-meter.png",
+			"title": "What it costs",
+			"caption": "Cost. The dashboard tracks token usage and dollar cost per generation through the gateway. This whole session: fourteen generations, three cache misses, eleven hits, cost less than two cents. With ninety-percent cache hit rate at scale and the faster model as primary, sub-cent per page view at scale. The economics work. AI features die in production not because they don't work, but because nobody knew what they cost until the bill arrived."
+		},
+		{
+			"image": "bealls-17-adjacent-inputs.png",
+			"title": "What else you can feed it",
+			"caption": "Where this goes. Today the engine reads four signal types: what page you're on, how you got there, what you interacted with, and what constraints you've typed. Your BigCommerce stack already has more. Order history through the BC Admin API. Customer cohorts from your data warehouse. Clean product attributes from any feed manager. Each one is a new signal type in the same pipeline. Same inference engine, same accumulation logic. The engine doesn't care where the signal comes from. It just needs a typed input."
+		},
+		{
+			"image": "bealls-18-returning-shopper.png",
+			"title": "Returning shopper, warm cold-start",
+			"caption": "What that unlocks. Returning shopper. Bought kids' shoes six months ago through your BC store. The Admin API tells the engine. The cold-start isn't cold. The engine knows family-shopper persona at sixty percent confidence before this session has fired a single behavioral signal. The layout is already tuned. The refinement chat starts pre-loaded with relevant constraints. That's not future-state speculation. That's a webhook handler you'd write in an afternoon."
+		},
+		{
+			"image": "bealls-19-beyond-storefront.png",
+			"title": "Beyond the storefront",
+			"caption": "And the engine doesn't have to drive only storefront surfaces. The composition engine consumes signals, infers persona, and generates a typed output. The output today is a page layout. The output tomorrow could be an email variant, a push notification, an SMS copy block, an in-app modal. Same schema contract, different surface. One decisioning layer covers layout, email, push, and SMS. Same observability dashboard. No vendor-per-channel sprawl."
+		},
+		{
+			"image": "bealls-20-builder-takeaway.png",
+			"title": "Pattern, not platform",
+			"caption": "The stack is commodity. The Vercel AI SDK for the model calls. A gateway for routing and fallback. Zod for schema enforcement. Redis for cache, Postgres for enrichment, BigCommerce for catalog. The renderer, the dev overlay, the operator dashboard, all open patterns. Four signals, one storefront, sub-cent per view at scale. The question isn't whether this pattern works. It's which signal you add first."
+		}
+	]
+}
