@@ -53,6 +53,7 @@ The three layers (engine / foundation / admin) of [the architecture](./architect
 - [strategic/engagements/bealls.md](./strategic/engagements/bealls.md) — Bealls demo engagement plan
 - [strategic/demos/](./strategic/demos/) — demo prep collateral
 - [audits/](./audits/) — verification artifacts (screenshots, before/after comparisons)
+- [handoff/sleepcountry-bigquery-transfer.md](./handoff/sleepcountry-bigquery-transfer.md) — self-contained brief on the Sleep Country BigQuery calibration (ADR-011) and how it changed the engine. Start here if you're picking this branch up on another machine.
 
 ## Doc structure conventions
 
