@@ -24,7 +24,7 @@ outputs:
   - id: prototype-overview
     type: repository-overview
     status: draft
-    artifact: README.md
+    artifact: docs/work-library/prototype-overview.md
     clearance: internal
     assurance:
       human_validation: pending
@@ -39,7 +39,7 @@ outputs:
 projections:
   - id: prototype-overview
     output: prototype-overview
-    artifact: README.md
+    artifact: docs/work-library/prototype-overview.md
     render_as: case-history
     label: Prototype overview
     route: /
