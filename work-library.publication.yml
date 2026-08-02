@@ -1,0 +1,57 @@
+schema: work-library-publication/0
+case_id: bealls-aisles
+adapter: git-manifest
+canonical_output: prototype-overview
+
+catalog:
+  title: Bealls Aisles
+  subtitle: Aisles case family · Working R&D prototype
+  family: aisles
+  family_label: Aisles case family
+  question: What does Bealls Aisles actually prove about safe AI-composed storefronts?
+  summary: One engine can serve multiple brands and page structures. The reusable asset is the graduated composition-latitude contract, not merchant-outcome evidence.
+
+collection_candidates:
+  - commerce
+
+publication:
+  status: draft
+  clearance: internal
+  assurance:
+    human_validation: pending
+
+outputs:
+  - id: prototype-overview
+    type: repository-overview
+    status: draft
+    artifact: README.md
+    clearance: internal
+    assurance:
+      human_validation: pending
+  - id: composition-taxonomy
+    type: strategy-reference
+    status: draft
+    artifact: docs/architecture/engine/composition-taxonomy.md
+    clearance: internal
+    assurance:
+      human_validation: pending
+
+projections:
+  - id: prototype-overview
+    output: prototype-overview
+    artifact: README.md
+    render_as: case-history
+    label: Prototype overview
+    route: /
+  - id: composition-taxonomy
+    output: composition-taxonomy
+    artifact: docs/architecture/engine/composition-taxonomy.md
+    render_as: strategy-memo
+    label: Composition latitude and block taxonomy
+    route: /strategy/composition-latitude
+
+exclude:
+  - .env*
+  - docs/deployment/**
+  - scripts/.DS_Store
+  - src/.DS_Store
