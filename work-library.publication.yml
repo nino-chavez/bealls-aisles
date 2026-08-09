@@ -37,16 +37,28 @@ outputs:
       human_validation: pending
 
 projections:
+  # kind values come from the library's controlled vocabulary —
+  # work-library/docs/ONTOLOGY.md. It decides which rail group a document
+  # lands in; render_as is only the renderer.
+  # Reclassified from the proposed `history`: the document doesn't preserve
+  # lineage or superseded work, it orients a current reader — "Use this case
+  # to inspect the working prototype... Use the linked Aisles
+  # competitive-position case for the investment decision."
   - id: prototype-overview
     output: prototype-overview
     artifact: docs/work-library/prototype-overview.md
-    render_as: case-history
+    render_as: markdown-document
+    kind: brief
     label: Prototype overview
     route: /
+  # "This document defines that contract. It is the spec that all subsequent
+  # schema, prompt, and renderer work should derive from." — binds the shape
+  # of a system to build, confirming the proposed `specification`.
   - id: composition-taxonomy
     output: composition-taxonomy
     artifact: docs/architecture/engine/composition-taxonomy.md
-    render_as: strategy-memo
+    render_as: markdown-document
+    kind: specification
     label: Composition latitude and block taxonomy
     route: /strategy/composition-latitude
 
