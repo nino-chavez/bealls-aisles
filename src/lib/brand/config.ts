@@ -387,12 +387,12 @@ export function getBrand(): BrandConfig {
 		(typeof process !== 'undefined' && process.env?.BRAND_ID) ||
 		'bealls';
 
-	return BRANDS[brandId] || BRANDS.bealls;
+	return getBrandById(brandId) ?? BRANDS.bealls;
 }
 
 /** Get a brand by explicit ID */
 export function getBrandById(id: string): BrandConfig | undefined {
-	return BRANDS[id];
+	return Object.prototype.hasOwnProperty.call(BRANDS, id) ? BRANDS[id] : undefined;
 }
 
 /** All available brand IDs */
