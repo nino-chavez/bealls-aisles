@@ -1,6 +1,6 @@
 # Aisles Documentation Map
 
-Engineering documentation for the Aisles composition engine and its multi-brand storefront foundation. Start with the [top-level README](../README.md) for the overview.
+Engineering documentation for the Aisles composition engine and its example-merchant multi-brand storefront foundation. The current scope is organization-level reuse for separate Bealls, Bealls Florida, and Home Centric brand contracts; it does not establish config-only onboarding or visual preservation for an unrelated merchant. Start with the [top-level README](../README.md) for the overview.
 
 ## Engine
 
@@ -14,7 +14,7 @@ The AI composition layer — what the engine can compose, and how it infers inte
 
 The storefront that exists with or without AI.
 
-- [architecture/multi-brand.md](./architecture/multi-brand.md) — how one codebase serves multiple brands (storefront and content modes)
+- [architecture/multi-brand.md](./architecture/multi-brand.md) — organization-scoped multi-brand setup (storefront and content modes)
 
 ## Decisions
 

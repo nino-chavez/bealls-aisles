@@ -6,7 +6,13 @@
 
 ## Overview
 
-A single Aisles codebase serves multiple brands. Brand selection is controlled by the `BRAND_ID` environment variable. Each brand gets its own Vercel project, BigCommerce channel (storefront mode) or content set (content mode), and visual identity, but shares all application code, AI logic, and infrastructure patterns.
+A single Aisles codebase serves related brands for one example merchant organization. Brand selection is controlled by the `BRAND_ID` environment variable. Each brand gets its own Vercel project, BigCommerce channel (storefront mode) or content set (content mode), and visual identity, but shares approved application code, AI logic, and infrastructure patterns.
+
+## Scope limit
+
+Bealls, Bealls Florida, and Home Centric are separate brand contracts under the same `example-merchant` organization. Their shared code does not mean they share a visual identity, and it does not prove that an unrelated merchant can preserve an existing storefront through tokens, prompts, and configuration alone.
+
+External-reference onboarding needs a versioned reference contract, merchant-native components and page recipes, responsive behavior, and an explicit autonomy policy. The canonical Aisles reference-contract/autonomy direction owns that work; this repository records only the current example-merchant implementation.
 
 The three brands in this fork demonstrate the breadth of the system, including the storefront vs. content mode split:
 
@@ -43,6 +49,7 @@ Every brand is defined by this TypeScript interface in `src/lib/brand/config.ts`
 
 ```typescript
 interface BrandConfig {
+  organizationId: string; // Stable owning organization; metadata only in this implementation
   id: string;          // Machine identifier, matches the BRAND_ID value
   name: string;        // Display name ("bealls", "Bealls Florida", "Home Centric")
   tagline: string;     // Short tagline shown in the nav and footer
@@ -89,7 +96,7 @@ interface BrandConfig {
 }
 ```
 
-The `theme` object is injected as CSS custom properties on `:root` at page load, so brand colors and fonts apply globally without any component-level changes.
+The `theme` object is injected as CSS custom properties on `:root` at page load, so shared components can consume the current brand's colors and fonts. Tokens do not represent a complete design contract and do not remove the need for merchant-native component or recipe work when integrating an unrelated storefront.
 
 The `prompt` fields are injected into every AI call — layout generation, refinement, and enrichment — so the AI produces brand-appropriate copy and persona definitions that match the product domain.
 
@@ -97,7 +104,9 @@ The `mode` field selects between transactional storefront mode and content/locat
 
 ---
 
-## How to Add a New Brand
+## How to Add a Related Brand
+
+Use this setup for a brand that belongs to the same organization and can use the approved shared implementation. Do not use it as an external-merchant preservation recipe; follow the canonical Aisles reference-contract/autonomy direction when that work begins.
 
 ### Step 1: Create the BigCommerce Channel (storefront mode only)
 
@@ -130,6 +139,7 @@ const BRANDS: Record<string, BrandConfig> = {
   // ... existing brands ...
 
   newbrand: {
+    organizationId: 'example-merchant',
     id: 'newbrand',
     name: 'New Brand',
     tagline: 'Your brand tagline here',
@@ -291,7 +301,7 @@ The enrichment script (`enrich.ts`) handles this automatically based on `BIGCOMM
 
 ## Brand Visual Identity
 
-Theme tokens are injected into `:root` as CSS custom properties. The page layout reads these via `var(--...)`. You do not need to create brand-specific CSS files.
+Theme tokens are injected into `:root` as CSS custom properties. The page layout reads these via `var(--...)`. This is sufficient for the current related-brand implementation where approved shared components already support the needed variants. It is not a promise that an external merchant needs no brand-native CSS, components, recipes, or responsive behavior.
 
 The Google Fonts URL is injected as a `<link rel="stylesheet">` in the document `<head>`. Include all weights used by the theme fonts. JetBrains Mono is used as a monospace fallback and should always be available.
 

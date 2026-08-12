@@ -7,6 +7,8 @@
  */
 
 export interface BrandConfig {
+	/** Stable owner for this brand contract. Metadata only in this implementation. */
+	organizationId: string;
 	id: string;
 	name: string;
 	tagline: string;
@@ -98,6 +100,7 @@ export interface BrandIncentivesConfig {
 
 const BRANDS: Record<string, BrandConfig> = {
 	bealls: {
+		organizationId: 'example-merchant',
 		id: 'bealls',
 		name: 'bealls',
 		tagline: 'Clothing, shoes, home & gifts for everyone',
@@ -189,6 +192,7 @@ const BRANDS: Record<string, BrandConfig> = {
 	},
 
 	beallsflorida: {
+		organizationId: 'example-merchant',
 		id: 'beallsflorida',
 		name: 'Bealls Florida',
 		tagline: 'Florida is a feeling',
@@ -282,6 +286,7 @@ const BRANDS: Record<string, BrandConfig> = {
 	},
 
 	homecentric: {
+		organizationId: 'example-merchant',
 		id: 'homecentric',
 		name: 'Home Centric',
 		tagline: 'Inspired Living for Less',
