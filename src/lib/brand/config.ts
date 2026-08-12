@@ -2,12 +2,13 @@
  * Brand configuration — the single source of truth for multi-brand support.
  *
  * Selected via BRAND_ID env var (defaults to "bealls").
- * Everything brand-specific — name, tagline, colors, fonts, category mapping,
- * prompt context, voice — comes from here.
+ * For the current Bealls-family implementation, brand-specific name, tagline,
+ * colors, fonts, category mapping, prompt context, and voice come from here.
+ * This configuration is not an external-merchant onboarding or preservation contract.
  */
 
 export interface BrandConfig {
-	/** Stable owner for this brand contract. Metadata only in this implementation. */
+	/** Stable owner for this brand configuration. Metadata only in this implementation. */
 	organizationId: string;
 	id: string;
 	name: string;

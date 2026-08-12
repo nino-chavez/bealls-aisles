@@ -1,6 +1,6 @@
 # Aisles Documentation Map
 
-Engineering documentation for the Aisles composition engine and its example-merchant multi-brand storefront foundation. The current scope is organization-level reuse for separate Bealls, Bealls Florida, and Home Centric brand contracts; it does not establish config-only onboarding or visual preservation for an unrelated merchant. Start with the [top-level README](../README.md) for the overview.
+Engineering documentation for the Aisles composition engine and its example-merchant multi-brand storefront foundation. The current scope is organization-level reuse for separate Bealls, Bealls Florida, and Home Centric brand configurations; it does not establish config-only onboarding or visual preservation for an unrelated merchant. Start with the [top-level README](../README.md) for the overview.
 
 ## Engine
 

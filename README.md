@@ -18,11 +18,11 @@
 
 ## What it is
 
-Aisles is a working prototype of a storefront that **composes its own pages with AI**. This repository demonstrates one example merchant organization running related brand contracts through a shared engine.
+Aisles is a working prototype of a storefront that **composes its own pages with AI**. This repository demonstrates one example merchant organization running related brand configurations through a shared engine.
 
 A shopper lands on a category, product, or home page. Aisles reads the intent behind the visit — the search that brought them in, the referrer, the campaign, the device and time, how they behave once they arrive — infers which of four shopper **personas** fits the moment, and generates the page to match: which blocks appear, how products are ordered, what the copy says. The shopper just sees a store that feels right. An operator can open a dashboard and see exactly which signals and rules produced it.
 
-The three storefronts above — **Bealls**, **Bealls Florida**, and **Home Centric** — run on one codebase as separate brand contracts under the same example merchant organization. They do not share product data or visual identity. The prototype demonstrates organization-level reuse: a shared AI composition engine, commerce foundation, and control-plane pattern with brand-specific configuration and existing implementation choices.
+The three storefronts above — **Bealls**, **Bealls Florida**, and **Home Centric** — run on one codebase as separate brand configurations under the same example merchant organization. They do not share product data or visual identity. The prototype demonstrates organization-level reuse: a shared AI composition engine, commerce foundation, and control-plane pattern with brand-specific configuration and existing implementation choices.
 
 This is not evidence that configuration alone can preserve an unrelated merchant's existing storefront. External-reference onboarding needs a versioned reference contract, merchant-native recipes and components, and explicit autonomy policy. That direction is owned by the canonical Aisles work and is not implemented in this repository.
 

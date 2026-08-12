@@ -10,7 +10,7 @@ A single Aisles codebase serves related brands for one example merchant organiza
 
 ## Scope limit
 
-Bealls, Bealls Florida, and Home Centric are separate brand contracts under the same `example-merchant` organization. Their shared code does not mean they share a visual identity, and it does not prove that an unrelated merchant can preserve an existing storefront through tokens, prompts, and configuration alone.
+Bealls, Bealls Florida, and Home Centric are separate brand configurations under the same `example-merchant` organization. Their shared code does not mean they share a visual identity, and it does not prove that an unrelated merchant can preserve an existing storefront through tokens, prompts, and configuration alone. Each brand configuration will become an explicit design contract during the later preserve-mode adoption.
 
 External-reference onboarding needs a versioned reference contract, merchant-native components and page recipes, responsive behavior, and an explicit autonomy policy. The canonical Aisles reference-contract/autonomy direction owns that work; this repository records only the current example-merchant implementation.
 

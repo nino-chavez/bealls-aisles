@@ -17,7 +17,7 @@ This document defines that contract. It is the spec that all subsequent schema, 
 
 ## Scope boundary
 
-This taxonomy describes the shared composition vocabulary used by the example merchant organization in this repository. Bealls, Bealls Florida, and Home Centric remain separate brand contracts; a valid layout from this vocabulary is not proof that it preserves an unrelated merchant's visual or interaction system.
+This taxonomy describes the shared composition vocabulary used by the example merchant organization in this repository. Bealls, Bealls Florida, and Home Centric remain separate brand configurations; a valid layout from this vocabulary is not proof that it preserves an unrelated merchant's visual or interaction system.
 
 External-reference onboarding requires a versioned reference contract, merchant-native recipes and components, and explicit autonomy limits. That future direction is owned by the canonical Aisles work and is not implemented by this taxonomy.
 
