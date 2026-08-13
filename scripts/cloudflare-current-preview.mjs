@@ -16,6 +16,7 @@ import {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outputRoot = path.join(root, '.svelte-kit', 'cloudflare');
+const adapterInputRoot = path.join(root, '.svelte-kit');
 const buildReceiptPath = path.join(root, '.svelte-kit', 'cloudflare-current-preview.json');
 const configPath = path.join(root, 'wrangler.jsonc');
 const hostingProfile = 'current-main-preview-v1';
@@ -56,6 +57,9 @@ const strippedApplicationSecrets = [
 	'BEALLS_STOREFRONT_TOKEN',
 	'BEALLSFLORIDA_STOREFRONT_TOKEN',
 	'STOREFRONT_TOKEN',
+	'VERCEL_OIDC_TOKEN',
+	'AISLES_OBSERVER_KEY',
+	'AISLES_REVIEW_TOKEN',
 ];
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
@@ -104,6 +108,9 @@ function buildBrand(brandId, brand) {
 	}
 
 	const deployableArtifact = artifactIdentity(outputRoot);
+	const adapterInputs = artifactIdentity(adapterInputRoot, new Set([
+		'cloudflare-current-preview.json',
+	]));
 	const receipt = {
 		schemaVersion: 'aisles-cloudflare-current-preview-build-v2',
 		brandId,
@@ -116,6 +123,7 @@ function buildBrand(brandId, brand) {
 		shopperClientRetiredEndpointReferences: retiredReferences,
 		gitCommit: gitCommit(),
 		deployableArtifact,
+		adapterInputs,
 	};
 	receipt.buildIdentity = deriveBuildIdentity(receipt);
 	receipt.deploymentConfigSha256 = writeResolvedDeploymentConfig(brandId, brand, receipt);
@@ -149,7 +157,7 @@ async function deployBrand(brandId, brand) {
 	await preflightRemoteWorker(brandId, brand);
 	// Re-derive after the remote read so local tampering during preflight also fails.
 	assertReceipt(brandId, brand, { requireWranglerDryRun: true });
-	run('npx', ['wrangler', 'deploy', '--config', resolvedConfigPath(brandId)], deploymentEnvironment());
+	run('npx', ['wrangler', 'deploy', '--strict', '--config', resolvedConfigPath(brandId)], deploymentEnvironment());
 }
 
 async function smokeDeployment(brandId, targetUrl) {
@@ -288,6 +296,12 @@ export function assertReceipt(brandId, brand, { requireWranglerDryRun = false } 
 	assert(receipt.fixture === 'v1', 'Build receipt is not the no-paid fixture');
 	assert(receipt.hostingProfile === hostingProfile, 'Build receipt hosting profile does not match');
 	assertArtifactIdentity(receipt.deployableArtifact, outputRoot, 'Cloudflare deployable artifact');
+	assertArtifactIdentity(
+		receipt.adapterInputs,
+		adapterInputRoot,
+		'Cloudflare adapter inputs',
+		new Set(['cloudflare-current-preview.json']),
+	);
 	assert(receipt.buildIdentity === deriveBuildIdentity(receipt), 'Build receipt identity does not match its deployable artifact and source');
 	assert(receipt.deploymentConfigSha256 === sha256(fs.readFileSync(resolvedConfigPath(brandId))),
 		'Resolved deployment config changed after its receipt was written');
@@ -315,14 +329,13 @@ function writeResolvedDeploymentConfig(brandId, brand, receipt) {
 		$schema: base.$schema,
 		account_id: base.account_id,
 		name: target.name,
-		main: path.resolve(root, base.main),
-		tsconfig: path.resolve(root, base.tsconfig),
+		main: '../../.svelte-kit/cloudflare/_worker.js',
 		compatibility_date: base.compatibility_date,
 		compatibility_flags: base.compatibility_flags,
 		workers_dev: base.workers_dev,
 		preview_urls: base.preview_urls,
 		observability: base.observability,
-		assets: { ...base.assets, directory: path.resolve(root, base.assets.directory) },
+		assets: { ...base.assets, directory: '../../.svelte-kit/cloudflare' },
 		vars: {
 			...target.vars,
 			AISLES_BUILD_ID: receipt.buildIdentity,

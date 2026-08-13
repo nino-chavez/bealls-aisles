@@ -54,6 +54,7 @@ export function deriveBuildIdentity(receipt: {
 	fixture: string;
 	gitCommit: string;
 	deployableArtifact: ArtifactIdentity;
+	adapterInputs?: ArtifactIdentity;
 }): string {
 	return sha256(Buffer.from(JSON.stringify({
 		schemaVersion: receipt.schemaVersion,
@@ -64,6 +65,7 @@ export function deriveBuildIdentity(receipt: {
 		fixture: receipt.fixture,
 		gitCommit: receipt.gitCommit,
 		deployableArtifact: receipt.deployableArtifact,
+		adapterInputs: receipt.adapterInputs,
 	})));
 }
 

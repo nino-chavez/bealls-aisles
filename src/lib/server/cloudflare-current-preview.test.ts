@@ -89,10 +89,14 @@ assert('build and deployment children strip application credentials',
 		.every((key) => wrapper.includes(`'${key}'`))
 	&& wrapper.includes('for (const key of strippedApplicationSecrets) delete env[key]'));
 assert('build receipt binds compiled brand, Worker, environment, fixture, and source commit',
-	['brandId', 'wranglerEnvironment', 'worker', 'fixture', 'gitCommit', 'deployableArtifact', 'buildIdentity', 'wranglerDryRunArtifact']
+	['brandId', 'wranglerEnvironment', 'worker', 'fixture', 'gitCommit', 'deployableArtifact', 'adapterInputs', 'buildIdentity', 'wranglerDryRunArtifact']
 		.every((field) => wrapper.includes(field))
 	&& wrapper.includes('assertReceipt(brandId, brand)')
 	&& wrapper.includes('assertArtifactIdentity(receipt.deployableArtifact'));
+assert('generated Wrangler config uses paths relative to its own directory',
+	wrapper.includes("main: '../../.svelte-kit/cloudflare/_worker.js'")
+	&& wrapper.includes("directory: '../../.svelte-kit/cloudflare'")
+	&& !wrapper.includes("tsconfig: path.resolve(root, base.tsconfig)"));
 assert('deploy account and remote inventory are fail-closed before mutation',
 	wrapper.includes("const intendedCloudflareAccountId = 'b6ffcf200d56bab5749e243f024658d2'")
 	&& wrapper.indexOf('await preflightRemoteWorker(brandId, brand)') < wrapper.lastIndexOf("run('npx', ['wrangler', 'deploy'")
@@ -100,6 +104,8 @@ assert('deploy account and remote inventory are fail-closed before mutation',
 	&& wrapper.includes("['secret', 'list'")
 	&& wrapper.includes("['versions', 'view'")
 	&& releaseGates.includes('undeclared binding'));
+assert('deploy uses strict binding replacement after remote fail-closed inventory',
+	wrapper.includes("['wrangler', 'deploy', '--strict'"));
 assert('live smoke binds fresh receipt identity and proves bounded policy modes',
 	wrapper.includes("home.headers.get('x-aisles-build-id') === receipt.buildIdentity")
 	&& wrapper.includes("home.headers.get('x-aisles-source-commit') === receipt.gitCommit")
