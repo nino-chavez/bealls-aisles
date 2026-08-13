@@ -56,7 +56,7 @@ For each brand, the wrapper:
 2. selects the Cloudflare adapter and exact brand
 3. enables the deterministic fixture
 4. refuses to attest any dirty tracked or untracked source
-5. writes a build receipt over the full deployable directory, source commit, Worker name, brand, environment, and fixture
+5. writes a build receipt over the full deployable directory plus the adapter's generated server, client, and temporary inputs, source commit, Worker name, brand, environment, and fixture
 6. creates a resolved per-brand deployment config containing that build identity and source commit
 7. re-hashes the full deployable directory and Wrangler dry-run output before deployment, so added, removed, or modified files fail closed
 8. scans the shopper JavaScript for `/api/layout`, `/api/refine`, and `/api/suggest`
@@ -69,6 +69,8 @@ Vercel remains the default adapter for ordinary `npm run build`.
 Cloudflare account authentication must come from the operator or CI environment. The public account ID is pinned to `b6ffcf200d56bab5749e243f024658d2`; an absent config value or mismatched ambient `CLOUDFLARE_ACCOUNT_ID` fails before remote inspection. The repository stores no API token.
 
 Immediately before mutation, the wrapper reads the exact target Worker through Wrangler. A missing new Worker is safe. An existing Worker is allowed only when every active version exposes the declared plain-text values and `ASSETS` binding, and `wrangler secret list` returns empty. Any inherited secret, service, D1, KV, AI, database, backend, or otherwise undeclared binding blocks deployment. The preflight never deletes or edits remote state. Omitting a binding from the local config does not clear it.
+
+After that read-only gate passes, the wrapper deploys with Wrangler's strict binding replacement. Build and deployment children also remove Vercel OIDC plus observer/review tokens, in addition to the catalog, model, database, and cache credentials listed above.
 
 Deploy Bealls first:
 

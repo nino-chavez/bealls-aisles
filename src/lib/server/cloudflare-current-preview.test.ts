@@ -85,7 +85,8 @@ const forbiddenConfigKeys = [
 assert('Wrangler config contains no provider, backend, or catalog credentials',
 	forbiddenConfigKeys.every((key) => !read('wrangler.jsonc').includes(key)));
 assert('build and deployment children strip application credentials',
-	['ANTHROPIC_API_KEY', 'OPENROUTER_API_KEY', 'DATABASE_URL', 'KV_REST_API_TOKEN', 'BIGCOMMERCE_STORE_HASH']
+	['ANTHROPIC_API_KEY', 'OPENROUTER_API_KEY', 'DATABASE_URL', 'KV_REST_API_TOKEN', 'BIGCOMMERCE_STORE_HASH',
+		'VERCEL_OIDC_TOKEN', 'AISLES_OBSERVER_KEY', 'AISLES_REVIEW_TOKEN']
 		.every((key) => wrapper.includes(`'${key}'`))
 	&& wrapper.includes('for (const key of strippedApplicationSecrets) delete env[key]'));
 assert('build receipt binds compiled brand, Worker, environment, fixture, and source commit',
