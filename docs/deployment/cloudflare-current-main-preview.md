@@ -20,8 +20,8 @@ Sleep Country is excluded from this port. Current `main` has no Sleep Country br
 
 | Brand | Wrangler environment | Worker | Preview state |
 |---|---|---|---|
-| Bealls | `bealls` | `aisles-bealls-current-preview` | First promotion candidate |
-| Home Centric | `homecentric` | `aisles-homecentric-current-preview` | Promote after Bealls smoke passes |
+| Bealls | `bealls` | `aisles-bealls-current-preview` | Live and smoke-verified |
+| Home Centric | `homecentric` | `aisles-homecentric-current-preview` | Live and smoke-verified |
 | Bealls Florida | `beallsflorida` | `aisles-beallsflorida-current-preview` | Buildable; promotion blocked pending catalog validity |
 
 Each environment declares three stable non-secret values: exact `BRAND_ID`, the fixture version, and the hosting profile. The guarded build adds two more non-secret values to its resolved deployment config: the full deployable-output identity and source commit. The browser bundle also bakes the same exact brand through `VITE_BRAND_ID`. The deployment wrapper refuses to deploy a build receipt for another brand.
@@ -88,6 +88,17 @@ npm run smoke:cloudflare -- homecentric https://<exact-homecentric-preview-url>
 
 Bealls Florida can be built and dry-run now. Its deploy command fails intentionally. Promotion stays blocked until an operator verifies the actual Bealls Florida BigCommerce channel, category names, product membership, and storefront-token origin rules. Removing the code gate without that evidence is not approval.
 
+## Production preview receipt — 2026-08-13
+
+The two approved preview Workers were built from and identify exact current-main commit `4f7c2612fc322288ef1e39c406c81da7c6a8e93d`.
+
+| Brand | URL | Cloudflare version | Build identity | Result |
+|---|---|---|---|---|
+| Bealls | [aisles-bealls-current-preview.biq.workers.dev](https://aisles-bealls-current-preview.biq.workers.dev) | `cfee9347-6c64-4902-bd4f-9f736bfd8cf7` | `ce660027580b368363c70c80ec5db97fa438b14553e322cfe67739794164e8b0` | Smoke passed |
+| Home Centric | [aisles-homecentric-current-preview.biq.workers.dev](https://aisles-homecentric-current-preview.biq.workers.dev) | `346fe906-4c10-42ca-a33d-bbdf0572887b` | `75739e25363a789a5ed17b6761200b0ff987f3fb5e732bebadf4841bd0326913` | Smoke passed |
+
+Each live version has only the `ASSETS` binding and the five declared non-secret plain-text values. `wrangler secret list` returned an empty array for both Workers. The smoke contract below passed after normal Workers routing propagation. No legacy Worker was changed.
+
 ## Smoke contract
 
 The smoke command makes only these deterministic preview requests:
@@ -106,8 +117,6 @@ The fixture prevents server access to BigCommerce, Redis, Postgres, search provi
 
 ## What remains unresolved
 
-- Cloudflare OAuth has been independently verified for the pinned account. The deploy wrapper still requires that authenticated read/write context and runs a read-only remote inventory before mutation.
-- The final preview URLs are unknown until the named Workers are deployed.
 - Bealls Florida catalog validity is not established. Its promotion remains blocked.
 - These previews do not validate live commerce. Moving any brand from fixture data to live catalog, cart, or checkout needs a separate credential, channel, and behavior review.
 - Sleep Country remains excluded until it has a canonical brand policy, renderer contract, and deterministic catalog source on current `main`.
