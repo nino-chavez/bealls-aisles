@@ -19,12 +19,12 @@ import type { CompositionPolicyRegistry, PolicySurface } from '../foundation/com
 const BRAND_IDS = ['bealls', 'beallsflorida', 'homecentric'] as const;
 const MODES = ['storefront', 'content'] as const;
 const SURFACES = [
-	'home', 'plp', 'pdp', 'cart', 'checkout', 'category', 'locator', 'error-404', 'error-empty',
+	'home', 'plp', 'pdp', 'cart', 'checkout', 'category', 'locator', 'style-guide', 'error-404', 'error-empty',
 ] as const;
 const RESCUE_REASONS = ['not-found', 'empty-cart', 'empty-search', 'empty-wishlist'] as const;
 const RECIPE_IDS = [
 	'home.storefront', 'plp.storefront', 'pdp.storefront', 'cart.storefront', 'checkout.storefront',
-	'home.content', 'category.content', 'locator.shared', 'error-404.shared',
+	'home.content', 'category.content', 'locator.shared', 'style-guide.shared', 'error-404.shared',
 	'error-empty.storefront', 'error-empty.content',
 ] as const;
 const CHROME_IDS = ['brand-strip-nav', 'primary-nav', 'footer', 'cart-drawer', 'picks-tray'] as const;
@@ -149,6 +149,9 @@ export const BEALLS_FAMILY_RENDERER_SOURCE_FILES = [
 	'src/routes/search/+page.svelte',
 	'src/routes/store-locator/+page.server.ts',
 	'src/routes/store-locator/+page.svelte',
+	'src/routes/style-guide/+page.server.ts',
+	'src/routes/style-guide/+page.svelte',
+	'src/routes/test/components/+page.svelte',
 ] as const;
 
 const DESIGN_CONFIG_INPUTS = [
@@ -159,6 +162,24 @@ const DESIGN_CONFIG_INPUTS = [
 export type RendererContractSurface = (typeof SURFACES)[number];
 export type RendererComponentId = (typeof COMPONENT_IDS)[number];
 export type RendererSourceFile = (typeof BEALLS_FAMILY_RENDERER_SOURCE_FILES)[number];
+
+export interface RendererRouteEvidence {
+	file: RendererSourceFile;
+	kind: 'brand-surface' | 'development-harness';
+	surfaces: readonly RendererContractSurface[];
+}
+
+/**
+ * Every SvelteKit route that directly imports or renders LayoutRenderer must
+ * declare why it exists. The harness route is deliberately tracked by the
+ * source snapshot without being presented as a supported shopper surface.
+ */
+export const BEALLS_FAMILY_LAYOUT_RENDERER_ROUTE_EVIDENCE = [
+	{ file: 'src/routes/+page.svelte', kind: 'brand-surface', surfaces: ['home'] },
+	{ file: 'src/routes/category/[slug]/+page.svelte', kind: 'brand-surface', surfaces: ['plp', 'category'] },
+	{ file: 'src/routes/style-guide/+page.svelte', kind: 'brand-surface', surfaces: ['style-guide'] },
+	{ file: 'src/routes/test/components/+page.svelte', kind: 'development-harness', surfaces: [] },
+] as const satisfies readonly RendererRouteEvidence[];
 
 const surfaceContractSchema = z.object({
 	surface: z.enum(SURFACES),
@@ -218,6 +239,10 @@ const LOCATOR_SURFACE = {
 	surface: 'locator', recipeId: 'locator.shared',
 	componentIds: ['store-locator-surface', 'zone-renderer'], rescueReasons: [],
 } as const;
+const STYLE_GUIDE_SURFACE = {
+	surface: 'style-guide', recipeId: 'style-guide.shared',
+	componentIds: ['layout-renderer'], rescueReasons: [],
+} as const;
 const ERROR_404_SURFACE = {
 	surface: 'error-404', recipeId: 'error-404.shared',
 	componentIds: ['empty-rescue', 'layout-renderer'], rescueReasons: ['not-found'],
@@ -249,7 +274,7 @@ const RESPONSIVE_STRATEGY = {
 const SOURCE_SNAPSHOT = {
 	algorithm: 'sha256',
 	files: [...BEALLS_FAMILY_RENDERER_SOURCE_FILES],
-	fingerprint: 'ad47cb39b84a9e72964c0b65d2b82181c6d0b3393b24bad2a23dcfa578555c4d',
+	fingerprint: '8c318fadd9e264bc390d8de275f6279fcba725a205befd6c6e06d79796c0bd33',
 } as const;
 
 interface DesignSnapshotLiteral {
@@ -264,8 +289,8 @@ function storefrontContract(
 	designSnapshot: DesignSnapshotLiteral,
 ): BeallsFamilyRendererContract {
 	return {
-		contractVersion: '1.1.0', organizationId: 'example-merchant', brandId, brandName, mode: 'storefront',
-		supportedSurfaces: [...STOREFRONT_SURFACES, LOCATOR_SURFACE, ERROR_404_SURFACE, STOREFRONT_EMPTY_SURFACE].map(cloneSurface),
+		contractVersion: '1.2.0', organizationId: 'example-merchant', brandId, brandName, mode: 'storefront',
+		supportedSurfaces: [...STOREFRONT_SURFACES, LOCATOR_SURFACE, STYLE_GUIDE_SURFACE, ERROR_404_SURFACE, STOREFRONT_EMPTY_SURFACE].map(cloneSurface),
 		mountedChromeIds: [...MOUNTED_CHROME], exposedChromeIds: [...STOREFRONT_EXPOSED_CHROME],
 		designConfigSnapshot: { algorithm: 'sha256', inputs: [...DESIGN_CONFIG_INPUTS], ...designSnapshot },
 		sourceSnapshot: { ...SOURCE_SNAPSHOT, files: [...SOURCE_SNAPSHOT.files] },
@@ -276,20 +301,20 @@ function storefrontContract(
 
 /** One explicit record per brand, even where the renderer implementation is shared. */
 export const BEALLS_FAMILY_RENDERER_CONTRACTS: Readonly<Record<(typeof BRAND_IDS)[number], BeallsFamilyRendererContract>> = {
-	bealls: storefrontContract('bealls', 'bealls', 'bealls-observed-legacy-v2', {
+	bealls: storefrontContract('bealls', 'bealls', 'bealls-observed-legacy-v3', {
 		googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap',
 		fingerprint: '789eb043880e8daed628c65a483591a8aa4367d560a846cfc7b4e4c1cdd2052b',
 	}),
-	beallsflorida: storefrontContract('beallsflorida', 'Bealls Florida', 'beallsflorida-observed-legacy-v2', {
+	beallsflorida: storefrontContract('beallsflorida', 'Bealls Florida', 'beallsflorida-observed-legacy-v3', {
 		googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Public+Sans:wght@400;500;600;700&display=swap',
 		fingerprint: '746ae8604bccee7b0169b1a961bc0104186f95b2c314dac8c5e191e94fe34222',
 	}),
 	homecentric: {
-		contractVersion: '1.1.0', organizationId: 'example-merchant', brandId: 'homecentric', brandName: 'Home Centric', mode: 'content',
+		contractVersion: '1.2.0', organizationId: 'example-merchant', brandId: 'homecentric', brandName: 'Home Centric', mode: 'content',
 		supportedSurfaces: ([
 			{ surface: 'home', recipeId: 'home.content', componentIds: ['layout-renderer', 'zone-renderer'], rescueReasons: [] },
 			{ surface: 'category', recipeId: 'category.content', componentIds: ['content-category-surface'], rescueReasons: [] },
-			LOCATOR_SURFACE, ERROR_404_SURFACE, CONTENT_EMPTY_SURFACE,
+			LOCATOR_SURFACE, STYLE_GUIDE_SURFACE, ERROR_404_SURFACE, CONTENT_EMPTY_SURFACE,
 		] as const).map(cloneSurface),
 		mountedChromeIds: [...MOUNTED_CHROME], exposedChromeIds: [...CONTENT_EXPOSED_CHROME],
 		designConfigSnapshot: {
@@ -299,7 +324,7 @@ export const BEALLS_FAMILY_RENDERER_CONTRACTS: Readonly<Record<(typeof BRAND_IDS
 		},
 		sourceSnapshot: { ...SOURCE_SNAPSHOT, files: [...SOURCE_SNAPSHOT.files] },
 		tokenSource: { ...TOKEN_SOURCE }, responsiveStrategy: { ...RESPONSIVE_STRATEGY },
-		autonomy: { policyRegistry: 'BEALLS_COMPOSITION_POLICY', organizationPolicyVersion: 'bealls-family-org-observed-v1', brandPolicyVersion: 'homecentric-observed-legacy-v2', referenceState: 'uncontracted' },
+		autonomy: { policyRegistry: 'BEALLS_COMPOSITION_POLICY', organizationPolicyVersion: 'bealls-family-org-observed-v1', brandPolicyVersion: 'homecentric-observed-legacy-v3', referenceState: 'uncontracted' },
 	},
 };
 
@@ -376,6 +401,40 @@ export function validateBeallsFamilyRendererSourceSnapshot(
 	if (actual !== contract.sourceSnapshot.fingerprint) throw new RendererContractValidationError('source snapshot fingerprint mismatch');
 }
 
+/** Finds SvelteKit route components that directly consume LayoutRenderer. */
+export function discoverBeallsFamilyLayoutRendererRoutes(
+	routeFiles: readonly string[],
+	readRouteFile: (path: string) => string,
+): string[] {
+	return [...new Set(routeFiles)]
+		.filter(isSvelteKitRouteComponent)
+		.filter((path) => sourceUsesGovernedLayoutRenderer(readRouteFile(path)))
+		.sort();
+}
+
+/**
+ * Fails closed when a LayoutRenderer route lacks route evidence or when that
+ * route and its sibling load module are absent from the source snapshot.
+ */
+export function validateBeallsFamilyLayoutRendererRouteCoverage(
+	routeFiles: readonly string[],
+	readRouteFile: (path: string) => string,
+): void {
+	const discovered = discoverBeallsFamilyLayoutRendererRoutes(routeFiles, readRouteFile);
+	const evidenceFiles = BEALLS_FAMILY_LAYOUT_RENDERER_ROUTE_EVIDENCE.map((entry) => entry.file);
+	const evidenceSet = new Set<string>(evidenceFiles);
+	const discoveredSet = new Set(discovered);
+	const missingEvidence = discovered.filter((path) => !evidenceSet.has(path));
+	const staleEvidence = evidenceFiles.filter((path) => !discoveredSet.has(path));
+	if (missingEvidence.length) throw new RendererContractValidationError(`LayoutRenderer route lacks surface evidence: ${missingEvidence.join(', ')}`);
+	if (staleEvidence.length) throw new RendererContractValidationError(`LayoutRenderer route evidence is stale: ${staleEvidence.join(', ')}`);
+
+	const snapshotFiles = new Set<string>(BEALLS_FAMILY_RENDERER_SOURCE_FILES);
+	const governedSources = relatedSvelteKitRouteSources(discovered, routeFiles);
+	const untrackedSources = governedSources.filter((path) => !snapshotFiles.has(path));
+	if (untrackedSources.length) throw new RendererContractValidationError(`LayoutRenderer route source is absent from snapshot: ${untrackedSources.join(', ')}`);
+}
+
 /** Stable SHA-256 over the runtime BrandConfig inputs that affect rendered surfaces. */
 export function fingerprintRendererDesignConfig(brand: BrandConfig): string {
 	return sha256(stableJson({
@@ -422,6 +481,7 @@ const RECIPE_SURFACES: Record<(typeof RECIPE_IDS)[number], { surface: RendererCo
 	'home.content': { surface: 'home', modes: ['content'] },
 	'category.content': { surface: 'category', modes: ['content'] },
 	'locator.shared': { surface: 'locator', modes: ['storefront', 'content'] },
+	'style-guide.shared': { surface: 'style-guide', modes: ['storefront', 'content'] },
 	'error-404.shared': { surface: 'error-404', modes: ['storefront', 'content'] },
 	'error-empty.storefront': { surface: 'error-empty', modes: ['storefront'] },
 	'error-empty.content': { surface: 'error-empty', modes: ['content'] },
@@ -435,13 +495,14 @@ const RECIPE_COMPONENTS: Record<(typeof RECIPE_IDS)[number], readonly RendererCo
 	'home.content': ['layout-renderer', 'zone-renderer'],
 	'category.content': ['content-category-surface'],
 	'locator.shared': ['store-locator-surface', 'zone-renderer'],
+	'style-guide.shared': ['layout-renderer'],
 	'error-404.shared': ['empty-rescue', 'layout-renderer'],
 	'error-empty.storefront': ['empty-rescue', 'layout-renderer'],
 	'error-empty.content': ['empty-rescue', 'layout-renderer'],
 };
 const RECIPE_RESCUE_REASONS: Record<(typeof RECIPE_IDS)[number], readonly (typeof RESCUE_REASONS)[number][]> = {
 	'home.storefront': [], 'plp.storefront': [], 'pdp.storefront': [], 'cart.storefront': [], 'checkout.storefront': [],
-	'home.content': [], 'category.content': [], 'locator.shared': [],
+	'home.content': [], 'category.content': [], 'locator.shared': [], 'style-guide.shared': [],
 	'error-404.shared': ['not-found'],
 	'error-empty.storefront': ['empty-cart', 'empty-search', 'empty-wishlist'],
 	'error-empty.content': ['empty-cart', 'empty-search', 'empty-wishlist'],
@@ -458,6 +519,30 @@ function assertSubset(child: readonly string[], parent: readonly string[], child
 	if (missing.length) throw new RendererContractValidationError(`${childLabel} is not present in ${parentLabel}: ${missing.join(', ')}`);
 }
 function sameArray(left: readonly string[], right: readonly string[]): boolean { return left.length === right.length && left.every((value, index) => value === right[index]); }
+function isSvelteKitRouteComponent(path: string): boolean {
+	const fileName = path.slice(path.lastIndexOf('/') + 1);
+	return /^\+(?:page|layout)(?:@[^.]*)?\.svelte$/.test(fileName) || fileName === '+error.svelte';
+}
+function sourceUsesGovernedLayoutRenderer(source: string): boolean {
+	return source.includes('LayoutRenderer.svelte') || /<LayoutRenderer(?:\s|\/|>)/.test(source);
+}
+function relatedSvelteKitRouteSources(rendererRoutes: readonly string[], routeFiles: readonly string[]): string[] {
+	const sources = new Set<string>();
+	for (const rendererRoute of rendererRoutes) {
+		const splitAt = rendererRoute.lastIndexOf('/');
+		const directory = rendererRoute.slice(0, splitAt);
+		const fileName = rendererRoute.slice(splitAt + 1);
+		const kind = /^\+(page|layout|error)/.exec(fileName)?.[1];
+		if (!kind) continue;
+		for (const candidate of routeFiles) {
+			const candidateSplitAt = candidate.lastIndexOf('/');
+			if (candidate.slice(0, candidateSplitAt) !== directory) continue;
+			const candidateName = candidate.slice(candidateSplitAt + 1);
+			if (new RegExp(`^\\+${kind}(?:@[^.]*)?\\.(?:svelte|server\\.(?:ts|js)|ts|js)$`).test(candidateName)) sources.add(candidate);
+		}
+	}
+	return [...sources].sort();
+}
 function sha256(value: string): string { return createHash('sha256').update(value, 'utf8').digest('hex'); }
 function stableJson(value: unknown): string {
 	if (value === null || typeof value !== 'object') return JSON.stringify(value);

@@ -4,6 +4,7 @@ import {
 	type BrandCompositionPolicy,
 	type CompositionPolicyRegistry,
 	type OrganizationCompositionPolicy,
+	type PolicySurface,
 } from '../foundation/composition-policy';
 
 const organization: OrganizationCompositionPolicy = {
@@ -25,6 +26,7 @@ const STORE_FRONT_SURFACES = {
 // engine output. EmptyRescue calls the layout API and falls back statically.
 const SHARED_SURFACES = {
 	locator: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
+	'style-guide': { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
 	'error-404': { preset: 'compose', decisionMode: 'model', publicationMode: 'live' },
 	'error-empty': { preset: 'compose', decisionMode: 'model', publicationMode: 'live' },
 } as const;
@@ -33,7 +35,7 @@ function observedStorefrontPolicy(brandId: 'bealls' | 'beallsflorida'): BrandCom
 	return {
 		organizationId: 'example-merchant',
 		brandId,
-		policyVersion: `${brandId}-observed-legacy-v2`,
+		policyVersion: `${brandId}-observed-legacy-v3`,
 		maximum: { capabilities: AUTONOMY_CAPABILITIES, decisionMode: 'model', publicationMode: 'live' },
 		reference: { state: 'uncontracted' },
 		surfaces: { ...STORE_FRONT_SURFACES, ...SHARED_SURFACES },
@@ -43,7 +45,7 @@ function observedStorefrontPolicy(brandId: 'bealls' | 'beallsflorida'): BrandCom
 const homecentric: BrandCompositionPolicy = {
 	organizationId: 'example-merchant',
 	brandId: 'homecentric',
-	policyVersion: 'homecentric-observed-legacy-v2',
+	policyVersion: 'homecentric-observed-legacy-v3',
 	maximum: { capabilities: AUTONOMY_CAPABILITIES, decisionMode: 'model', publicationMode: 'live' },
 	reference: { state: 'uncontracted' },
 	surfaces: {
@@ -68,6 +70,12 @@ export function getBrandCompositionPolicy(brandId: string): BrandCompositionPoli
 	return Object.prototype.hasOwnProperty.call(BEALLS_COMPOSITION_POLICY.brands, brandId)
 		? BEALLS_COMPOSITION_POLICY.brands[brandId]
 		: undefined;
+}
+
+/** Fails closed when a configured brand has no explicit policy for a surface. */
+export function supportsBrandCompositionSurface(brandId: string, surface: PolicySurface): boolean {
+	const policy = getBrandCompositionPolicy(brandId);
+	return !!policy && Object.prototype.hasOwnProperty.call(policy.surfaces, surface);
 }
 
 /** Keeps the policy registry deliberately aligned with the configured merchant family. */

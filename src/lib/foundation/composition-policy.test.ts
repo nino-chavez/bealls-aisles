@@ -28,6 +28,8 @@ assert('Bealls Florida remains a separate brand policy', florida.provenance.bran
 const category = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'homecentric', surface: 'category', registry });
 const locator = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'homecentric', surface: 'locator', registry });
 assert('Home Centric category and locator are fixed', category.decisionMode === 'fixed' && locator.decisionMode === 'fixed' && category.capabilities.length === 0 && locator.capabilities.length === 0);
+const styleGuide = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'homecentric', surface: 'style-guide', registry });
+assert('style guide compiles to fixed output with no model capabilities', styleGuide.decisionMode === 'fixed' && styleGuide.capabilities.length === 0 && styleGuide.provenance.preset === 'preserve');
 assert('all policies state uncontracted reference truthfully', Object.values(registry.brands).every((policy) => policy.reference.state === 'uncontracted'));
 assert('no observed surface uses live Explore', Object.values(registry.brands).every((policy) => Object.values(policy.surfaces).every((surface) => surface?.preset !== 'explore' || surface.publicationMode !== 'live')));
 

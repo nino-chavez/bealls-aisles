@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { getBrand } from '$lib/brand/config';
+	import { supportsBrandCompositionSurface } from '$lib/brand/composition-policy';
 
 	let { brandName = 'Aisles', tagline = '', footerNote = '' }: { brandName?: string; tagline?: string; footerNote?: string } = $props();
 
 	const brand = getBrand();
+	const checkoutSupported = supportsBrandCompositionSurface(brand.id, 'checkout');
 	const categories = Object.entries(brand.categories).map(([slug, config]) => ({
 		label: config.displayName,
 		href: `/category/${slug}`,
@@ -39,13 +41,15 @@
 				</ul>
 			</div>
 
-			<!-- Support -->
-			<div>
-				<h4 class="text-xs font-semibold uppercase tracking-wider text-surface-muted-fg">Support</h4>
-				<ul class="mt-4 space-y-2.5">
-					<li><a href="/checkout" class="text-sm text-surface-fg hover:text-primary">Checkout</a></li>
-				</ul>
-			</div>
+			{#if checkoutSupported}
+				<!-- Support -->
+				<div>
+					<h4 class="text-xs font-semibold uppercase tracking-wider text-surface-muted-fg">Support</h4>
+					<ul class="mt-4 space-y-2.5">
+						<li><a href="/checkout" class="text-sm text-surface-fg hover:text-primary">Checkout</a></li>
+					</ul>
+				</div>
+			{/if}
 		</div>
 
 		<div class="mt-12 border-t border-surface-border pt-8 text-xs text-surface-muted-fg">
