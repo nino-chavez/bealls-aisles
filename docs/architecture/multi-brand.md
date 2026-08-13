@@ -14,6 +14,8 @@ Bealls, Bealls Florida, and Home Centric are separate brand configurations under
 
 External-reference onboarding needs a versioned reference contract, merchant-native components and page recipes, responsive behavior, and an explicit autonomy policy. The canonical Aisles reference-contract/autonomy direction owns that work; this repository records only the current example-merchant implementation.
 
+`src/lib/brand/composition-policy.ts` now makes that current boundary machine-readable. It assigns the three brands separate policy records under `example-merchant` and labels every reference state `uncontracted`. This is an observed legacy classification only. It is not wired into route resolution and does not satisfy preserve-mode adoption.
+
 The three brands in this fork demonstrate the breadth of the system, including the storefront vs. content mode split:
 
 | Brand | Domain | Mode | BC Channel | Vercel Project |
