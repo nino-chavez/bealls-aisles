@@ -1,0 +1,49 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "aisles-current-preview-inert",
+  "main": ".svelte-kit/cloudflare/_worker.js",
+  "tsconfig": ".svelte-kit/tsconfig.json",
+  "compatibility_date": "2026-08-13",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": true,
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 }
+  },
+  "assets": {
+    "directory": ".svelte-kit/cloudflare",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "BRAND_ID": "__deploy_requires_named_env__",
+    "AISLES_PARITY_FIXTURE": "v1",
+    "AISLES_HOSTING_PROFILE": "current-main-preview-v1"
+  },
+  "env": {
+    "bealls": {
+      "name": "aisles-bealls-current-preview",
+      "vars": {
+        "BRAND_ID": "bealls",
+        "AISLES_PARITY_FIXTURE": "v1",
+        "AISLES_HOSTING_PROFILE": "current-main-preview-v1"
+      }
+    },
+    "homecentric": {
+      "name": "aisles-homecentric-current-preview",
+      "vars": {
+        "BRAND_ID": "homecentric",
+        "AISLES_PARITY_FIXTURE": "v1",
+        "AISLES_HOSTING_PROFILE": "current-main-preview-v1"
+      }
+    },
+    "beallsflorida": {
+      "name": "aisles-beallsflorida-current-preview",
+      "vars": {
+        "BRAND_ID": "beallsflorida",
+        "AISLES_PARITY_FIXTURE": "v1",
+        "AISLES_HOSTING_PROFILE": "current-main-preview-v1"
+      }
+    }
+  }
+}

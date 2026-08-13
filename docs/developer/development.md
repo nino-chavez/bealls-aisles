@@ -70,6 +70,8 @@ VITE_BRAND_ID=beallsflorida BRAND_ID=beallsflorida npm run dev
 
 Note that switching brands locally requires matching `STOREFRONT_TOKEN` and `BIGCOMMERCE_CHANNEL_ID` for the target brand's BC channel. Using a different brand with the same BC credentials will return no products if the category names don't match.
 
+For the bounded Cloudflare current-main preview, use the no-paid build and smoke commands in [Cloudflare current-main preview](../deployment/cloudflare-current-main-preview.md). Do not reuse the historical Cloudflare deployment branch or its Workers.
+
 ---
 
 ## Dev Mode
