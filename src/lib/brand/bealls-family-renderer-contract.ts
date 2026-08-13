@@ -302,7 +302,7 @@ const RESPONSIVE_STRATEGY = {
 const SOURCE_SNAPSHOT = {
 	algorithm: 'sha256',
 	files: [...BEALLS_FAMILY_RENDERER_SOURCE_FILES],
-	fingerprint: '53463f792e6803161557765eae5923286fb9c145e4bd243c6b7b1db9130ff2d7',
+	fingerprint: '416d5fe669aee470edc08c6214f966ef77fbb0bbcfeeaf01b386dceb7e3f6f45',
 } as const;
 
 interface DesignSnapshotLiteral {
@@ -317,7 +317,7 @@ function storefrontContract(
 	designSnapshot: DesignSnapshotLiteral,
 ): BeallsFamilyRendererContract {
 	return {
-		contractVersion: '2.2.0', organizationId: 'example-merchant', brandId, brandName, mode: 'storefront',
+		contractVersion: '2.3.0', organizationId: 'example-merchant', brandId, brandName, mode: 'storefront',
 		supportedSurfaces: [...STOREFRONT_SURFACES, LOCATOR_SURFACE, STYLE_GUIDE_SURFACE, ERROR_404_SURFACE, STOREFRONT_EMPTY_SURFACE].map(cloneSurface),
 		mountedChromeIds: [...MOUNTED_CHROME], exposedChromeIds: [...STOREFRONT_EXPOSED_CHROME],
 		designConfigSnapshot: { algorithm: 'sha256', inputs: [...DESIGN_CONFIG_INPUTS], ...designSnapshot },
@@ -338,7 +338,7 @@ export const BEALLS_FAMILY_RENDERER_CONTRACTS: Readonly<Record<(typeof BRAND_IDS
 		fingerprint: '746ae8604bccee7b0169b1a961bc0104186f95b2c314dac8c5e191e94fe34222',
 	}),
 	homecentric: {
-		contractVersion: '2.2.0', organizationId: 'example-merchant', brandId: 'homecentric', brandName: 'Home Centric', mode: 'content',
+		contractVersion: '2.3.0', organizationId: 'example-merchant', brandId: 'homecentric', brandName: 'Home Centric', mode: 'content',
 		supportedSurfaces: ([
 			{ surface: 'home', recipeId: 'home.content', componentIds: ['zone-renderer'], rescueReasons: [] },
 			{ surface: 'category', recipeId: 'category.content', componentIds: ['content-category-surface'], rescueReasons: [] },

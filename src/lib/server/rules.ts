@@ -13,6 +13,7 @@
 
 import { getDb } from './db';
 import { isCachingDisabledGlobally } from './cache-flags';
+import { isParityFixtureEnabled } from './parity-fixture';
 
 export interface MerchandisingRule {
 	id: number;
@@ -44,6 +45,7 @@ export async function getActiveRules(
 	persona: string,
 	categorySlug: string,
 ): Promise<MerchandisingRule[]> {
+	if (isParityFixtureEnabled()) return [];
 	const key = `${persona}|${categorySlug}`;
 	const now = Date.now();
 	if (!isCachingDisabledGlobally()) {

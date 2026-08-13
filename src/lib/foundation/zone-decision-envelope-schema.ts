@@ -26,6 +26,10 @@ export const ZoneDecisionContextSchema = z.strictObject({
 	viewportClass: z.enum(['mobile', 'tablet', 'desktop']),
 	catalogVersion: z.string().trim().min(1).max(128),
 	contentVersion: z.string().trim().min(1).max(128),
+	publicationClosure: z.strictObject({
+		candidateProductIds: z.array(z.string().trim().min(1).max(128)).max(128),
+		candidateAssetUrls: z.array(z.string().trim().min(1).max(8192)).max(128),
+	}),
 	syntheticProvenance: z.strictObject({
 		kind: z.enum(['none', 'parity-fixture']),
 		version: z.string().trim().min(1).max(128),

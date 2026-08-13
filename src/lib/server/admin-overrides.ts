@@ -32,9 +32,9 @@
 import { getDb } from './db';
 import { isCachingDisabledGlobally } from './cache-flags';
 import type { TrustedMerchantZoneRecord } from '$lib/foundation/resolve-zone';
-import { env } from '$env/dynamic/private';
 import { readCompatibleZoneContentRows, TRUSTED_ZONE_CONTENT_SCHEMA_VERSION } from './zone-content-store-gate';
 import { parseZoneInstance, type ZoneInstanceId } from '$lib/foundation/zones';
+import { isParityFixtureEnabled } from './parity-fixture';
 
 const TTL_MS = 60 * 1000;
 
@@ -68,6 +68,7 @@ export interface PersonaFitOverride {
 
 /** Returns the brand voice override for a brand, or null if none authored. */
 export async function getBrandVoiceOverride(brandId: string): Promise<BrandVoiceOverride | null> {
+	if (isParityFixtureEnabled()) return null;
 	if (voiceTableMissing) return null;
 
 	if (!isCachingDisabledGlobally()) {
@@ -123,7 +124,8 @@ export interface RouteZoneContentBinding {
 export async function getRouteZoneContents(input: RouteZoneContentBinding & {
 	zoneIds: readonly string[];
 }): Promise<ReadonlyMap<string, TrustedMerchantZoneRecord>> {
-	if (env.AISLES_ZONE_CONTENT_SCHEMA_VERSION !== TRUSTED_ZONE_CONTENT_SCHEMA_VERSION || zoneStoreUnavailable) return new Map();
+	if (isParityFixtureEnabled()) return new Map();
+	if (process.env.AISLES_ZONE_CONTENT_SCHEMA_VERSION !== TRUSTED_ZONE_CONTENT_SCHEMA_VERSION || zoneStoreUnavailable) return new Map();
 
 	const key = [
 		input.organizationId, input.brandId, input.routePath, input.surface,
@@ -138,7 +140,7 @@ export async function getRouteZoneContents(input: RouteZoneContentBinding & {
 	zoneStoreStates.set(key, state);
 
 	const rows = await readCompatibleZoneContentRows({
-		configuredSchemaVersion: env.AISLES_ZONE_CONTENT_SCHEMA_VERSION,
+		configuredSchemaVersion: process.env.AISLES_ZONE_CONTENT_SCHEMA_VERSION,
 		state,
 		query: async () => {
 			const sql = getDb();
@@ -215,6 +217,7 @@ function selectExpectedZoneRecords(
 export async function getPersonaFitOverridesForBrand(
 	brandId: string,
 ): Promise<Map<string, PersonaFitOverride>> {
+	if (isParityFixtureEnabled()) return new Map();
 	if (personaFitTableMissing) return new Map();
 
 	if (!isCachingDisabledGlobally()) {

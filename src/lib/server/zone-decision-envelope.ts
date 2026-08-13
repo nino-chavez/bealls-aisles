@@ -1,6 +1,11 @@
 import { createHash } from 'node:crypto';
 import type { EffectiveCompositionPolicy } from '$lib/foundation/composition-policy';
-import { validateZoneContent, type ZoneResolution } from '$lib/foundation/resolve-zone';
+import {
+	normalizeZonePublicationContext,
+	validateZonePublicationContent,
+	type ZonePublicationContext,
+	type ZoneResolution,
+} from '$lib/foundation/resolve-zone';
 import { parseZoneInstance, ZONES } from '$lib/foundation/zones';
 import {
 	ZoneDecisionContextSchema,
@@ -25,6 +30,7 @@ export function createZoneDecisionContext(input: {
 	viewportClass: ZoneDecisionContext['viewportClass'];
 	catalogVersion: string;
 	contentVersion: string;
+	publicationContext: ZonePublicationContext;
 	syntheticProvenance: ZoneDecisionContext['syntheticProvenance'];
 	approvedInputHash: string;
 }): ZoneDecisionContext {
@@ -48,6 +54,7 @@ export function createZoneDecisionContext(input: {
 		viewportClass: input.viewportClass,
 		catalogVersion: input.catalogVersion,
 		contentVersion: input.contentVersion,
+		publicationClosure: normalizeZonePublicationContext(input.publicationContext),
 		syntheticProvenance: input.syntheticProvenance,
 		approvedInputHash: input.approvedInputHash,
 	});
@@ -58,6 +65,14 @@ export function createZoneDecisionEnvelope(
 	resolution: ZoneResolution,
 ): ZoneDecisionEnvelope {
 	if (context.zoneId !== resolution.zoneId) throw new Error('decision envelope: expanded zone mismatch');
+	const content = resolution.terminal === 'hidden'
+		? null
+		: validateZonePublicationContent({
+				brandId: context.brandId,
+				zoneId: context.zoneId,
+				raw: resolution.content,
+				publicationContext: context.publicationClosure,
+			});
 	const engine = resolution.engineProvenance
 		? resolution.engineProvenance.kind === 'model'
 			? { kind: 'model' as const, id: resolution.engineProvenance.modelId, version: resolution.engineProvenance.approvedInputHash }
@@ -72,7 +87,7 @@ export function createZoneDecisionEnvelope(
 			merchantAuthority: resolution.merchantAuthority ?? null,
 		},
 		terminal: resolution.terminal,
-		content: resolution.content,
+		content,
 	});
 	if (!hasConsistentZoneDecisionEnvelope(envelope)) {
 		throw new Error('decision envelope: inconsistent source, provenance, or terminal');
@@ -90,8 +105,18 @@ export function revalidateCachedZoneDecision(
 	if (!hasConsistentZoneDecisionEnvelope(parsed.data)) return null;
 	if (stableJson(parsed.data.context) !== stableJson(expected)) return null;
 	if (parsed.data.terminal === 'hidden') return parsed.data.content === null ? parsed.data : null;
-	if (parsed.data.content === null || validateZoneContent(expected.zoneId, parsed.data.content) === null) return null;
-	return parsed.data;
+	if (parsed.data.content === null) return null;
+	try {
+		const content = validateZonePublicationContent({
+			brandId: expected.brandId,
+			zoneId: expected.zoneId,
+			raw: parsed.data.content,
+			publicationContext: expected.publicationClosure,
+		});
+		return { ...parsed.data, content };
+	} catch {
+		return null;
+	}
 }
 
 export function zoneDecisionCacheKey(context: ZoneDecisionContext): string {

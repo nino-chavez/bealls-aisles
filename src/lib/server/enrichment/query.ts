@@ -5,6 +5,7 @@
 
 import { getDb } from '../db';
 import { isCachingDisabledGlobally } from '../cache-flags';
+import { isParityFixtureEnabled } from '../parity-fixture';
 import type { PersonaFitScores } from './types';
 import {
 	scoreTagOverlap,
@@ -63,6 +64,7 @@ let enrichmentMissCache = new Map<number, number>(); // entityId → cachedAt; n
  * trigger a Postgres query, scoped to those missing IDs.
  */
 export async function getEnrichmentByEntityIds(entityIds: number[]): Promise<Map<number, ProductEnrichment>> {
+	if (isParityFixtureEnabled()) return new Map();
 	if (entityIds.length === 0) return new Map();
 
 	const now = Date.now();
@@ -151,6 +153,7 @@ export function _clearEnrichmentCache(): void {
  * Cached in-process for TAG_VOCAB_TTL_MS. Pass `force=true` to bypass.
  */
 export async function getBrandTagVocabulary(brandId: string, force = false): Promise<string[]> {
+	if (isParityFixtureEnabled()) return [];
 	const cached = tagVocabularyCache.get(brandId);
 	if (!force && !isCachingDisabledGlobally() && cached && Date.now() - cached.cachedAt < TAG_VOCAB_TTL_MS) {
 		return cached.tags;
@@ -200,6 +203,7 @@ export async function getProductsByTagOverlap(
 	seedEntityId: number,
 	opts: TagOverlapOpts = {},
 ): Promise<TagOverlapResult[]> {
+	if (isParityFixtureEnabled()) return [];
 	const minOverlap = opts.minOverlap ?? 2;
 	const limit = opts.limit ?? 8;
 	const excludeEntityIds = opts.excludeEntityIds ?? [];

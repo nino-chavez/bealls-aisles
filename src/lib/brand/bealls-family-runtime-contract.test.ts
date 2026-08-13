@@ -228,6 +228,7 @@ const baseContext = createZoneDecisionContext({
 	viewportClass: 'mobile',
 	catalogVersion: 'catalog-v1',
 	contentVersion: 'merchant-none-v1',
+	publicationContext: {},
 	syntheticProvenance: { kind: 'parity-fixture', version: 'v1' },
 	approvedInputHash: approvedInputHash({ brandId: 'bealls', routePath: '/', zoneId: 'home.hero' }),
 });
@@ -240,7 +241,7 @@ const inconsistentEnvelope = {
 };
 const homeExpectation = {
 	organizationId: 'example-merchant', brandId: 'bealls', routeId: '/', routePath: '/', surface: 'home',
-	zoneId: 'home.hero', component: 'editorial-header',
+	zoneId: 'home.hero', component: 'editorial-header', publicationContext: {},
 };
 assert('one invariant rejects inconsistent provenance at cache and client boundaries',
 	!hasConsistentZoneDecisionEnvelope(inconsistentEnvelope)
@@ -250,6 +251,67 @@ rejects('envelope creation rejects an engine source without engine provenance', 
 	...homeHeroResolution,
 	source: 'engine',
 }), /inconsistent source, provenance, or terminal/);
+
+const externalHeroContent = {
+	component: 'editorial-hero',
+	props: {
+		image: 'https://attacker.example/tracker.gif', headline: 'Leave the registered storefront',
+		ctaLabel: 'Continue', ctaHref: 'https://attacker.example/phish', textPosition: 'left',
+	},
+};
+const externalHeroResolution = {
+	...homeHeroResolution,
+	source: 'fallback' as const,
+	terminal: 'materialized' as const,
+	content: externalHeroContent,
+};
+rejects('envelope creation re-runs asset and destination closure',
+	() => createZoneDecisionEnvelope(baseContext, externalHeroResolution), /asset|destination/);
+const externalHeroEnvelope = {
+	...envelope,
+	terminal: 'materialized' as const,
+	content: externalHeroContent,
+};
+const externalHeroExpectation = { ...homeExpectation, component: 'editorial-hero' };
+assert('cache and client parsing reject schema-valid external assets and destinations',
+	revalidateCachedZoneDecision(externalHeroEnvelope, baseContext) === null
+	&& runtimeZoneViewFromEnvelope(externalHeroEnvelope, externalHeroExpectation) === null);
+
+const relatedPolicy = compileBrandCompositionPolicy('bealls', 'pdp', 'pdp.related');
+const relatedContent = {
+	component: 'product-carousel',
+	props: { title: 'Related products', products: [{ productId: 'p1', role: 'standard' as const }] },
+};
+const relatedResolution = resolveZone({
+	zoneId: 'pdp.related', brandId: 'bealls', routePath: '/product/parity-shirt', policy: relatedPolicy,
+	engineOutput: { zones: { 'pdp.related': relatedContent } }, engineDecisionMode: 'rules',
+	engineProvenance: { kind: 'trusted-rule', id: 'pdp-tag-overlap-v1', version: '1' },
+	publicationContext: { candidateProductIds: ['p1'] },
+});
+const relatedContext = createZoneDecisionContext({
+	policy: relatedPolicy, routeId: '/product/[slug]', routePath: '/product/parity-shirt', zoneId: 'pdp.related',
+	viewportClass: 'desktop', catalogVersion: 'catalog-related-v1', contentVersion: 'none',
+	publicationContext: { candidateProductIds: ['p1'] }, syntheticProvenance: { kind: 'none', version: 'live-v1' },
+	approvedInputHash: 'c'.repeat(64),
+});
+const relatedEnvelope = createZoneDecisionEnvelope(relatedContext, relatedResolution);
+const outsideCatalogContent = {
+	...relatedContent,
+	props: { ...relatedContent.props, products: [{ productId: 'outside-catalog', role: 'standard' as const }] },
+};
+rejects('envelope creation re-runs approved-catalog closure', () => createZoneDecisionEnvelope(relatedContext, {
+	...relatedResolution,
+	content: outsideCatalogContent,
+}), /outside the approved catalog/);
+const outsideCatalogEnvelope = { ...relatedEnvelope, content: outsideCatalogContent };
+const relatedExpectation = {
+	organizationId: 'example-merchant', brandId: 'bealls', routeId: '/product/[slug]',
+	routePath: '/product/parity-shirt', surface: 'pdp', zoneId: 'pdp.related',
+	component: 'product-carousel', publicationContext: { candidateProductIds: ['p1'] },
+};
+assert('cache and client parsing reject schema-valid unapproved product references',
+	revalidateCachedZoneDecision(outsideCatalogEnvelope, relatedContext) === null
+	&& runtimeZoneViewFromEnvelope(outsideCatalogEnvelope, relatedExpectation) === null);
 
 const checkoutAssuranceContent = {
 	component: 'assurance-strip-checkout',
@@ -262,11 +324,12 @@ const checkoutAssurancePolicy = compileBrandCompositionPolicy('bealls', 'checkou
 const checkoutAssuranceContext = createZoneDecisionContext({
 	policy: checkoutAssurancePolicy, routeId: '/checkout', routePath: '/checkout', zoneId: 'checkout.assurance-strip',
 	viewportClass: 'desktop', catalogVersion: 'catalog-v1', contentVersion: 'merchant-v1',
+	publicationContext: {},
 	syntheticProvenance: { kind: 'none', version: 'live-v1' }, approvedInputHash: 'b'.repeat(64),
 });
 const checkoutExpectation = {
 	organizationId: 'example-merchant', brandId: 'bealls', routeId: '/checkout', routePath: '/checkout',
-	surface: 'checkout', zoneId: 'checkout.assurance-strip', component: 'assurance-strip-checkout',
+	surface: 'checkout', zoneId: 'checkout.assurance-strip', component: 'assurance-strip-checkout', publicationContext: {},
 };
 const adminEnvelope = createZoneDecisionEnvelope(checkoutAssuranceContext, {
 	zoneId: 'checkout.assurance-strip', family: 'checkout.assurance-strip', source: 'admin', terminal: 'materialized',
@@ -510,6 +573,7 @@ const cartResolution = resolveZone({
 const cartContext = createZoneDecisionContext({
 	policy: cartPolicy, routeId: '/cart', routePath: '/cart', zoneId: 'cart.above-checkout-cta',
 	viewportClass: 'desktop', catalogVersion: 'catalog-v1', contentVersion: 'none',
+	publicationContext: {},
 	syntheticProvenance: { kind: 'parity-fixture', version: 'v1' }, approvedInputHash: 'a'.repeat(64),
 });
 const cartEnvelope = createZoneDecisionEnvelope(cartContext, cartResolution);

@@ -13,6 +13,7 @@ import { getDb } from './db';
 import type { Persona, PersonaInference, PersonaProbabilities, InferenceContext } from '$lib/signals/types';
 import type { SignalStore } from '$lib/signals/store';
 import { infer, priorFor as inferPriorFor } from '$lib/signals/inference';
+import { isParityFixtureEnabled } from './parity-fixture';
 
 export interface SessionOutcome {
 	sessionId: string;
@@ -91,6 +92,7 @@ export async function finalizeSession(
 	store: SignalStore,
 	opts: { converted?: boolean } = {},
 ): Promise<void> {
+	if (isParityFixtureEnabled()) return;
 	const ctx = store.toInferenceContext();
 	const inference = infer(ctx);
 	const events = store.getEvents();
@@ -144,6 +146,7 @@ export async function finalizeSession(
 
 /** Upsert one outcome row. */
 export async function recordOutcome(outcome: SessionOutcome): Promise<void> {
+	if (isParityFixtureEnabled()) return;
 	const sql = getDb();
 	await sql`
 		INSERT INTO session_outcomes (
@@ -194,6 +197,7 @@ export async function readOutcomesBatch(opts: {
 	labeledOnly?: boolean;
 	since?: Date;
 } = {}): Promise<SessionOutcome[]> {
+	if (isParityFixtureEnabled()) return [];
 	const sql = getDb();
 	const limit = opts.limit ?? 10000;
 
@@ -248,6 +252,7 @@ export async function outcomesSummary(): Promise<{
 	byLabel: Record<string, number>;
 	byPrimary: Record<string, number>;
 }> {
+	if (isParityFixtureEnabled()) return { total: 0, byLabel: {}, byPrimary: {} };
 	const sql = getDb();
 	const totalRows = await sql`SELECT COUNT(*)::int AS n FROM session_outcomes`;
 	const labelRows = await sql`SELECT label_source, COUNT(*)::int AS n FROM session_outcomes GROUP BY label_source`;

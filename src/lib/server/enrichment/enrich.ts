@@ -14,6 +14,10 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { generateText, Output, embedMany } from 'ai';
 import { z } from 'zod';
 
+if (process.env.AISLES_PARITY_FIXTURE === 'v1') {
+	throw new Error('The parity fixture forbids enrichment provider and database execution');
+}
+
 // ─── Config ────────────────────────────────────────────────────────
 
 const DATABASE_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL;

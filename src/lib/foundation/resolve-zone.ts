@@ -63,6 +63,21 @@ export interface ZonePublicationContext {
 	candidateAssetUrls?: readonly string[];
 }
 
+export interface NormalizedZonePublicationContext {
+	candidateProductIds: string[];
+	candidateAssetUrls: string[];
+}
+
+/** Canonical closure carried by trusted decision contexts and cache keys. */
+export function normalizeZonePublicationContext(
+	context: ZonePublicationContext = {},
+): NormalizedZonePublicationContext {
+	return {
+		candidateProductIds: [...new Set((context.candidateProductIds ?? []).map(String))].sort(),
+		candidateAssetUrls: [...new Set((context.candidateAssetUrls ?? []).map(String))].sort(),
+	};
+}
+
 export function resolveZone(opts: ResolveZoneOpts): ZoneResolution {
 	const parsed = parseZoneInstance(opts.zoneId);
 	if (!parsed) throw new Error(`resolveZone: unknown zone instance "${opts.zoneId}"`);
@@ -217,7 +232,8 @@ export function validateZonePublicationContent(input: {
 	if (!validated.ok) throw new Error(`zone publication contract: content is invalid for "${input.zoneId}"`);
 	const brand = getBrandById(input.brandId);
 	if (!brand) throw new Error(`zone publication contract: unknown brand "${input.brandId}"`);
-	const candidateProductIds = (input.publicationContext?.candidateProductIds ?? []).map(String);
+	const publicationContext = normalizeZonePublicationContext(input.publicationContext);
+	const candidateProductIds = publicationContext.candidateProductIds;
 	const productIds = new Set(candidateProductIds);
 	const allowedHrefs = new Set([
 		'/', '/store-locator', '/search', '/cart', '/checkout',
@@ -227,7 +243,7 @@ export function validateZonePublicationContent(input: {
 	const assets = new Set([
 		brand.homepage.heroImage,
 		...Object.values(brand.categories).map((category) => category.tileImage),
-		...(input.publicationContext?.candidateAssetUrls ?? []),
+		...publicationContext.candidateAssetUrls,
 	].filter((value): value is string => !!value));
 
 	walk(validated.content, (key, value) => {

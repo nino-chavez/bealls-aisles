@@ -1,11 +1,10 @@
-import { env } from '$env/dynamic/private';
 import { getBrand } from '$lib/brand/config';
 import type { BCProduct } from './bigcommerce';
 
 export const PARITY_FIXTURE_VERSION = 'bealls-family-catalog-v1';
 
 export function isParityFixtureEnabled(): boolean {
-	return env.AISLES_PARITY_FIXTURE === 'v1';
+	return process.env.AISLES_PARITY_FIXTURE === 'v1';
 }
 
 export function parityCategories() {

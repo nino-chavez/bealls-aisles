@@ -15,6 +15,7 @@
  */
 
 import { getDb } from './db';
+import { isParityFixtureEnabled } from './parity-fixture';
 
 let tableCreated = false;
 
@@ -55,6 +56,7 @@ export interface ZoneRetrievalLogEntry {
 }
 
 export function logZoneRetrieval(entry: ZoneRetrievalLogEntry): void {
+	if (isParityFixtureEnabled()) return;
 	// Always emit the structured log line (synchronous, in-band).
 	try {
 		console.info(

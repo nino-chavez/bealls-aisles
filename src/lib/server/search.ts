@@ -8,8 +8,10 @@
  *    (semantic tags, material, style, use case). No API call needed.
  */
 
-import { env } from '$env/dynamic/private';
 import { getDb } from './db';
+import { isParityFixtureEnabled } from './parity-fixture';
+
+let externalSearchObserverForTest: (() => void) | null = null;
 
 export interface SearchResult {
 	bcEntityId: number;
@@ -29,6 +31,7 @@ export interface SearchResult {
  * Search products — tries vector search first, falls back to tag search.
  */
 export async function searchProducts(query: string, limit = 20): Promise<SearchResult[]> {
+	if (isParityFixtureEnabled()) return [];
 	// Try vector search if OpenRouter is configured
 	const vectorResults = await vectorSearch(query, limit);
 	if (vectorResults.length > 0) return vectorResults;
@@ -40,8 +43,9 @@ export async function searchProducts(query: string, limit = 20): Promise<SearchR
 // ─── Vector search (pgvector) ──────────────────────────────────────
 
 async function vectorSearch(query: string, limit: number): Promise<SearchResult[]> {
-	const apiKey = env.OPENROUTER_API_KEY;
+	const apiKey = process.env.OPENROUTER_API_KEY;
 	if (!apiKey) return [];
+	externalSearchObserverForTest?.();
 
 	try {
 		const { createOpenRouter } = await import('@openrouter/ai-sdk-provider');
@@ -92,6 +96,7 @@ async function vectorSearch(query: string, limit: number): Promise<SearchResult[
 // ─── Tag search (fallback) ─────────────────────────────────────────
 
 async function tagSearch(query: string, limit: number): Promise<SearchResult[]> {
+	externalSearchObserverForTest?.();
 	try {
 		const sql = getDb();
 		const terms = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
@@ -150,4 +155,9 @@ async function tagSearch(query: string, limit: number): Promise<SearchResult[]> 
 		console.warn('[search] Tag search failed:', err);
 		return [];
 	}
+}
+
+/** Test-only observer for proving fixture search never enters a provider or DB strategy. */
+export function _setExternalSearchObserverForTest(observer: (() => void) | null): void {
+	externalSearchObserverForTest = observer;
 }

@@ -8,8 +8,6 @@
  * perf optimization. Bypassing it would corrupt the cart.
  */
 
-import { env } from '$env/dynamic/private';
-
 let warned = false;
 
 /**
@@ -20,7 +18,7 @@ let warned = false;
  * some deployment shapes).
  */
 export function isCachingDisabledGlobally(): boolean {
-	const flag = env.AISLES_NO_CACHE;
+	const flag = process.env.AISLES_NO_CACHE;
 	const disabled = flag === '1' || flag === 'true';
 	if (disabled && !warned) {
 		console.warn('[cache] AISLES_NO_CACHE is set — all caches bypassed (demo cold-start mode).');

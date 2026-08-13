@@ -10,6 +10,7 @@
  */
 
 import { getDb } from './db';
+import { isParityFixtureEnabled } from './parity-fixture';
 
 let tableCreated = false;
 
@@ -77,6 +78,7 @@ export interface GenerationLogEntry {
 }
 
 export async function logGeneration(entry: GenerationLogEntry): Promise<void> {
+	if (isParityFixtureEnabled()) return;
 	try {
 		await ensureTable();
 		const sql = getDb();
