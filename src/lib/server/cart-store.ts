@@ -22,8 +22,8 @@
  * Trace: PRD-FND-003 (cart state primitive).
  */
 
-import { env } from '$env/dynamic/private';
 import type { CartResponse } from './bigcommerce';
+import { isParityFixtureEnabled } from './parity-fixture';
 
 const CART_TTL_S = 60 * 60 * 24; // 24h
 
@@ -34,13 +34,16 @@ interface CacheEntry {
 
 let redis: import('@upstash/redis').Redis | null = null;
 let initialized = false;
+let redisAccessObserverForTest: (() => void) | null = null;
 
 async function getRedis(): Promise<import('@upstash/redis').Redis | null> {
+	if (isParityFixtureEnabled()) return null;
 	if (initialized) return redis;
 	initialized = true;
+	redisAccessObserverForTest?.();
 
-	const url = env.KV_REST_API_URL;
-	const token = env.KV_REST_API_TOKEN;
+	const url = process.env.KV_REST_API_URL;
+	const token = process.env.KV_REST_API_TOKEN;
 	if (!url || !token) return null;
 
 	try {
@@ -60,6 +63,19 @@ function cartKey(cartEntityId: string): string {
 // KV_REST_API_*). Behaves like the old Map. Production should always
 // have Redis configured.
 const memoryFallback = new Map<string, CacheEntry>();
+
+/** Test-only observer for proving fixture paths return before Redis acquisition. */
+export function _setCartRedisAccessObserverForTest(observer: (() => void) | null): void {
+	redisAccessObserverForTest = observer;
+}
+
+/** Test-only cleanup for the process-local fixture cart store. */
+export function _resetCartStoreForTest(): void {
+	memoryFallback.clear();
+	redis = null;
+	initialized = false;
+	redisAccessObserverForTest = null;
+}
 
 export async function cacheCart(cart: CartResponse, sessionCookie: string | null): Promise<void> {
 	const entry: CacheEntry = { cart, sessionCookie };

@@ -1,8 +1,12 @@
-import { ZoneDecisionEnvelopeSchema, hasConsistentZoneDecisionEnvelope } from './zone-decision-envelope-schema';
+import {
+	ZoneDecisionEnvelopeSchema,
+	hasConsistentZoneDecisionEnvelope,
+	hasExactZoneDecisionContext,
+} from './zone-decision-envelope-schema';
+import type { ZoneDecisionContext } from './zone-decision-envelope-schema';
 import {
 	normalizeZonePublicationContext,
 	validateZonePublicationContent,
-	type ZonePublicationContext,
 } from './resolve-zone';
 
 export type RuntimeZoneSource = 'engine' | 'admin' | 'fallback';
@@ -16,14 +20,8 @@ export interface RuntimeZoneEnvelopeView {
 }
 
 export interface RuntimeZoneEnvelopeExpectation {
-	organizationId: string;
-	brandId: string;
-	routeId: string;
-	routePath: string;
-	surface: string;
-	zoneId: string;
+	context: ZoneDecisionContext;
 	component: string;
-	publicationContext: ZonePublicationContext;
 }
 
 /** Validate the wire envelope and bind it to the exact consuming route and renderer branch. */
@@ -34,21 +32,16 @@ export function runtimeZoneViewFromEnvelope(
 	const parsed = ZoneDecisionEnvelopeSchema.safeParse(raw);
 	if (!parsed.success) return null;
 	const envelope = parsed.data;
-	if (envelope.context.organizationId !== expected.organizationId
-		|| envelope.context.brandId !== expected.brandId
-		|| envelope.context.routeId !== expected.routeId
-		|| envelope.context.routePath !== expected.routePath
-		|| envelope.context.surface !== expected.surface
-		|| envelope.context.zoneId !== expected.zoneId
+	if (!hasExactZoneDecisionContext(envelope.context, expected.context)
 		|| envelope.terminal !== 'materialized') return null;
 	if (!hasConsistentZoneDecisionEnvelope(envelope)) return null;
-	const publicationClosure = normalizeZonePublicationContext(expected.publicationContext);
+	const publicationClosure = normalizeZonePublicationContext(expected.context.publicationClosure);
 	if (JSON.stringify(envelope.context.publicationClosure) !== JSON.stringify(publicationClosure)) return null;
 	let content: unknown;
 	try {
 		content = validateZonePublicationContent({
-			brandId: expected.brandId,
-			zoneId: expected.zoneId,
+			brandId: expected.context.brandId,
+			zoneId: expected.context.zoneId,
 			raw: envelope.content,
 			publicationContext: publicationClosure,
 		});
@@ -58,7 +51,7 @@ export function runtimeZoneViewFromEnvelope(
 	if (!content || Array.isArray(content) || typeof content !== 'object' || !('component' in content)
 		|| content.component !== expected.component) return null;
 	return {
-		zoneId: expected.zoneId,
+		zoneId: expected.context.zoneId,
 		source: envelope.provenance.source,
 		terminal: terminalForSource(envelope.provenance.source),
 		content: content as { component: string; props: Record<string, unknown> },

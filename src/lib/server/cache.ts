@@ -1,7 +1,7 @@
 /** Validated decision-envelope cache. Raw layouts are never cacheable. */
 
-import { env } from '$env/dynamic/private';
 import { isCachingDisabledGlobally } from './cache-flags';
+import { isParityFixtureEnabled } from './parity-fixture';
 import {
 	revalidateCachedZoneDecision,
 	zoneDecisionCacheKey,
@@ -12,12 +12,15 @@ import {
 const DECISION_TTL_S = 60 * 60;
 let redis: import('@upstash/redis').Redis | null = null;
 let initialized = false;
+let redisAccessObserverForTest: (() => void) | null = null;
 
 async function getRedis(): Promise<import('@upstash/redis').Redis | null> {
+	if (isParityFixtureEnabled()) return null;
 	if (initialized) return redis;
 	initialized = true;
-	const url = env.KV_REST_API_URL;
-	const token = env.KV_REST_API_TOKEN;
+	redisAccessObserverForTest?.();
+	const url = process.env.KV_REST_API_URL;
+	const token = process.env.KV_REST_API_TOKEN;
 	if (!url || !token) return null;
 	try {
 		const { Redis } = await import('@upstash/redis');
@@ -26,6 +29,11 @@ async function getRedis(): Promise<import('@upstash/redis').Redis | null> {
 	} catch {
 		return null;
 	}
+}
+
+/** Test-only observer for proving fixture paths return before Redis acquisition. */
+export function _setDecisionCacheRedisAccessObserverForTest(observer: (() => void) | null): void {
+	redisAccessObserverForTest = observer;
 }
 
 /** Cache hits preserve the stored provenance and must pass full-context revalidation. */
@@ -41,8 +49,11 @@ export async function getCachedZoneDecision(context: ZoneDecisionContext): Promi
 	}
 }
 
-export async function cacheZoneDecision(envelope: ZoneDecisionEnvelope): Promise<void> {
-	const validated = revalidateCachedZoneDecision(envelope, envelope.context);
+export async function cacheZoneDecision(
+	envelope: ZoneDecisionEnvelope,
+	trustedContext: ZoneDecisionContext,
+): Promise<void> {
+	const validated = revalidateCachedZoneDecision(envelope, trustedContext);
 	if (!validated) throw new Error('decision cache: refusing invalid envelope');
 	const client = await getRedis();
 	if (!client) return;

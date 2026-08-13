@@ -59,11 +59,9 @@ export const load: PageServerLoad = async ({ params, url, cookies, request, pare
 		return throwShopperNotFound(url, `Category "${slug}" not found in BigCommerce`);
 	}
 
-	// 2026-05-02 audit P0 §3.4 fix — Bealls Home category renders zero
-	// products in the BC sandbox channel; the AI then composed Women's
-	// editorial as a fallback. If the BC category exists but is empty,
-	// 404 to the rescue surface rather than letting the AI fabricate
-	// off-category content.
+	// 2026-05-02 audit P0 §3.4 fix — an empty Bealls Home category once
+	// reached the retired whole-layout fallback and rendered Women's content.
+	// Keep the fail-closed 404 rather than publishing off-category content.
 	if (result.products.length === 0) {
 		return throwShopperNotFound(url, `Category "${slug}" has no products available`);
 	}

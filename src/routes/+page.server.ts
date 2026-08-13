@@ -11,14 +11,13 @@ export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	const brand = getBrand();
 	const mode = getBrandMode(brand);
 
-	// Persona inference for AI homepage layout — same pipeline as category pages
+	// Persona inference remains available for deterministic ranking and operator evidence.
 	const { store, visitCount } = await createStoreFromRequest({ url, request, cookies, category: 'home' });
 	const inferenceContext = store.toInferenceContext();
 	const inference = infer(inferenceContext);
 
-	// Load homepage products via the same loader the AI uses, sorted by persona-fit.
-	// Resilient to BC degradation — falls through to empty list (page renders chrome
-	// + zones; AI body skips when products are absent).
+	// Load homepage products for the fixed shopper scaffold, sorted by persona fit.
+	// BC degradation falls through to an empty list; chrome and named zones still render.
 	let homeProducts: Awaited<ReturnType<typeof loadHomeProducts>>['products'] = [];
 	try {
 		const result = await loadHomeProducts(inference.primary, 30);

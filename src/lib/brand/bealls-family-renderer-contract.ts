@@ -302,7 +302,7 @@ const RESPONSIVE_STRATEGY = {
 const SOURCE_SNAPSHOT = {
 	algorithm: 'sha256',
 	files: [...BEALLS_FAMILY_RENDERER_SOURCE_FILES],
-	fingerprint: '416d5fe669aee470edc08c6214f966ef77fbb0bbcfeeaf01b386dceb7e3f6f45',
+	fingerprint: '6697c299eb641849e9781dee452f89416dd3e1ef63ef3936e6fa6847abf1c997',
 } as const;
 
 interface DesignSnapshotLiteral {
@@ -317,28 +317,28 @@ function storefrontContract(
 	designSnapshot: DesignSnapshotLiteral,
 ): BeallsFamilyRendererContract {
 	return {
-		contractVersion: '2.3.0', organizationId: 'example-merchant', brandId, brandName, mode: 'storefront',
+		contractVersion: '2.4.0', organizationId: 'example-merchant', brandId, brandName, mode: 'storefront',
 		supportedSurfaces: [...STOREFRONT_SURFACES, LOCATOR_SURFACE, STYLE_GUIDE_SURFACE, ERROR_404_SURFACE, STOREFRONT_EMPTY_SURFACE].map(cloneSurface),
 		mountedChromeIds: [...MOUNTED_CHROME], exposedChromeIds: [...STOREFRONT_EXPOSED_CHROME],
 		designConfigSnapshot: { algorithm: 'sha256', inputs: [...DESIGN_CONFIG_INPUTS], ...designSnapshot },
 		sourceSnapshot: { ...SOURCE_SNAPSHOT, files: [...SOURCE_SNAPSHOT.files] },
 		tokenSource: { ...TOKEN_SOURCE }, responsiveStrategy: { ...RESPONSIVE_STRATEGY },
-		autonomy: { policyRegistry: 'BEALLS_COMPOSITION_POLICY', organizationPolicyVersion: 'bealls-family-org-observed-v1', brandPolicyVersion, referenceState: 'uncontracted' },
+		autonomy: { policyRegistry: 'BEALLS_COMPOSITION_POLICY', organizationPolicyVersion: 'bealls-family-org-observed-v2', brandPolicyVersion, referenceState: 'uncontracted' },
 	};
 }
 
 /** One explicit record per brand, even where the renderer implementation is shared. */
 export const BEALLS_FAMILY_RENDERER_CONTRACTS: Readonly<Record<(typeof BRAND_IDS)[number], BeallsFamilyRendererContract>> = {
-	bealls: storefrontContract('bealls', 'bealls', 'bealls-executable-runtime-v5', {
+	bealls: storefrontContract('bealls', 'bealls', 'bealls-executable-runtime-v6', {
 		googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap',
 		fingerprint: '789eb043880e8daed628c65a483591a8aa4367d560a846cfc7b4e4c1cdd2052b',
 	}),
-	beallsflorida: storefrontContract('beallsflorida', 'Bealls Florida', 'beallsflorida-executable-runtime-v5', {
+	beallsflorida: storefrontContract('beallsflorida', 'Bealls Florida', 'beallsflorida-executable-runtime-v6', {
 		googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Public+Sans:wght@400;500;600;700&display=swap',
 		fingerprint: '746ae8604bccee7b0169b1a961bc0104186f95b2c314dac8c5e191e94fe34222',
 	}),
 	homecentric: {
-		contractVersion: '2.3.0', organizationId: 'example-merchant', brandId: 'homecentric', brandName: 'Home Centric', mode: 'content',
+		contractVersion: '2.4.0', organizationId: 'example-merchant', brandId: 'homecentric', brandName: 'Home Centric', mode: 'content',
 		supportedSurfaces: ([
 			{ surface: 'home', recipeId: 'home.content', componentIds: ['zone-renderer'], rescueReasons: [] },
 			{ surface: 'category', recipeId: 'category.content', componentIds: ['content-category-surface'], rescueReasons: [] },
@@ -352,7 +352,7 @@ export const BEALLS_FAMILY_RENDERER_CONTRACTS: Readonly<Record<(typeof BRAND_IDS
 		},
 		sourceSnapshot: { ...SOURCE_SNAPSHOT, files: [...SOURCE_SNAPSHOT.files] },
 		tokenSource: { ...TOKEN_SOURCE }, responsiveStrategy: { ...RESPONSIVE_STRATEGY },
-		autonomy: { policyRegistry: 'BEALLS_COMPOSITION_POLICY', organizationPolicyVersion: 'bealls-family-org-observed-v1', brandPolicyVersion: 'homecentric-executable-runtime-v5', referenceState: 'uncontracted' },
+		autonomy: { policyRegistry: 'BEALLS_COMPOSITION_POLICY', organizationPolicyVersion: 'bealls-family-org-observed-v2', brandPolicyVersion: 'homecentric-executable-runtime-v6', referenceState: 'uncontracted' },
 	},
 };
 

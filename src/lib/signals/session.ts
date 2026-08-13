@@ -11,7 +11,7 @@
 
 import { SignalStore } from './store';
 import type { SignalEvent } from './types';
-import { env } from '$env/dynamic/private';
+import { isParityFixtureEnabled } from '$lib/server/parity-fixture';
 
 const SESSION_TTL_S = 30 * 60; // 30 minutes
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
@@ -47,14 +47,19 @@ function ensureCleanup() {
 
 let redis: import('@upstash/redis').Redis | null = null;
 let redisInitialized = false;
+let redisAccessObserverForTest: (() => void) | null = null;
 
 async function getRedis(): Promise<import('@upstash/redis').Redis | null> {
+	// Regression fixtures are a hard no-provider boundary, even when the host
+	// process happens to expose production-looking credentials.
+	if (isParityFixtureEnabled()) return null;
 	if (redisInitialized) return redis;
 	redisInitialized = true;
+	redisAccessObserverForTest?.();
 
 	try {
-		const url = env.KV_REST_API_URL;
-		const token = env.KV_REST_API_TOKEN;
+		const url = process.env.KV_REST_API_URL;
+		const token = process.env.KV_REST_API_TOKEN;
 
 		if (!url || !token) {
 			console.warn('[session] No Redis credentials found, using in-memory only');
@@ -164,6 +169,21 @@ export async function hasSession(sessionId: string): Promise<boolean> {
 /** Number of active sessions in the hot cache (for observability). */
 export function sessionCount(): number {
 	return sessions.size;
+}
+
+/** Test-only observer for proving fixture paths return before Redis acquisition. */
+export function _setSessionRedisAccessObserverForTest(observer: (() => void) | null): void {
+	redisAccessObserverForTest = observer;
+}
+
+/** Test-only cleanup for the process-local fixture store and timer. */
+export function _resetSessionStateForTest(): void {
+	sessions.clear();
+	if (cleanupTimer) clearInterval(cleanupTimer);
+	cleanupTimer = null;
+	redis = null;
+	redisInitialized = false;
+	redisAccessObserverForTest = null;
 }
 
 /** List all active session IDs from Redis (scanning aisles:session:* keys). */

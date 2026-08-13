@@ -9,7 +9,7 @@ import {
 
 const organization: OrganizationCompositionPolicy = {
 	organizationId: 'example-merchant',
-	policyVersion: 'bealls-family-org-observed-v1',
+	policyVersion: 'bealls-family-org-observed-v2',
 	maximum: { capabilities: AUTONOMY_CAPABILITIES, decisionMode: 'model', publicationMode: 'live' },
 };
 
@@ -29,6 +29,7 @@ const FIXED_ZONE = { capabilities: [], decisionMode: 'fixed' } as const;
 const RULES_PRODUCT_ZONE = {
 	capabilities: ['rank_products', 'select_products'],
 	decisionMode: 'rules',
+	trustedRule: { id: 'pdp-tag-overlap-v1', version: '1' },
 } as const;
 
 /**
@@ -87,8 +88,8 @@ const ZONE_OVERRIDES = {
 } as const;
 
 // These surfaces are present for every configured family brand today.
-// Locator keeps a fixed route scaffold; its current load path supplies no
-// engine output. EmptyRescue calls the layout API and falls back statically.
+// Locator and empty-rescue insertion points use fixed route scaffolds and
+// named fallback/Hidden terminals; neither calls a shopper model endpoint.
 const SHARED_SURFACES = {
 	locator: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live', zoneOverrides: ZONE_OVERRIDES.locator },
 	'style-guide': { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
@@ -100,7 +101,7 @@ function observedStorefrontPolicy(brandId: 'bealls' | 'beallsflorida'): BrandCom
 	return {
 		organizationId: 'example-merchant',
 		brandId,
-		policyVersion: `${brandId}-executable-runtime-v5`,
+		policyVersion: `${brandId}-executable-runtime-v6`,
 		maximum: { capabilities: AUTONOMY_CAPABILITIES, decisionMode: 'model', publicationMode: 'live' },
 		reference: { state: 'uncontracted' },
 		surfaces: {
@@ -120,7 +121,7 @@ function observedStorefrontPolicy(brandId: 'bealls' | 'beallsflorida'): BrandCom
 const homecentric: BrandCompositionPolicy = {
 	organizationId: 'example-merchant',
 	brandId: 'homecentric',
-	policyVersion: 'homecentric-executable-runtime-v5',
+	policyVersion: 'homecentric-executable-runtime-v6',
 	maximum: { capabilities: AUTONOMY_CAPABILITIES, decisionMode: 'model', publicationMode: 'live' },
 	reference: { state: 'uncontracted' },
 	surfaces: {

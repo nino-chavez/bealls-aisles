@@ -22,6 +22,12 @@ export type DecisionMode = (typeof DECISION_MODES)[number];
 export const PUBLICATION_MODES = ['live', 'holdout', 'approval_required'] as const;
 export type PublicationMode = (typeof PUBLICATION_MODES)[number];
 
+/** Closed rule registry. A rules-mode decision may name only one of these identities. */
+export const TRUSTED_RULES = {
+	'pdp-tag-overlap-v1': { id: 'pdp-tag-overlap-v1', version: '1' },
+} as const;
+export type TrustedRuleIdentity = (typeof TRUSTED_RULES)[keyof typeof TRUSTED_RULES];
+
 const PRESET_CAPABILITIES = {
 	preserve: ['rank_products', 'select_products'],
 	assist: [
@@ -51,6 +57,7 @@ export interface ZoneCompositionPolicy {
 	capabilities?: readonly AutonomyCapability[];
 	decisionMode?: DecisionMode;
 	publicationMode?: PublicationMode;
+	trustedRule?: TrustedRuleIdentity;
 }
 
 export interface SurfaceCompositionPolicy {
@@ -94,6 +101,7 @@ export interface EffectiveCompositionPolicy {
 	capabilities: readonly AutonomyCapability[];
 	decisionMode: DecisionMode;
 	publicationMode: PublicationMode;
+	trustedRule: TrustedRuleIdentity | null;
 	provenance: {
 		kind: 'observed_legacy_classification';
 		organizationId: string;
@@ -176,6 +184,13 @@ export function compileCompositionPolicy(input: CompileCompositionPolicyInput): 
 	const publicationMode = zone?.publicationMode ?? surface.publicationMode;
 	assertDecisionNarrower(decisionMode, surface.decisionMode, `${input.zoneId ?? input.surface} effective policy`);
 	assertPublicationNarrower(publicationMode, surface.publicationMode, `${input.zoneId ?? input.surface} effective policy`);
+	const trustedRule = zone?.trustedRule ?? null;
+	if (trustedRule) {
+		const registered = TRUSTED_RULES[trustedRule.id];
+		if (decisionMode !== 'rules' || !registered || registered.version !== trustedRule.version) {
+			throw new CompositionPolicyValidationError(`${input.zoneId ?? input.surface} names an unregistered trusted rule`);
+		}
+	}
 
 	return {
 		policyVersion: composeEffectivePolicyVersion(organization.policyVersion, brand.policyVersion),
@@ -185,6 +200,7 @@ export function compileCompositionPolicy(input: CompileCompositionPolicyInput): 
 		),
 		decisionMode,
 		publicationMode,
+		trustedRule,
 		provenance: {
 			kind: 'observed_legacy_classification',
 			organizationId: input.organizationId,

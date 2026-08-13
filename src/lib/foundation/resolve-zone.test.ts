@@ -136,6 +136,18 @@ const trustedRules = resolveZone({
 assert('registered trusted-rule output publishes inside rules authority', trustedRules.source === 'engine'
 	&& trustedRules.engineProvenance?.kind === 'trusted-rule');
 
+const forgedRules = resolveZone({
+	zoneId: 'pdp.related',
+	brandId: 'bealls',
+	routePath: '/product/parity-shirt',
+	policy: relatedPolicy,
+	engineOutput: { zones: { 'pdp.related': related } },
+	engineDecisionMode: 'rules',
+	engineProvenance: { kind: 'trusted-rule', id: 'arbitrary-unregistered-rule', version: '999' } as never,
+	publicationContext: { candidateProductIds: ['p1', 'p2', 'p3'] },
+});
+assert('unregistered trusted-rule identity cannot publish into rules authority', forgedRules.source === 'fallback');
+
 const modelOverreach = resolveZone({
 	zoneId: 'pdp.related',
 	brandId: 'bealls',

@@ -3,13 +3,28 @@ import { fileURLToPath } from 'node:url';
 
 const envKeys = [
 	'AISLES_PARITY_FIXTURE', 'AISLES_ZONE_CONTENT_SCHEMA_VERSION',
-	'OPENROUTER_API_KEY', 'DATABASE_URL',
+	'OPENROUTER_API_KEY', 'DATABASE_URL', 'BRAND_ID',
+	'KV_REST_API_URL', 'KV_REST_API_TOKEN',
+	'BIGCOMMERCE_STORE_HASH', 'BEALLS_STOREFRONT_TOKEN', 'BIGCOMMERCE_STOREFRONT_TOKEN',
 ] as const;
 const originalEnv = Object.fromEntries(envKeys.map((key) => [key, process.env[key]]));
 process.env.AISLES_PARITY_FIXTURE = 'v1';
-process.env.AISLES_ZONE_CONTENT_SCHEMA_VERSION = 'route-bound-zone-content-v1';
+process.env.AISLES_ZONE_CONTENT_SCHEMA_VERSION = 'route-bound-v1';
 process.env.OPENROUTER_API_KEY = 'fixture-must-not-use-this-key';
 process.env.DATABASE_URL = 'postgresql://fixture-must-not-connect.invalid/db';
+process.env.BRAND_ID = 'bealls';
+process.env.KV_REST_API_URL = 'https://fixture-must-not-contact-upstash.invalid';
+process.env.KV_REST_API_TOKEN = 'fixture-must-not-use-this-token';
+process.env.BIGCOMMERCE_STORE_HASH = 'fixture-must-not-contact-bigcommerce';
+process.env.BEALLS_STOREFRONT_TOKEN = 'fixture-must-not-use-this-token';
+process.env.BIGCOMMERCE_STOREFRONT_TOKEN = 'fixture-must-not-use-this-token';
+
+const originalFetch = globalThis.fetch;
+let networkFetches = 0;
+globalThis.fetch = (async () => {
+	networkFetches++;
+	throw new Error('fixture attempted an external fetch');
+}) as typeof fetch;
 
 const [
 	{ _setDbAccessObserverForTest },
@@ -20,6 +35,22 @@ const [
 	{ outcomesSummary },
 	{ logGeneration },
 	{ logZoneRetrieval },
+	{
+		_setSessionRedisAccessObserverForTest, _resetSessionStateForTest,
+		getSessionStore, persistSession, hasSession, listSessionIds,
+	},
+	{ createStoreFromRequest },
+	{
+		_setCartRedisAccessObserverForTest, _resetCartStoreForTest,
+		cacheCart, getCachedCart, getSessionCookie, evictCart,
+	},
+	{
+		_setBigCommerceQueryAccessObserverForTest,
+		getProducts, getProductsByCategory, getProductByPath, getProductsByEntityIds,
+		getProductByEntityId, getCategories, createCart, addToCart, updateCartLineItem,
+		deleteCartLineItem, getCart, getCheckoutRedirectUrl,
+	},
+	{ _setDecisionCacheRedisAccessObserverForTest, invalidateDecisionCache },
 ] = await Promise.all([
 	import('./db'),
 	import('./search'),
@@ -29,12 +60,25 @@ const [
 	import('./outcomes'),
 	import('./generation-log'),
 	import('./zone-retrieval-log'),
+	import('../signals/session'),
+	import('../signals/request'),
+	import('./cart-store'),
+	import('./bigcommerce'),
+	import('./cache'),
 ]);
 
 let databaseAccesses = 0;
 let searchStrategyAccesses = 0;
+let sessionRedisAccesses = 0;
+let cartRedisAccesses = 0;
+let decisionCacheRedisAccesses = 0;
+let bigCommerceQueryAccesses = 0;
 _setDbAccessObserverForTest(() => { databaseAccesses++; });
 _setExternalSearchObserverForTest(() => { searchStrategyAccesses++; });
+_setSessionRedisAccessObserverForTest(() => { sessionRedisAccesses++; });
+_setCartRedisAccessObserverForTest(() => { cartRedisAccesses++; });
+_setDecisionCacheRedisAccessObserverForTest(() => { decisionCacheRedisAccesses++; });
+_setBigCommerceQueryAccessObserverForTest(() => { bigCommerceQueryAccesses++; });
 
 let failures = 0;
 function assert(name: string, condition: boolean, detail = ''): void {
@@ -68,6 +112,41 @@ try {
 	});
 	logZoneRetrieval({ surface: 'pdp', seedEntityId: 8001, brandId: 'bealls', zones: {} });
 
+	const session = await getSessionStore('fixture-session', { fresh: true });
+	await persistSession(session);
+	const cookieValues = new Map<string, string>();
+	await createStoreFromRequest({
+		url: new URL('https://fixture.invalid/search?q=shirt'),
+		request: new Request('https://fixture.invalid/search?q=shirt', { headers: { 'user-agent': 'fixture' } }),
+		cookies: {
+			get: (name: string) => cookieValues.get(name),
+			set: (name: string, value: string) => { cookieValues.set(name, value); },
+		},
+		category: 'search',
+	});
+	const sessionAvailable = await hasSession('fixture-session');
+	const sessionIds = await listSessionIds();
+
+	const catalog = await getProducts(12);
+	const category = await getProductsByCategory(9000);
+	const productByPath = await getProductByPath('/parity-coastal-shirt/');
+	const productsById = await getProductsByEntityIds([8001, 8002]);
+	const productById = await getProductByEntityId(8001);
+	const categories = await getCategories();
+	const created = await createCart(8001, 1);
+	const added = await addToCart(created.cart.entityId, 8002, 2);
+	const updated = await updateCartLineItem(
+		created.cart.entityId, 'parity-line-8002', 8002, 3,
+	);
+	const fetched = await getCart(created.cart.entityId);
+	const checkoutUrl = await getCheckoutRedirectUrl(created.cart.entityId);
+	const deleted = await deleteCartLineItem(created.cart.entityId, 'parity-line-8001');
+	await cacheCart(updated.cart, null);
+	const cached = await getCachedCart(updated.cart.entityId);
+	const cachedCookie = await getSessionCookie(updated.cart.entityId);
+	await evictCart(updated.cart.entityId);
+	await invalidateDecisionCache();
+
 	assert('fixture search returns before OpenRouter even when a key is present',
 		search.length === 0 && searchStrategyAccesses === 0);
 	assert('fixture enrichment, tag overlap, persona, rules, and merchant records are empty',
@@ -76,12 +155,36 @@ try {
 		&& summary.total === 0);
 	assert('fixture runtime performs zero database acquisitions across guarded paths', databaseAccesses === 0,
 		`observed ${databaseAccesses}`);
+	assert('fixture session paths stay process-local with apparent Upstash credentials',
+		sessionAvailable && sessionIds.includes('fixture-session') && sessionRedisAccesses === 0,
+		`observed ${sessionRedisAccesses} Redis acquisitions`);
+	assert('fixture catalog and commerce paths use deterministic fakes with zero BigCommerce calls',
+		catalog.length === 12 && category.products.length === 12 && productByPath?.entityId === 8001
+		&& productsById.length === 2 && productById?.entityId === 8001 && categories.length > 0
+		&& created.cart.lineItems.physicalItems.length === 1
+		&& added.cart.lineItems.physicalItems.length === 2
+		&& updated.cart.lineItems.physicalItems.find((item) => item.entityId === 'parity-line-8002')?.quantity === 3
+		&& fetched?.lineItems.physicalItems.length === 2 && checkoutUrl === null
+		&& deleted.cart?.lineItems.physicalItems.length === 1
+		&& bigCommerceQueryAccesses === 0,
+		`observed ${bigCommerceQueryAccesses} BigCommerce query acquisitions`);
+	assert('fixture cart and decision caches never acquire Upstash clients',
+		cached?.cart.entityId === updated.cart.entityId && cachedCookie === null
+		&& cartRedisAccesses === 0 && decisionCacheRedisAccesses === 0,
+		`observed cart=${cartRedisAccesses}, decision=${decisionCacheRedisAccesses}`);
+	assert('hostile fixture credentials produce zero external fetches', networkFetches === 0,
+		`observed ${networkFetches}`);
 	const enrichSource = readFileSync(fileURLToPath(new URL('./enrichment/enrich.ts', import.meta.url)), 'utf8');
 	assert('offline enrichment also fails before credential and provider construction in fixture mode',
 		enrichSource.indexOf("process.env.AISLES_PARITY_FIXTURE === 'v1'") < enrichSource.indexOf('const DATABASE_URL'));
 } finally {
 	_setDbAccessObserverForTest(null);
 	_setExternalSearchObserverForTest(null);
+	_setBigCommerceQueryAccessObserverForTest(null);
+	_setDecisionCacheRedisAccessObserverForTest(null);
+	_resetSessionStateForTest();
+	_resetCartStoreForTest();
+	globalThis.fetch = originalFetch;
 	for (const key of envKeys) {
 		const value = originalEnv[key];
 		if (value === undefined) delete process.env[key];

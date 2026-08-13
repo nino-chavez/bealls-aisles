@@ -1,7 +1,7 @@
 import { ZoneSchemas } from './zone-schemas';
 import { ZONES, parseZoneInstance, type ZoneId, type ZoneInstanceId, type ZoneMetadata } from './zones';
 import { getFallback } from './fallbacks';
-import type { AutonomyCapability, DecisionMode, EffectiveCompositionPolicy } from './composition-policy';
+import type { AutonomyCapability, DecisionMode, EffectiveCompositionPolicy, TrustedRuleIdentity } from './composition-policy';
 import { getBrandById } from '$lib/brand/config';
 
 export type ZoneSource = 'engine' | 'admin' | 'fallback';
@@ -27,7 +27,7 @@ export interface TrustedMerchantZoneRecord {
 }
 
 export type EngineProvenance =
-	| { kind: 'trusted-rule'; id: 'pdp-tag-overlap-v1'; version: '1' }
+	| ({ kind: 'trusted-rule' } & TrustedRuleIdentity)
 	| { kind: 'model'; approvedInputHash: string; modelId: string };
 
 export interface ZoneResolution {
@@ -147,7 +147,11 @@ function permitsEngineOutput(opts: ResolveZoneOpts, family: ZoneId, content: unk
 	if (opts.policy.publicationMode !== 'live' || opts.policy.decisionMode === 'fixed') return false;
 	if (!opts.engineDecisionMode || !opts.engineProvenance) return false;
 	if (DECISION_AUTHORITY[opts.engineDecisionMode] > DECISION_AUTHORITY[opts.policy.decisionMode]) return false;
-	if (opts.engineDecisionMode === 'rules' && opts.engineProvenance.kind !== 'trusted-rule') return false;
+	if (opts.engineDecisionMode === 'rules') {
+		if (opts.engineProvenance.kind !== 'trusted-rule' || !opts.policy.trustedRule) return false;
+		if (opts.engineProvenance.id !== opts.policy.trustedRule.id
+			|| opts.engineProvenance.version !== opts.policy.trustedRule.version) return false;
+	}
 	if (opts.engineDecisionMode === 'model' && opts.engineProvenance.kind !== 'model') return false;
 	const required = requiredCapabilities(content, opts.engineDecisionMode);
 	return required.every((capability) => opts.policy.capabilities.includes(capability));

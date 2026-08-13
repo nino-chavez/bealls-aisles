@@ -121,7 +121,7 @@ export async function loadCategoryProducts(
 
 /**
  * Load products for the homepage — a curated cross-category set sorted by
- * persona-fit. Used by the AI layout for the "home" virtual category.
+ * persona-fit. Used by deterministic ranking for the "home" virtual category.
  *
  * Pulls top N from BC's global product query (default 30 — large enough that
  * the AI has variety, small enough to stay in the prompt's MAX_LAYOUT_PRODUCTS=15

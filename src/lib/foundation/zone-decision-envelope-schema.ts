@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AUTONOMY_CAPABILITIES, AUTONOMY_PRESETS, DECISION_MODES, PUBLICATION_MODES } from './composition-policy';
+import { AUTONOMY_CAPABILITIES, AUTONOMY_PRESETS, DECISION_MODES, PUBLICATION_MODES, TRUSTED_RULES } from './composition-policy';
 
 const ReferenceSchema = z.strictObject({
 	state: z.literal('uncontracted'),
@@ -21,6 +21,10 @@ export const ZoneDecisionContextSchema = z.strictObject({
 	autonomyPreset: z.enum(AUTONOMY_PRESETS),
 	decisionMode: z.enum(DECISION_MODES),
 	publicationMode: z.enum(PUBLICATION_MODES),
+	trustedRule: z.strictObject({
+		id: z.literal(TRUSTED_RULES['pdp-tag-overlap-v1'].id),
+		version: z.literal(TRUSTED_RULES['pdp-tag-overlap-v1'].version),
+	}).nullable(),
 	capabilities: z.array(z.enum(AUTONOMY_CAPABILITIES)).max(AUTONOMY_CAPABILITIES.length),
 	reference: ReferenceSchema,
 	viewportClass: z.enum(['mobile', 'tablet', 'desktop']),
@@ -55,6 +59,14 @@ export const ZoneDecisionEnvelopeSchema = z.strictObject({
 });
 export type ZoneDecisionEnvelope = z.infer<typeof ZoneDecisionEnvelopeSchema>;
 
+/** One exact-context comparison shared by cache and client publication boundaries. */
+export function hasExactZoneDecisionContext(actual: unknown, expected: unknown): boolean {
+	const actualParsed = ZoneDecisionContextSchema.safeParse(actual);
+	const expectedParsed = ZoneDecisionContextSchema.safeParse(expected);
+	return actualParsed.success && expectedParsed.success
+		&& stableJson(actualParsed.data) === stableJson(expectedParsed.data);
+}
+
 /** One source/provenance/terminal invariant shared by creation, cache, and clients. */
 export function hasConsistentZoneDecisionEnvelope(envelope: ZoneDecisionEnvelope): boolean {
 	if ((envelope.terminal === 'hidden') !== (envelope.content === null)) return false;
@@ -66,7 +78,20 @@ export function hasConsistentZoneDecisionEnvelope(envelope: ZoneDecisionEnvelope
 	if (engine === null || merchantAuthority !== null || envelope.terminal !== 'materialized'
 		|| envelope.context.publicationMode !== 'live' || envelope.context.decisionMode === 'fixed') return false;
 	if (engine.kind === 'model') {
-		return envelope.context.decisionMode === 'model' && engine.version === envelope.context.approvedInputHash;
+		return envelope.context.decisionMode === 'model' && envelope.context.trustedRule === null
+			&& engine.version === envelope.context.approvedInputHash;
 	}
-	return envelope.context.decisionMode === 'rules';
+	return envelope.context.decisionMode === 'rules' && envelope.context.trustedRule !== null
+		&& engine.id === envelope.context.trustedRule.id
+		&& engine.version === envelope.context.trustedRule.version;
+}
+
+function stableJson(value: unknown): string {
+	if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+	if (value && typeof value === 'object') {
+		return `{${Object.entries(value as Record<string, unknown>)
+			.sort(([a], [b]) => a.localeCompare(b))
+			.map(([key, child]) => `${JSON.stringify(key)}:${stableJson(child)}`).join(',')}}`;
+	}
+	return JSON.stringify(value);
 }

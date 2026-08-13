@@ -9,10 +9,8 @@
  * Block (component) schemas are shared across surface schemas and
  * live in `./blocks.ts`.
  *
- * Existing call sites that import { LayoutSchema, Layout } from
- * '$lib/schema/layout' continue to work — those names are aliased to
- * the storefront variants of the home/PLP schemas, which together are
- * the only surfaces composed today.
+ * These whole-layout schemas are retained for historical fixtures and
+ * offline tooling. Shopper publication uses the closed named-zone schemas.
  */
 
 import { z } from 'zod';
@@ -34,7 +32,7 @@ export type Surface = z.infer<typeof Surface>;
 
 /**
  * EmptyReason — the discriminator for empty/rescue surfaces.
- * Selects which rescue framing the AI uses when surface='empty'.
+ * Historical whole-layout discriminator retained for fixture compatibility.
  *
  * - 'not-found' — 404. Shopper landed on a missing route. Rescue with
  *   popular categories + best-sellers + go-home affordance.
@@ -45,8 +43,7 @@ export type Surface = z.infer<typeof Surface>;
  * - 'empty-wishlist' — Picks/wishlist empty. Rescue with curated picks
  *   + "save what you love" framing.
  *
- * Per ADR-006, EmptyLayoutSchema is wide-latitude — the AI selects
- * whichever blocks fit the rescue framing.
+ * Current shopper empty states do not publish this whole-layout shape.
  */
 export const EmptyReason = z.enum([
 	'not-found',

@@ -5,16 +5,22 @@
  * Server-side only — never import this from client components.
  */
 
-import { env } from '$env/dynamic/private';
 import { getBrand } from '$lib/brand/config';
 import { isParityFixtureEnabled, parityBCProducts, parityCategories } from './parity-fixture';
+
+let queryAccessObserverForTest: (() => void) | null = null;
+
+/** Test-only observer for proving fixture paths return before BigCommerce access. */
+export function _setBigCommerceQueryAccessObserverForTest(observer: (() => void) | null): void {
+	queryAccessObserverForTest = observer;
+}
 
 function getGraphQLConfig() {
 	const brand = getBrand();
 	// Brand-specific storefront tokens: BEALLS_STOREFRONT_TOKEN, BEALLSFLORIDA_STOREFRONT_TOKEN, etc.
 	const tokenKey = `${brand.id.toUpperCase()}_STOREFRONT_TOKEN`;
-	const storeHash = env.BIGCOMMERCE_STORE_HASH;
-	const storefrontToken = env[tokenKey] || env.BIGCOMMERCE_STOREFRONT_TOKEN;
+	const storeHash = process.env.BIGCOMMERCE_STORE_HASH;
+	const storefrontToken = process.env[tokenKey] || process.env.BIGCOMMERCE_STOREFRONT_TOKEN;
 
 	if (!storeHash) throw new Error('BIGCOMMERCE_STORE_HASH not configured');
 	if (!storefrontToken) throw new Error(`Storefront token not configured (tried ${tokenKey} and BIGCOMMERCE_STOREFRONT_TOKEN)`);
@@ -46,6 +52,10 @@ async function rawQuery<T>(
 	variables?: Record<string, unknown>,
 	opts: { sessionCookie?: string } = {},
 ): Promise<{ data: T; sessionCookie: string | null }> {
+	if (isParityFixtureEnabled()) {
+		throw new Error('BigCommerce access is disabled by the parity fixture');
+	}
+	queryAccessObserverForTest?.();
 	const { url, token } = getGraphQLConfig();
 	// BC's Storefront GraphQL enforces an Origin check matching the token's
 	// allowed_cors_origins. Server-to-server fetches sometimes have an Origin
@@ -393,6 +403,43 @@ export interface CartResponse {
 	};
 }
 
+const parityCarts = new Map<string, CartResponse>();
+
+function parityProductOrThrow(productEntityId: number): BCProduct {
+	const product = parityBCProducts().find((candidate) => candidate.entityId === productEntityId);
+	if (!product) throw new Error(`Parity product ${productEntityId} is outside the fixed catalog`);
+	return product;
+}
+
+function parityLineItem(productEntityId: number, quantity: number): CartResponse['lineItems']['physicalItems'][number] {
+	const product = parityProductOrThrow(productEntityId);
+	return {
+		entityId: `parity-line-${productEntityId}`,
+		productEntityId,
+		name: product.name,
+		quantity,
+		salePrice: product.prices.salePrice ?? product.prices.price,
+		listPrice: product.prices.price,
+		imageUrl: product.defaultImage?.url ?? '',
+		url: product.path,
+		productSlug: product.path.replace(/^\/+|\/+$/g, ''),
+	};
+}
+
+function parityCartId(): string {
+	return `parity-cart-${getBrand().id}`;
+}
+
+function parityCartSnapshot(cart: CartResponse): CartResponse {
+	return structuredClone(cart);
+}
+
+function requireParityCart(cartEntityId: string): CartResponse {
+	const cart = parityCarts.get(cartEntityId);
+	if (!cart) throw new Error(`Parity cart ${cartEntityId} does not exist`);
+	return cart;
+}
+
 /**
  * Result of a cart mutation: the cart payload plus the BC visitor session
  * cookie that scoped it. The cookie must be replayed on subsequent cart
@@ -405,6 +452,14 @@ export interface CartMutationResult {
 }
 
 export async function createCart(productEntityId: number, quantity = 1): Promise<CartMutationResult> {
+	if (isParityFixtureEnabled()) {
+		const cart: CartResponse = {
+			entityId: parityCartId(),
+			lineItems: { physicalItems: [parityLineItem(productEntityId, quantity)] },
+		};
+		parityCarts.set(cart.entityId, cart);
+		return { cart: parityCartSnapshot(cart), sessionCookie: null };
+	}
 	interface CreateCartResponse { cart: { createCart: { cart: CartResponse } } }
 
 	const { data, sessionCookie } = await rawQuery<CreateCartResponse>(`
@@ -444,6 +499,13 @@ export async function addToCart(
 	quantity = 1,
 	sessionCookie?: string,
 ): Promise<CartMutationResult> {
+	if (isParityFixtureEnabled()) {
+		const cart = requireParityCart(cartEntityId);
+		const item = cart.lineItems.physicalItems.find((candidate) => candidate.productEntityId === productEntityId);
+		if (item) item.quantity += quantity;
+		else cart.lineItems.physicalItems.push(parityLineItem(productEntityId, quantity));
+		return { cart: parityCartSnapshot(cart), sessionCookie: null };
+	}
 	interface AddToCartResponse { cart: { addCartLineItems: { cart: CartResponse } } }
 
 	const { data, sessionCookie: nextCookie } = await rawQuery<AddToCartResponse>(`
@@ -485,6 +547,14 @@ export async function updateCartLineItem(
 	quantity: number,
 	sessionCookie?: string,
 ): Promise<CartMutationResult> {
+	if (isParityFixtureEnabled()) {
+		parityProductOrThrow(productEntityId);
+		const cart = requireParityCart(cartEntityId);
+		const item = cart.lineItems.physicalItems.find((candidate) => candidate.entityId === lineItemEntityId);
+		if (!item) throw new Error(`Parity line item ${lineItemEntityId} does not exist`);
+		item.quantity = quantity;
+		return { cart: parityCartSnapshot(cart), sessionCookie: null };
+	}
 	interface UpdateLineItemResponse { cart: { updateCartLineItem: { cart: CartResponse } } }
 
 	const { data, sessionCookie: nextCookie } = await rawQuery<UpdateLineItemResponse>(`
@@ -525,6 +595,17 @@ export async function deleteCartLineItem(
 	lineItemEntityId: string,
 	sessionCookie?: string,
 ): Promise<{ cart: CartResponse | null; sessionCookie: string | null }> {
+	if (isParityFixtureEnabled()) {
+		const cart = requireParityCart(cartEntityId);
+		const index = cart.lineItems.physicalItems.findIndex((candidate) => candidate.entityId === lineItemEntityId);
+		if (index < 0) throw new Error(`Parity line item ${lineItemEntityId} does not exist`);
+		cart.lineItems.physicalItems.splice(index, 1);
+		if (cart.lineItems.physicalItems.length === 0) {
+			parityCarts.delete(cartEntityId);
+			return { cart: null, sessionCookie: null };
+		}
+		return { cart: parityCartSnapshot(cart), sessionCookie: null };
+	}
 	interface DeleteLineItemResponse { cart: { deleteCartLineItem: { cart: CartResponse | null } } }
 
 	const { data, sessionCookie: nextCookie } = await rawQuery<DeleteLineItemResponse>(`
@@ -570,6 +651,10 @@ export async function getCheckoutRedirectUrl(
 	cartEntityId: string,
 	sessionCookie?: string,
 ): Promise<string | null> {
+	if (isParityFixtureEnabled()) {
+		// Fixture evidence never mints an external checkout capability.
+		return null;
+	}
 	interface RedirectUrlsResponse {
 		cart: {
 			createCartRedirectUrls: {
@@ -604,6 +689,10 @@ export async function getCheckoutRedirectUrl(
 }
 
 export async function getCart(cartEntityId: string, sessionCookie?: string): Promise<CartResponse | null> {
+	if (isParityFixtureEnabled()) {
+		const cart = parityCarts.get(cartEntityId);
+		return cart ? parityCartSnapshot(cart) : null;
+	}
 	interface GetCartResponse { site: { cart: CartResponse | null } }
 
 	const { data } = await rawQuery<GetCartResponse>(`

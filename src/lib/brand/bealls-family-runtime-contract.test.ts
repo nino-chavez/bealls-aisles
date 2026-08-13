@@ -37,6 +37,7 @@ import {
 	readCompatibleZoneContentRows,
 	TRUSTED_ZONE_CONTENT_SCHEMA_VERSION,
 } from '../server/zone-content-store-gate';
+import { cacheZoneDecision } from '../server/cache';
 
 let failures = 0;
 function assert(name: string, condition: boolean, detail = ''): void {
@@ -49,6 +50,14 @@ function assert(name: string, condition: boolean, detail = ''): void {
 function rejects(name: string, action: () => unknown, expected: RegExp): void {
 	try {
 		action();
+		assert(name, false, 'did not reject');
+	} catch (error) {
+		assert(name, expected.test(String(error)), String(error));
+	}
+}
+async function rejectsAsync(name: string, action: () => Promise<unknown>, expected: RegExp): Promise<void> {
+	try {
+		await action();
 		assert(name, false, 'did not reject');
 	} catch (error) {
 		assert(name, expected.test(String(error)), String(error));
@@ -240,8 +249,8 @@ const inconsistentEnvelope = {
 	provenance: { source: 'engine' as const, engine: null, merchantAuthority: 'lock' as const },
 };
 const homeExpectation = {
-	organizationId: 'example-merchant', brandId: 'bealls', routeId: '/', routePath: '/', surface: 'home',
-	zoneId: 'home.hero', component: 'editorial-header', publicationContext: {},
+	context: baseContext,
+	component: 'editorial-header',
 };
 assert('one invariant rejects inconsistent provenance at cache and client boundaries',
 	!hasConsistentZoneDecisionEnvelope(inconsistentEnvelope)
@@ -295,6 +304,27 @@ const relatedContext = createZoneDecisionContext({
 	approvedInputHash: 'c'.repeat(64),
 });
 const relatedEnvelope = createZoneDecisionEnvelope(relatedContext, relatedResolution);
+const forgedRuleEnvelope = {
+	...relatedEnvelope,
+	provenance: {
+		...relatedEnvelope.provenance,
+		engine: { kind: 'trusted-rule' as const, id: 'arbitrary-unregistered-rule', version: '999' },
+	},
+};
+const relatedExpectation = {
+	context: relatedContext,
+	component: 'product-carousel',
+};
+assert('registered rule identity is bound across envelope, cache, and client parsing',
+	!hasConsistentZoneDecisionEnvelope(forgedRuleEnvelope)
+	&& revalidateCachedZoneDecision(forgedRuleEnvelope, relatedContext) === null
+	&& runtimeZoneViewFromEnvelope(forgedRuleEnvelope, relatedExpectation) === null);
+rejects('envelope creation rejects forged trusted-rule provenance', () => createZoneDecisionEnvelope(
+	relatedContext,
+	{ ...relatedResolution, engineProvenance: {
+		kind: 'trusted-rule', id: 'arbitrary-unregistered-rule', version: '999',
+	} as never },
+), /inconsistent source, provenance, or terminal/);
 const outsideCatalogContent = {
 	...relatedContent,
 	props: { ...relatedContent.props, products: [{ productId: 'outside-catalog', role: 'standard' as const }] },
@@ -304,14 +334,26 @@ rejects('envelope creation re-runs approved-catalog closure', () => createZoneDe
 	content: outsideCatalogContent,
 }), /outside the approved catalog/);
 const outsideCatalogEnvelope = { ...relatedEnvelope, content: outsideCatalogContent };
-const relatedExpectation = {
-	organizationId: 'example-merchant', brandId: 'bealls', routeId: '/product/[slug]',
-	routePath: '/product/parity-shirt', surface: 'pdp', zoneId: 'pdp.related',
-	component: 'product-carousel', publicationContext: { candidateProductIds: ['p1'] },
-};
 assert('cache and client parsing reject schema-valid unapproved product references',
 	revalidateCachedZoneDecision(outsideCatalogEnvelope, relatedContext) === null
 	&& runtimeZoneViewFromEnvelope(outsideCatalogEnvelope, relatedExpectation) === null);
+
+const widenedClosureEnvelope = {
+	...relatedEnvelope,
+	context: {
+		...relatedContext,
+		publicationClosure: {
+			...relatedContext.publicationClosure,
+			candidateProductIds: ['outside-catalog', 'p1'],
+		},
+	},
+	content: outsideCatalogContent,
+};
+assert('an envelope cannot widen its own publication closure at cache or client boundaries',
+	revalidateCachedZoneDecision(widenedClosureEnvelope, relatedContext) === null
+	&& runtimeZoneViewFromEnvelope(widenedClosureEnvelope, relatedExpectation) === null);
+await rejectsAsync('cache writes require a separately trusted exact context',
+	() => cacheZoneDecision(widenedClosureEnvelope, relatedContext), /refusing invalid envelope/);
 
 const checkoutAssuranceContent = {
 	component: 'assurance-strip-checkout',
@@ -328,8 +370,8 @@ const checkoutAssuranceContext = createZoneDecisionContext({
 	syntheticProvenance: { kind: 'none', version: 'live-v1' }, approvedInputHash: 'b'.repeat(64),
 });
 const checkoutExpectation = {
-	organizationId: 'example-merchant', brandId: 'bealls', routeId: '/checkout', routePath: '/checkout',
-	surface: 'checkout', zoneId: 'checkout.assurance-strip', component: 'assurance-strip-checkout', publicationContext: {},
+	context: checkoutAssuranceContext,
+	component: 'assurance-strip-checkout',
 };
 const adminEnvelope = createZoneDecisionEnvelope(checkoutAssuranceContext, {
 	zoneId: 'checkout.assurance-strip', family: 'checkout.assurance-strip', source: 'admin', terminal: 'materialized',

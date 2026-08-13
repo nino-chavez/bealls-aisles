@@ -29,7 +29,10 @@ assert('Bealls PDP permits only trusted rules while named zones narrow to rules 
 	&& pdp.publicationMode === 'live'
 	&& pdp.provenance.preset === 'preserve'
 	&& pdpRelated.decisionMode === 'rules'
-	&& pdpBelowDescription.decisionMode === 'fixed');
+	&& pdpRelated.trustedRule?.id === 'pdp-tag-overlap-v1'
+	&& pdpRelated.trustedRule.version === '1'
+	&& pdpBelowDescription.decisionMode === 'fixed'
+	&& pdpBelowDescription.trustedRule === null);
 const florida = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'beallsflorida', surface: 'plp', registry });
 assert('Bealls Florida remains a separate brand policy', florida.provenance.brandId === 'beallsflorida' && florida.policyVersion !== home.policyVersion);
 const category = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'homecentric', surface: 'category', registry });
@@ -79,5 +82,13 @@ const expandedZone: BrandCompositionPolicy = {
 };
 const expandedZoneRegistry: CompositionPolicyRegistry = { ...registry, brands: { ...registry.brands, bealls: expandedZone } };
 throws('rejects a zone expansion beyond its surface', () => compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'cart', zoneId: 'cart.empty-state', registry: expandedZoneRegistry }), /cart.empty-state zone expands surface/);
+
+const forgedRuleRegistry = structuredClone(registry) as CompositionPolicyRegistry;
+(forgedRuleRegistry.brands.bealls.surfaces.pdp!.zoneOverrides!['pdp.related'] as unknown as {
+	trustedRule: { id: string; version: string };
+}).trustedRule = { id: 'arbitrary-unregistered-rule', version: '999' };
+throws('rejects an unregistered rule identity in effective policy', () => compileCompositionPolicy({
+	organizationId: 'example-merchant', brandId: 'bealls', surface: 'pdp', zoneId: 'pdp.related', registry: forgedRuleRegistry,
+}), /unregistered trusted rule/);
 
 if (failures) process.exitCode = 1;

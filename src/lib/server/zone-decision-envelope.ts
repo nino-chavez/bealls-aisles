@@ -10,6 +10,7 @@ import { parseZoneInstance, ZONES } from '$lib/foundation/zones';
 import {
 	ZoneDecisionContextSchema,
 	ZoneDecisionEnvelopeSchema,
+	hasExactZoneDecisionContext,
 	hasConsistentZoneDecisionEnvelope,
 	type ZoneDecisionContext,
 	type ZoneDecisionEnvelope,
@@ -49,6 +50,7 @@ export function createZoneDecisionContext(input: {
 		autonomyPreset: input.policy.provenance.preset,
 		decisionMode: input.policy.decisionMode,
 		publicationMode: input.policy.publicationMode,
+		trustedRule: input.policy.trustedRule,
 		capabilities: [...input.policy.capabilities],
 		reference: { state: input.policy.provenance.referenceState, id: null, version: null },
 		viewportClass: input.viewportClass,
@@ -103,7 +105,7 @@ export function revalidateCachedZoneDecision(
 	const parsed = ZoneDecisionEnvelopeSchema.safeParse(raw);
 	if (!parsed.success) return null;
 	if (!hasConsistentZoneDecisionEnvelope(parsed.data)) return null;
-	if (stableJson(parsed.data.context) !== stableJson(expected)) return null;
+	if (!hasExactZoneDecisionContext(parsed.data.context, expected)) return null;
 	if (parsed.data.terminal === 'hidden') return parsed.data.content === null ? parsed.data : null;
 	if (parsed.data.content === null) return null;
 	try {
