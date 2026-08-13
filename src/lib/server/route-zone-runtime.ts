@@ -4,7 +4,13 @@ import {
 	type TrustedShopperRouteContext,
 } from '$lib/brand/bealls-family-runtime-contract';
 import type { DecisionMode, EffectiveCompositionPolicy } from '$lib/foundation/composition-policy';
-import { resolveZone, type EngineProvenance, type TrustedMerchantZoneRecord, type ZoneResolution } from '$lib/foundation/resolve-zone';
+import {
+	resolveZone,
+	type EngineProvenance,
+	type TrustedMerchantZoneRecord,
+	type ZonePublicationContext,
+	type ZoneResolution,
+} from '$lib/foundation/resolve-zone';
 import { parseZoneInstance } from '$lib/foundation/zones';
 
 export type RouteZoneTerminal =
@@ -36,15 +42,27 @@ export async function executeRouteZones(input: {
 	engineOutput?: { zones?: Record<string, unknown> };
 	engineDecisionMode?: DecisionMode;
 	engineProvenance?: EngineProvenance;
+	publicationContext?: ZonePublicationContext;
 	/** Server-owned injection seam for deterministic tests or already-fetched records. */
 	merchantRecords?: ReadonlyMap<string, TrustedMerchantZoneRecord | null>;
+	/** Server-owned route-batch loader seam; invoked at most once per execution. */
+	merchantRecordLoader?: (
+		context: TrustedShopperRouteContext,
+		policyVersion: string,
+	) => Promise<ReadonlyMap<string, TrustedMerchantZoneRecord | null>>;
 }): Promise<RouteZoneExecution> {
 	const routePolicy = compileBrandCompositionPolicy(input.context.brandId, input.context.surface);
-	const decisions = await Promise.all(input.context.zoneInstanceIds.map(async (zoneId): Promise<RouteZoneDecision> => {
+	let merchantRecords = input.merchantRecords;
+	if (!merchantRecords) {
+		const loader = input.merchantRecordLoader
+			?? (await import('./resolve-zone-async')).loadRouteZoneRecords;
+		merchantRecords = await loader(input.context, routePolicy.policyVersion);
+	}
+	const decisions = input.context.zoneInstanceIds.map((zoneId): RouteZoneDecision => {
 		const parsed = parseZoneInstance(zoneId);
 		if (!parsed) throw new Error(`route zone runtime: unknown expanded zone "${zoneId}"`);
 		const policy = compileBrandCompositionPolicy(input.context.brandId, input.context.surface, parsed.family);
-		const resolutionInput = {
+		const resolution = resolveZone({
 			zoneId,
 			brandId: input.context.brandId,
 			routePath: input.context.routePath,
@@ -52,13 +70,9 @@ export async function executeRouteZones(input: {
 			engineOutput: input.engineOutput,
 			engineDecisionMode: input.engineDecisionMode,
 			engineProvenance: input.engineProvenance,
-			...(input.merchantRecords ? { adminRecord: input.merchantRecords.get(zoneId) ?? null } : {}),
-		};
-		// Keep the deterministic no-I/O path free of environment/database module
-		// loading. Production requests use the trusted store by default.
-		const resolution = input.merchantRecords
-			? resolveZone(resolutionInput)
-			: await (await import('./resolve-zone-async')).resolveZoneAsync(resolutionInput);
+			publicationContext: input.publicationContext,
+			adminRecord: merchantRecords.get(zoneId) ?? null,
+		});
 		return {
 			zoneId,
 			terminal: resolution.terminal === 'hidden'
@@ -71,7 +85,7 @@ export async function executeRouteZones(input: {
 			resolution,
 			policy,
 		};
-	}));
+	});
 
 	const execution: RouteZoneExecution = {
 		organizationId: input.context.organizationId,

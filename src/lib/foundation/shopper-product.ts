@@ -1,5 +1,11 @@
 import type { Product } from '$lib/types';
 
+type ShopperRouteProductFields = {
+	descriptionPlain?: string;
+	categoryPath?: string;
+};
+type ShopperPublicProductKey = keyof Product | keyof ShopperRouteProductFields;
+
 export const SHOPPER_PRODUCT_KEYS = [
 	'id',
 	'entityId',
@@ -8,17 +14,28 @@ export const SHOPPER_PRODUCT_KEYS = [
 	'salePrice',
 	'image',
 	'imageAlt',
+	'description',
+	'specs',
+	'tags',
 	'category',
-] as const satisfies readonly (keyof Product)[];
+	'brand',
+	'rating',
+	'reviewCount',
+	'badges',
+	'descriptionPlain',
+	'categoryPath',
+] as const satisfies readonly ShopperPublicProductKey[];
 
-export type ShopperProduct = Pick<Product, (typeof SHOPPER_PRODUCT_KEYS)[number]>;
+type ShopperProductKey = Exclude<(typeof SHOPPER_PRODUCT_KEYS)[number], keyof ShopperRouteProductFields>;
+export type ShopperProduct = Pick<Product, ShopperProductKey> & ShopperRouteProductFields;
+type ShopperProjection<T> = ShopperProduct & Pick<T, Extract<keyof T, keyof ShopperRouteProductFields>>;
 
 /**
- * Project server-ranked products to the exact catalog fields needed by the
- * cart and checkout shopper renderers. Inference scores, semantic tags, and
- * neighborhood explainability stay on the server/operator side.
+ * Project server-ranked products to the complete public Product contract.
+ * Inference scores, semantic tags, and neighborhood explainability stay on
+ * the server/operator side for every shopper SSR and JSON response.
  */
-export function projectShopperProduct<T extends Product>(product: T): ShopperProduct {
+export function projectShopperProduct<T extends Product & ShopperRouteProductFields>(product: T): ShopperProjection<T> {
 	return {
 		id: product.id,
 		entityId: product.entityId,
@@ -27,10 +44,19 @@ export function projectShopperProduct<T extends Product>(product: T): ShopperPro
 		salePrice: product.salePrice,
 		image: product.image,
 		imageAlt: product.imageAlt,
+		description: product.description,
+		specs: product.specs,
+		tags: product.tags,
 		category: product.category,
-	};
+		brand: product.brand,
+		rating: product.rating,
+		reviewCount: product.reviewCount,
+		badges: product.badges,
+		descriptionPlain: product.descriptionPlain,
+		categoryPath: product.categoryPath,
+	} as ShopperProjection<T>;
 }
 
-export function projectShopperProducts<T extends Product>(products: readonly T[]): ShopperProduct[] {
+export function projectShopperProducts<T extends Product & ShopperRouteProductFields>(products: readonly T[]): Array<ShopperProjection<T>> {
 	return products.map(projectShopperProduct);
 }

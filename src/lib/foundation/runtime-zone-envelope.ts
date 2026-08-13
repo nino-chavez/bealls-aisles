@@ -1,4 +1,4 @@
-import { ZoneDecisionEnvelopeSchema } from './zone-decision-envelope-schema';
+import { ZoneDecisionEnvelopeSchema, hasConsistentZoneDecisionEnvelope } from './zone-decision-envelope-schema';
 import { validateZoneContent } from './resolve-zone';
 
 export type RuntimeZoneSource = 'engine' | 'admin' | 'fallback';
@@ -36,7 +36,7 @@ export function runtimeZoneViewFromEnvelope(
 		|| envelope.context.surface !== expected.surface
 		|| envelope.context.zoneId !== expected.zoneId
 		|| envelope.terminal !== 'materialized') return null;
-	if (!hasConsistentProvenance(envelope.provenance)) return null;
+	if (!hasConsistentZoneDecisionEnvelope(envelope)) return null;
 	const content = validateZoneContent(expected.zoneId, envelope.content);
 	if (!content || Array.isArray(content) || typeof content !== 'object' || !('component' in content)
 		|| content.component !== expected.component) return null;
@@ -58,14 +58,4 @@ export function runtimeZoneDomAttributes(view: RuntimeZoneEnvelopeView): Record<
 
 function terminalForSource(source: RuntimeZoneSource): MaterializedRuntimeZoneTerminal {
 	return `materialized-${source}`;
-}
-
-function hasConsistentProvenance(provenance: {
-	source: RuntimeZoneSource;
-	engine: unknown | null;
-	merchantAuthority: 'authored' | 'pin' | 'lock' | null;
-}): boolean {
-	if (provenance.source === 'engine') return provenance.engine !== null && provenance.merchantAuthority === null;
-	if (provenance.source === 'admin') return provenance.engine === null && provenance.merchantAuthority !== null;
-	return provenance.engine === null && provenance.merchantAuthority === null;
 }

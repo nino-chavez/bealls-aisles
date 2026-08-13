@@ -6,18 +6,15 @@
  * is NOT zone-targeted — only the upsell + below-fold + empty-state
  * zones live here.
  *
- * - cart.above-checkout-cta: Hidden by default. Engine emits the
- *   last-chance upsell row when the AI composer finds qualifying
- *   neighborhood products. Candidate pool is the tag-overlap aggregate
- *   of the cart's line items (ADR-008 Phase B / PRD-ENG-019); empty
- *   cart falls back to popular products for resilience.
+ * - cart.above-checkout-cta: Hidden by default. Shopper model execution
+ *   is retired; a future merchant-authorized producer needs a new contract.
  * - cart.below-fold: Hidden by default. Behavioral surface; pulls
  *   forward when viewed-products session state lands.
  * - cart.empty-state: Hidden — the existing CartDrawer EmptyRescue
  *   path (FND-012) handles this independently; not zone-resolved.
  *
- * All cart zones currently fall through to Hidden. Engine wiring is
- * the primary populator; admin authoring lands in Phase 5.
+ * All cart zones currently fall through to Hidden unless an exactly bound,
+ * publication-valid merchant record exists.
  */
 
 import type { ZoneFallback } from './index';

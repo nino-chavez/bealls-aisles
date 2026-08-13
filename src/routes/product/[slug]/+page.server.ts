@@ -8,6 +8,7 @@ import { getBOPISContext } from '$lib/server/locator/proximity';
 import { requireBrandSurface } from '$lib/server/brand-surface-guard';
 import { executeRouteZones, routeZoneDecision } from '$lib/server/route-zone-runtime';
 import { requireTrustedShopperPageContext, throwShopperNotFound } from '$lib/server/shopper-route-runtime';
+import { projectShopperProduct, projectShopperProducts } from '$lib/foundation/shopper-product';
 
 export const load: PageServerLoad = async ({ params, url, parent, cookies }) => {
 	const routeContext = await requireTrustedShopperPageContext(url, '/product/[slug]');
@@ -169,6 +170,10 @@ export const load: PageServerLoad = async ({ params, url, parent, cookies }) => 
 		engineOutput,
 		engineDecisionMode: 'rules',
 		engineProvenance: { kind: 'trusted-rule', id: 'pdp-tag-overlap-v1', version: '1' },
+		publicationContext: {
+			candidateProductIds: [product, ...relatedProducts].flatMap((candidate) => [candidate.id, String(candidate.entityId)]),
+			candidateAssetUrls: [product, ...relatedProducts].map((candidate) => candidate.image).filter(Boolean),
+		},
 	});
 	const belowDescriptionZone = routeZoneDecision(zoneExecution, 'pdp.below-description').resolution;
 	const relatedZone = routeZoneDecision(zoneExecution, 'pdp.related').resolution;
@@ -177,8 +182,8 @@ export const load: PageServerLoad = async ({ params, url, parent, cookies }) => 
 	const belowRecsZone = routeZoneDecision(zoneExecution, 'pdp.below-recs').resolution;
 
 	return {
-		product,
-		relatedProducts,
+		product: projectShopperProduct(product),
+		relatedProducts: projectShopperProducts(relatedProducts),
 		persona,
 		devMode,
 		galleryImages,

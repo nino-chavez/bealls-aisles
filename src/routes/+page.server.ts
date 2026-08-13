@@ -5,6 +5,7 @@ import { createStoreFromRequest } from '$lib/signals/request';
 import { loadHomeProducts } from '$lib/server/catalog';
 import { executeShopperPageRoute } from '$lib/server/shopper-route-runtime';
 import { routeZoneDecision } from '$lib/server/route-zone-runtime';
+import { projectShopperProducts } from '$lib/foundation/shopper-product';
 
 export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	const brand = getBrand();
@@ -27,9 +28,10 @@ export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	}
 
 	// Pick featured products (first 4 from different price ranges) — used as static fallback only
-	const featured = homeProducts.length >= 4
-		? [homeProducts[0], homeProducts[Math.floor(homeProducts.length / 3)], homeProducts[Math.floor(homeProducts.length * 2 / 3)], homeProducts[homeProducts.length - 1]]
-		: homeProducts.slice(0, 4);
+	const shopperHomeProducts = projectShopperProducts(homeProducts);
+	const featured = shopperHomeProducts.length >= 4
+		? [shopperHomeProducts[0], shopperHomeProducts[Math.floor(shopperHomeProducts.length / 3)], shopperHomeProducts[Math.floor(shopperHomeProducts.length * 2 / 3)], shopperHomeProducts[shopperHomeProducts.length - 1]]
+		: shopperHomeProducts.slice(0, 4);
 
 	// Check for returning visitor persona
 	const storedPersona = cookies.get('aisles_persona') || null;
@@ -53,7 +55,7 @@ export const load: PageServerLoad = async ({ url, cookies, request }) => {
 
 	return {
 		featured,
-		homeProducts,
+		homeProducts: shopperHomeProducts,
 		categories: categoryList,
 		storedPersona,
 		storedCategory,

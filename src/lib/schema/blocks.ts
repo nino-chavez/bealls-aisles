@@ -389,11 +389,9 @@ export const PromoCodeEntrySection = z.object({
 });
 
 /**
- * last-chance-upsell-row — engine-composed cart/checkout block.
- * AI emits ProductRef[]; the foundation resolves refs to Product
- * objects via the products payload from /api/layout. Candidate set
- * is the tag-overlap neighborhood of the cart's line items
- * (ADR-008 Phase B / PRD-ENG-019); the AI selects 3 + writes the title.
+ * last-chance-upsell-row — legacy layout-schema block retained for fixtures.
+ * Shopper cart and checkout routes do not publish this through a model API.
+ * Named-zone publication still requires an approved server catalog closure.
  */
 export const LastChanceUpsellRowSection = z.object({
 	component: z.literal('last-chance-upsell-row'),
@@ -404,9 +402,8 @@ export const LastChanceUpsellRowSection = z.object({
 });
 
 /**
- * assurance-strip-checkout — engine-composed checkout block. AI selects
- * the variant by inferred shopper signal (first-time vs returning vs
- * loyalty-known) and emits matching items copy.
+ * assurance-strip-checkout — checkout fallback block. The current shopper
+ * route resolves its fixed brand fallback through the named-zone contract.
  */
 export const AssuranceStripCheckoutSection = z.object({
 	component: z.literal('assurance-strip-checkout'),

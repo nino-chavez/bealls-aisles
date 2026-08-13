@@ -58,6 +58,10 @@ const narrowedBrand: BrandCompositionPolicy = {
 		decisionMode: 'rules',
 		publicationMode: 'live',
 	},
+	surfaces: {
+		...registry.brands.bealls.surfaces,
+		cart: { ...registry.brands.bealls.surfaces.cart!, decisionMode: 'model' },
+	},
 };
 const narrowBrandRegistry: CompositionPolicyRegistry = { ...registry, brands: { ...registry.brands, bealls: narrowedBrand } };
 throws('rejects a surface expansion beyond the brand ceiling', () => compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'cart', registry: narrowBrandRegistry }), /cart surface expands decision mode/);

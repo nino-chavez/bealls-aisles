@@ -5,27 +5,15 @@
 	import CartSummary from '$lib/components/layouts/sections/CartSummary.svelte';
 	import FreeShippingMeter from '$lib/components/layouts/sections/FreeShippingMeter.svelte';
 	import PromoCodeEntry from '$lib/components/layouts/sections/PromoCodeEntry.svelte';
-	import LastChanceUpsellRow from '$lib/components/layouts/sections/LastChanceUpsellRow.svelte';
-	import AILoadingInline from '$lib/components/AILoadingInline.svelte';
 	import EmptyRescue from '$lib/components/EmptyRescue.svelte';
 	import type { CartLineItem } from '$lib/components/layouts/sections/CartLineItems.svelte';
-	import type { ShopperProduct } from '$lib/foundation/shopper-product';
 	import { getBrand } from '$lib/brand/config';
 	import ZoneExecutionEvidence from '$lib/foundation/ZoneExecutionEvidence.svelte';
-	import RuntimeEnvelopeZone from '$lib/foundation/RuntimeEnvelopeZone.svelte';
-	import {
-		runtimeZoneViewFromEnvelope,
-		type RuntimeZoneEnvelopeView,
-	} from '$lib/foundation/runtime-zone-envelope';
 
 	let { data }: { data: PageData } = $props();
 
 	// Local mirror so qty mutations re-render without a full server round-trip.
 	let items = $state<CartLineItem[]>(data.cart?.lineItems.physicalItems ?? []);
-	let upsellProducts = $state<ShopperProduct[]>([]);
-	let upsellTitle = $state('Last chance — pair these with your order');
-	let upsellLoading = $state(false);
-	let upsellZone = $state<RuntimeZoneEnvelopeView | null>(null);
 
 	let subtotal = $derived(items.reduce((sum, i) => sum + i.salePrice.value * i.quantity, 0));
 	let itemCount = $derived(items.reduce((sum, i) => sum + i.quantity, 0));
@@ -38,7 +26,6 @@
 	}));
 
 	onMount(() => {
-		if (items.length > 0) loadUpsells();
 		const onUpdate = () => refreshCart();
 		window.addEventListener('cart-updated', onUpdate);
 		return () => window.removeEventListener('cart-updated', onUpdate);
@@ -54,49 +41,6 @@
 		}
 	}
 
-	async function loadUpsells() {
-		upsellLoading = true;
-		upsellZone = null;
-		try {
-			// PRD-ENG-019: cart line-item entityIds drive the tag-overlap
-			// neighborhood that becomes the upsell candidate pool.
-			const cartItemEntityIds = items.map((i) => i.productEntityId).filter((n): n is number => Number.isFinite(n));
-			const res = await fetch('/api/layout', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ categorySlug: 'cart', persona, cartItemEntityIds }),
-			});
-			if (!res.ok) return;
-			const d = await res.json();
-			const zone = (Array.isArray(d?.envelopes) ? d.envelopes : [])
-				.map((raw: unknown) => runtimeZoneViewFromEnvelope(raw, {
-					organizationId: data.zoneExecution.organizationId,
-					brandId: data.zoneExecution.brandId,
-					routeId: '/cart',
-					routePath: data.zoneExecution.routePath,
-					surface: 'cart',
-					zoneId: 'cart.above-checkout-cta',
-					component: 'last-chance-upsell-row',
-				}))
-				.find((candidate: RuntimeZoneEnvelopeView | null): candidate is RuntimeZoneEnvelopeView => candidate !== null);
-			if (!zone) return;
-			const upsell = zone.content;
-			upsellTitle = (upsell.props?.title as string) ?? upsellTitle;
-			const refs: Array<{ productId: string }> = upsell.props?.products ?? [];
-			const candidates: ShopperProduct[] = d?.products ?? [];
-			const inCart = new Set(items.map((i) => i.productEntityId));
-			upsellProducts = refs
-				.map((ref) => candidates.find((c) => c.id === ref.productId || String(c.entityId) === ref.productId))
-				.filter((p): p is ShopperProduct => !!p && !inCart.has(p.entityId))
-				.slice(0, 4);
-			if (upsellProducts.length > 0) upsellZone = zone;
-		} catch {
-			// upsells are optional; continue without them
-			upsellZone = null;
-		} finally {
-			upsellLoading = false;
-		}
-	}
 </script>
 
 <svelte:head>
@@ -118,7 +62,7 @@
 		</div>
 	{:else}
 		<div class="mt-8 grid gap-10 lg:grid-cols-[2fr_1fr]">
-			<!-- Left column: items + policy-authorized upsell + promo -->
+			<!-- Left column: items + promo. Shopper-paid model upsells are retired. -->
 			<div>
 				<!-- Foundation: cart-line-items -->
 				<CartLineItems {items} />
@@ -130,15 +74,6 @@
 					</div>
 				{/if}
 
-				{#if upsellLoading}
-					<div class="mt-10 border-t border-surface-border pt-8">
-						<AILoadingInline label="Selecting pieces that pair with your cart" />
-					</div>
-				{:else if upsellZone && upsellProducts.length > 0}
-					<RuntimeEnvelopeZone view={upsellZone} className="mt-10 border-t border-surface-border pt-8">
-						<LastChanceUpsellRow title={upsellTitle} products={upsellProducts} />
-					</RuntimeEnvelopeZone>
-				{/if}
 			</div>
 
 			<!-- Right column: summary + promo + checkout -->

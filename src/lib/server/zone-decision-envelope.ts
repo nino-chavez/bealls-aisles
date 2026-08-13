@@ -5,6 +5,7 @@ import { parseZoneInstance, ZONES } from '$lib/foundation/zones';
 import {
 	ZoneDecisionContextSchema,
 	ZoneDecisionEnvelopeSchema,
+	hasConsistentZoneDecisionEnvelope,
 	type ZoneDecisionContext,
 	type ZoneDecisionEnvelope,
 } from '$lib/foundation/zone-decision-envelope-schema';
@@ -62,7 +63,7 @@ export function createZoneDecisionEnvelope(
 			? { kind: 'model' as const, id: resolution.engineProvenance.modelId, version: resolution.engineProvenance.approvedInputHash }
 			: { kind: 'trusted-rule' as const, id: resolution.engineProvenance.id, version: resolution.engineProvenance.version }
 		: null;
-	return ZoneDecisionEnvelopeSchema.parse({
+	const envelope = ZoneDecisionEnvelopeSchema.parse({
 		schemaVersion: 'zone-decision-envelope-v1',
 		context,
 		provenance: {
@@ -73,6 +74,10 @@ export function createZoneDecisionEnvelope(
 		terminal: resolution.terminal,
 		content: resolution.content,
 	});
+	if (!hasConsistentZoneDecisionEnvelope(envelope)) {
+		throw new Error('decision envelope: inconsistent source, provenance, or terminal');
+	}
+	return envelope;
 }
 
 /** Parse, bind to the current full context, and revalidate zone content. */
@@ -82,11 +87,10 @@ export function revalidateCachedZoneDecision(
 ): ZoneDecisionEnvelope | null {
 	const parsed = ZoneDecisionEnvelopeSchema.safeParse(raw);
 	if (!parsed.success) return null;
+	if (!hasConsistentZoneDecisionEnvelope(parsed.data)) return null;
 	if (stableJson(parsed.data.context) !== stableJson(expected)) return null;
 	if (parsed.data.terminal === 'hidden') return parsed.data.content === null ? parsed.data : null;
 	if (parsed.data.content === null || validateZoneContent(expected.zoneId, parsed.data.content) === null) return null;
-	if (parsed.data.provenance.source === 'engine' && (expected.publicationMode !== 'live' || expected.decisionMode === 'fixed')) return null;
-	if (parsed.data.provenance.source === 'admin' && parsed.data.provenance.merchantAuthority === null) return null;
 	return parsed.data;
 }
 

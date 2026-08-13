@@ -9,7 +9,6 @@ import {
 	PARITY_VIEWPORTS,
 	compileBrandCompositionPolicy,
 	getRuntimeZoneContracts,
-	normalizeTrustedShopperRequest,
 	normalizeTrustedShopperRoute,
 	trustedModelZoneApiContext,
 	trustedErrorRouteContext,
@@ -21,8 +20,8 @@ import { getBrandById, resolveBrandId } from './config';
 import { resolveZone } from '../foundation/resolve-zone';
 import { enumerateZoneInstances, parseZoneInstance, ZONE_IDS, ZONES } from '../foundation/zones';
 import { RENDERABLE_ZONE_COMPONENT_IDS } from '../foundation/zone-schemas';
-import { issueShopperRouteGrant, verifyShopperRouteGrant, type ShopperRouteGrantScope } from '../foundation/shopper-route-grant';
 import { runtimeZoneDomAttributes, runtimeZoneViewFromEnvelope } from '../foundation/runtime-zone-envelope';
+import { hasConsistentZoneDecisionEnvelope } from '../foundation/zone-decision-envelope-schema';
 import { projectShopperProducts, SHOPPER_PRODUCT_KEYS } from '../foundation/shopper-product';
 import { applyTrustedEmptyRouteState, assertCompleteRouteZoneExecution, executeRouteZones } from '../server/route-zone-runtime';
 import {
@@ -117,10 +116,9 @@ assert('every applicable zone has an exact child override', contracts.every((rec
 		BEALLS_COMPOSITION_POLICY.brands[record.brandId].surfaces[record.surface]?.zoneOverrides ?? {},
 		record.zoneId,
 	)));
-assert('runtime authority is exact: only three model families and three PDP rule families remain', (() => {
+assert('runtime authority is exact: no shopper model families and only three PDP rule families remain', (() => {
 	const bealls = getRuntimeZoneContracts('bealls').filter((record) => record.applicable);
-	return bealls.filter((record) => record.policy?.decisionMode === 'model').map((record) => record.zoneId).sort().join(',')
-		=== ['cart.above-checkout-cta', 'checkout.assurance-strip', 'checkout.last-chance-upsell'].sort().join(',')
+	return bealls.filter((record) => record.policy?.decisionMode === 'model').length === 0
 		&& bealls.filter((record) => record.policy?.decisionMode === 'rules').map((record) => record.zoneId).sort().join(',')
 		=== ['pdp.cross-sell', 'pdp.recently-viewed', 'pdp.related'].sort().join(',')
 		&& getRuntimeZoneContracts('homecentric').filter((record) => record.applicable)
@@ -143,9 +141,11 @@ for (const path of ['/observe', '/style-guide', '/test/components', '/api/layout
 }
 rejects('Home Centric cannot select a storefront cart contract', () => normalizeTrustedShopperRoute('homecentric', '/cart'), /not available/);
 rejects('unknown category slugs do not compile a policy', () => normalizeTrustedShopperRoute('bealls', '/category/not-registered'), /unknown or non-shopper/);
-assert('server grants model-zone authority only to the exact cart and checkout page routes',
-	trustedModelZoneApiContext(normalizeTrustedShopperRoute('bealls', '/checkout')).surface === 'checkout'
-	&& trustedModelZoneApiContext(normalizeTrustedShopperRoute('bealls', '/cart')).surface === 'cart');
+for (const path of ['/cart', '/checkout'] as const) {
+	rejects(`shopper route ${path} grants no paid model authority`, () => trustedModelZoneApiContext(
+		normalizeTrustedShopperRoute('bealls', path),
+	), /no model-zone API authority/);
+}
 rejects('home/PLP/PDP grants cannot be repurposed for the global cart drawer', () => trustedModelZoneApiContext(
 	normalizeTrustedShopperRoute('bealls', '/product/parity-coastal-shirt'),
 ), /no model-zone API authority/);
@@ -153,89 +153,66 @@ rejects('Home Centric receives no model-zone API authority', () => trustedModelZ
 	normalizeTrustedShopperRoute('homecentric', '/'),
 ), /no model-zone API authority/);
 
-const trustedRequest = new Request('https://shop.example/api/layout', {
-	method: 'POST',
-	headers: { origin: 'https://shop.example', referer: 'https://shop.example/cart?dev=true', 'sec-fetch-site': 'same-origin' },
-});
-assert('query-only Referer changes do not alter the exact route binding', normalizeTrustedShopperRequest(trustedRequest, 'bealls').routePath === '/cart');
-rejects('requests without Origin/Referer binding fail closed', () => normalizeTrustedShopperRequest(new Request('https://shop.example/api/layout'), 'bealls'), /Origin is required/);
-rejects('Origin alone cannot select a consuming route', () => normalizeTrustedShopperRequest(new Request('https://shop.example/api/layout', {
-	headers: { origin: 'https://shop.example' },
-}), 'bealls'), /Referer is required/);
-rejects('cross-origin route bindings fail closed', () => normalizeTrustedShopperRequest(new Request('https://shop.example/api/layout', {
-	headers: { origin: 'https://shop.example', referer: 'https://attacker.example/cart' },
-}), 'bealls'), /cross-origin/);
-rejects('cross-origin Origin fails even with a same-origin Referer', () => normalizeTrustedShopperRequest(new Request('https://shop.example/api/layout', {
-	headers: { origin: 'https://attacker.example', referer: 'https://shop.example/cart' },
-}), 'bealls'), /cross-origin Origin/);
-rejects('encoded path confusion cannot normalize to a shopper route', () => normalizeTrustedShopperRequest(new Request('https://shop.example/api/layout', {
-	headers: { origin: 'https://shop.example', referer: 'https://shop.example/%63art' },
-}), 'bealls'), /encoded or credentialed/);
-
-const routeGrantSecret = 'parity-route-grant-secret-00000000000000000000000000000000';
-const cartGrantContext = normalizeTrustedShopperRoute('bealls', '/cart');
-const checkoutGrantContext = normalizeTrustedShopperRoute('bealls', '/checkout');
-const cartGrantScope = grantScope(cartGrantContext, 'session-a');
-const checkoutGrantScope = grantScope(checkoutGrantContext, 'session-a');
-const cartGrant = issueShopperRouteGrant(cartGrantScope, routeGrantSecret, 1_000_000);
-assert('server-signed grant revalidates the page-derived consuming route', verifyShopperRouteGrant(
-	cartGrant, routeGrantSecret, cartGrantScope, 1_000_100,
-).routePath === '/cart');
-rejects('same-origin Referer spoofing cannot retarget a signed route grant', () => verifyShopperRouteGrant(
-	cartGrant, routeGrantSecret, checkoutGrantScope, 1_000_100,
-), /consuming route mismatch/);
-rejects('tampered signed route grant fails closed', () => verifyShopperRouteGrant(
-	`${cartGrant.slice(0, -1)}x`, routeGrantSecret, cartGrantScope, 1_000_100,
-), /invalid signature/);
-rejects('route grant cannot replay across browser binding sessions', () => verifyShopperRouteGrant(
-	cartGrant, routeGrantSecret, { ...cartGrantScope, bindingSessionId: 'session-b' }, 1_000_100,
-), /consuming route mismatch/);
-const floridaCartScope = grantScope(normalizeTrustedShopperRoute('beallsflorida', '/cart'), 'session-a');
-rejects('route grant cannot replay across sibling brands', () => verifyShopperRouteGrant(
-	cartGrant, routeGrantSecret, floridaCartScope, 1_000_100,
-), /consuming route mismatch/);
-rejects('expired route grants fail closed', () => verifyShopperRouteGrant(
-	cartGrant, routeGrantSecret, cartGrantScope, 1_000_000 + 10 * 60 * 1_000,
-), /expired or invalid lifetime/);
-
 const modelApiSource = read('src/routes/api/layout/+server.ts');
 const refineApiSource = read('src/routes/api/refine/+server.ts');
 const suggestApiSource = read('src/routes/api/suggest/+server.ts');
-const routeGrantServerSource = read('src/lib/server/shopper-route-grant.ts');
 assert('client bodies cannot select surface or sourceSurface', !/\b(sourceSurface|surface)\s*:/.test(inputSchemaSource(modelApiSource))
 	&& !/\b(sourceSurface|surface)\s*:/.test(inputSchemaSource(refineApiSource))
 	&& !/\b(sourceSurface|surface)\s*:/.test(inputSchemaSource(suggestApiSource)));
-assert('model-zone surface selection is independent of request body fields', !modelApiSource.includes('trustedCartChromeContext')
-	&& !/cartItemEntityIds[^\n]+route\.surface/.test(modelApiSource));
+assert('shopper model execution is retired before input, cache, catalog, or provider work',
+	modelApiSource.includes("status: 403")
+	&& modelApiSource.includes('modelCalled: false')
+	&& !['request.json', 'generateText', 'layoutModel', 'getCachedZoneDecision', 'shouldBypassCache', 'loadHomeProducts']
+		.some((token) => modelApiSource.includes(token))
+	&& !read('src/routes/+layout.server.ts').includes('bindShopperRouteGrant'));
+assert('only server environment can disable caches',
+	!read('src/lib/server/cache-flags.ts').includes('searchParams.get')
+	&& !read('src/lib/server/cache-flags.ts').includes('cookies.get')
+	&& !read('src/lib/stores/dev-mode.svelte.ts').includes('aisles_fresh'));
+const { POST: retiredLayoutPost } = await import('../../routes/api/layout/+server');
+const retiredLayoutResponse = await retiredLayoutPost({} as never);
+assert('layout API returns a mechanical no-cost rejection', retiredLayoutResponse.status === 403
+	&& (await retiredLayoutResponse.json()).meta.modelCalled === false);
+const hostileLayoutResponse = await retiredLayoutPost({
+	request: new Request('https://shop.example/api/layout?fresh=1', {
+		method: 'POST', body: JSON.stringify({ surface: 'checkout', catalogVersion: 'attacker', fresh: true }),
+	}),
+	url: new URL('https://shop.example/api/layout?fresh=1'),
+	cookies: { get: () => '1' },
+} as never);
+assert('client route, cache-key, and freshness inputs cannot reopen model execution', hostileLayoutResponse.status === 403
+	&& (await hostileLayoutResponse.json()).meta.modelCalled === false);
 assert('global cart drawer has no dead cross-route model call or engine provenance badge',
 	!read('src/lib/components/CartDrawer.svelte').includes("fetch('/api/layout'")
 	&& !read('src/lib/components/CartDrawer.svelte').includes('data-zone-source="engine"')
 	&& !read('src/lib/components/CartDrawer.svelte').includes('DevZoneBadge'));
-assert('production model APIs fail closed without a configured server signing secret',
-	routeGrantServerSource.includes('if (!secret) throw new Error')
-	&& routeGrantServerSource.includes('AISLES_ROUTE_BINDING_SECRET is not configured'));
-assert('route grants and browser bindings are HttpOnly, same-site, and Secure outside development',
-	(routeGrantServerSource.match(/httpOnly: true/g)?.length ?? 0) >= 2
-	&& (routeGrantServerSource.match(/sameSite: 'strict'/g)?.length ?? 0) >= 2
-	&& (routeGrantServerSource.match(/secure: !dev/g)?.length ?? 0) >= 2
-	&& routeGrantServerSource.includes("path: '/api'")
-	&& !listFiles(routeRoot).filter((file) => file.endsWith('.svelte')).some((file) => readFileSync(resolve(routeRoot, file), 'utf8').includes('shopper-route-grant')));
-assert('cart/checkout model API publishes decision envelopes, never whole layouts', modelApiSource.includes('envelopes')
-	&& !modelApiSource.includes('validateRuntimeLayout') && !modelApiSource.includes('LayoutSchema'));
+assert('retired shopper model authority leaves no route-grant implementation',
+	!read('src/lib/brand/bealls-family-renderer-contract.ts').includes('shopper-route-grant')
+	&& !listFiles(routeRoot).some((file) => readFileSync(resolve(routeRoot, file), 'utf8').includes('shopper-route-grant')));
+assert('shopper routes make no layout-model API request',
+	!read('src/routes/cart/+page.svelte').includes("fetch('/api/layout'")
+	&& !read('src/routes/checkout/+page.svelte').includes("fetch('/api/layout'"));
 const shopperProduct = projectShopperProducts([{
 	id: 'safe-product', entityId: 42, name: 'Safe Product', price: 24, salePrice: 19,
 	image: '/safe.jpg', imageAlt: 'Safe Product', description: 'server catalog copy', specs: {}, tags: [], category: 'Women',
 	personaFit: { gatherer: 0.8, hunter: 0.2, researcher: 0.4, gifter: 0.1 },
 	semanticTags: ['internal-semantic-tag'], overlapScore: 0.75, sharedTags: ['internal-shared-tag'],
 }])[0] as Record<string, unknown>;
-assert('layout responses project an exact shopper-safe catalog DTO',
+assert('shopper projection preserves the exact public catalog contract and strips inference fields',
 	JSON.stringify(Object.keys(shopperProduct)) === JSON.stringify(SHOPPER_PRODUCT_KEYS)
 	&& shopperProduct.id === 'safe-product' && shopperProduct.entityId === 42
 	&& shopperProduct.name === 'Safe Product' && shopperProduct.price === 24
 	&& shopperProduct.image === '/safe.jpg' && shopperProduct.category === 'Women'
-	&& !['personaFit', 'semanticTags', 'overlapScore', 'sharedTags'].some((key) => key in shopperProduct)
-	&& (modelApiSource.match(/products: shopperProducts/g)?.length ?? 0) === 2
-	&& !/^\s*products,\s*$/m.test(modelApiSource));
+	&& !['personaFit', 'semanticTags', 'relevanceScore', 'overlapScore', 'sharedTags'].some((key) => key in shopperProduct));
+assert('every shopper SSR product boundary uses the same safe projection', [
+	'src/routes/+page.server.ts', 'src/routes/category/[slug]/+page.server.ts',
+	'src/routes/search/+page.server.ts', 'src/routes/account/+page.server.ts',
+	'src/routes/product/[slug]/+page.server.ts',
+].every((file) => read(file).includes('projectShopperProduct'))
+	&& !/^\s*homeProducts,\s*$/m.test(read('src/routes/+page.server.ts'))
+	&& !read('src/routes/category/[slug]/+page.server.ts').includes('products: result.products')
+	&& !read('src/routes/search/+page.server.ts').includes('results: matched')
+	&& !/^\s*relatedProducts,\s*$/m.test(read('src/routes/product/[slug]/+page.server.ts')));
 assert('fixed refine/suggest surfaces return the existing static route behavior', refineApiSource.includes('zones are fixed')
 	&& suggestApiSource.includes('model suggestions are not authorized'));
 
@@ -257,6 +234,22 @@ const baseContext = createZoneDecisionContext({
 const envelope = createZoneDecisionEnvelope(baseContext, homeHeroResolution);
 const hit = revalidateCachedZoneDecision(structuredClone(envelope), baseContext);
 assert('cache hit returns stored decision and provenance unchanged', JSON.stringify(hit) === JSON.stringify(envelope));
+const inconsistentEnvelope = {
+	...envelope,
+	provenance: { source: 'engine' as const, engine: null, merchantAuthority: 'lock' as const },
+};
+const homeExpectation = {
+	organizationId: 'example-merchant', brandId: 'bealls', routeId: '/', routePath: '/', surface: 'home',
+	zoneId: 'home.hero', component: 'editorial-header',
+};
+assert('one invariant rejects inconsistent provenance at cache and client boundaries',
+	!hasConsistentZoneDecisionEnvelope(inconsistentEnvelope)
+	&& revalidateCachedZoneDecision(inconsistentEnvelope, baseContext) === null
+	&& runtimeZoneViewFromEnvelope(inconsistentEnvelope, homeExpectation) === null);
+rejects('envelope creation rejects an engine source without engine provenance', () => createZoneDecisionEnvelope(baseContext, {
+	...homeHeroResolution,
+	source: 'engine',
+}), /inconsistent source, provenance, or terminal/);
 
 const checkoutAssuranceContent = {
 	component: 'assurance-strip-checkout',
@@ -291,9 +284,9 @@ assert('shared envelope adapter preserves admin and fallback provenance in DOM m
 	&& runtimeZoneDomAttributes(adminView)['data-zone-terminal'] === 'materialized-admin'
 	&& runtimeZoneDomAttributes(fallbackView)['data-zone-source'] === 'fallback'
 	&& runtimeZoneDomAttributes(fallbackView)['data-zone-terminal'] === 'materialized-fallback');
-assert('cart and checkout render model envelopes only through the shared provenance adapter',
-	read('src/routes/cart/+page.svelte').includes('RuntimeEnvelopeZone')
-	&& read('src/routes/checkout/+page.svelte').includes('RuntimeEnvelopeZone')
+assert('checkout renders its server fallback through the shared provenance adapter',
+	read('src/routes/checkout/+page.svelte').includes('RuntimeEnvelopeZone')
+	&& !read('src/routes/cart/+page.svelte').includes('RuntimeEnvelopeZone')
 	&& !read('src/routes/cart/+page.svelte').includes('data-zone-source="engine"')
 	&& !read('src/routes/checkout/+page.svelte').includes('data-zone-source="engine"'));
 
@@ -329,6 +322,47 @@ for (const [code, reason] of [['42P01', 'missing table'], ['42703', 'missing rou
 	assert(`${reason} disables merchant reads after one failed query`, incompatibleZoneStoreQueries === 1
 		&& incompatibleZoneStoreState.unavailable);
 }
+
+let releaseZoneRead!: () => void;
+const blockedZoneRead = new Promise<void>((resolve) => { releaseZoneRead = resolve; });
+let concurrentZoneStoreQueries = 0;
+const concurrentZoneStoreState = { unavailable: false };
+const firstConcurrentRead = readCompatibleZoneContentRows({
+	configuredSchemaVersion: TRUSTED_ZONE_CONTENT_SCHEMA_VERSION,
+	state: concurrentZoneStoreState,
+	query: async () => { concurrentZoneStoreQueries++; await blockedZoneRead; return ['row']; },
+});
+const secondConcurrentRead = readCompatibleZoneContentRows({
+	configuredSchemaVersion: TRUSTED_ZONE_CONTENT_SCHEMA_VERSION,
+	state: concurrentZoneStoreState,
+	query: async () => { concurrentZoneStoreQueries++; return ['duplicate']; },
+});
+await Promise.resolve();
+releaseZoneRead();
+const concurrentZoneStoreResults = await Promise.all([firstConcurrentRead, secondConcurrentRead]);
+assert('concurrent merchant reads share one in-flight query', concurrentZoneStoreQueries === 1
+	&& concurrentZoneStoreResults.every((result) => result?.[0] === 'row'));
+
+let transientNow = 1_000;
+let transientZoneStoreQueries = 0;
+const transientZoneStoreState = { unavailable: false };
+const transientRead = () => readCompatibleZoneContentRows({
+	configuredSchemaVersion: TRUSTED_ZONE_CONTENT_SCHEMA_VERSION,
+	state: transientZoneStoreState,
+	now: () => transientNow,
+	query: async () => {
+		transientZoneStoreQueries++;
+		if (transientZoneStoreQueries === 1) throw new Error('temporary network failure');
+		return ['recovered'];
+	},
+});
+assert('transient merchant-store errors fail closed', await transientRead() === null);
+transientNow = 5_999;
+assert('transient merchant-store cooldown prevents retry fanout', await transientRead() === null
+	&& transientZoneStoreQueries === 1);
+transientNow = 6_000;
+assert('merchant-store reads recover after the bounded cooldown', (await transientRead())?.[0] === 'recovered'
+	&& transientZoneStoreQueries === 2 && !transientZoneStoreState.unavailable);
 
 const cacheDimensions: Array<[string, ZoneDecisionContext]> = [
 	['organization', { ...baseContext, organizationId: 'another-org' }],
@@ -437,6 +471,13 @@ const contexts: TrustedShopperRouteContext[] = [
 	normalizeTrustedShopperRoute('homecentric', '/store-locator'),
 	trustedErrorRouteContext('homecentric', '/missing', 'not-found'),
 ];
+let routeMerchantBatchLoads = 0;
+const routeBatchExecution = await executeRouteZones({
+	context: normalizeTrustedShopperRoute('bealls', '/'),
+	merchantRecordLoader: async () => { routeMerchantBatchLoads++; return new Map(); },
+});
+assert('one route execution performs at most one merchant-record batch load', routeMerchantBatchLoads === 1
+	&& routeBatchExecution.decisions.length === routeBatchExecution.expectedZoneIds.length);
 const executions = await Promise.all(contexts.map((context) => executeRouteZones({
 	context,
 	merchantRecords: new Map(),
@@ -476,27 +517,6 @@ const checkoutConsumer = { ...cartContext, routeId: '/checkout', routePath: '/ch
 assert('a caller selecting another valid route cannot make its output consumable here', revalidateCachedZoneDecision(cartEnvelope, checkoutConsumer) === null);
 
 if (failures) throw new Error(`${failures} runtime contract test(s) failed`);
-
-function grantScope(context: TrustedShopperRouteContext, bindingSessionId: string): ShopperRouteGrantScope {
-	const policy = compileBrandCompositionPolicy(context.brandId, context.surface);
-	return {
-		version: 'shopper-route-grant-v1',
-		bindingSessionId,
-		organizationId: policy.provenance.organizationId,
-		organizationPolicyVersion: policy.provenance.organizationPolicyVersion,
-		brandId: context.brandId,
-		brandPolicyVersion: policy.provenance.brandPolicyVersion,
-		routeId: context.routeId,
-		routePath: context.routePath,
-		surface: context.surface,
-		effectivePolicyVersion: policy.policyVersion,
-		referenceState: 'uncontracted',
-		referenceId: null,
-		referenceVersion: null,
-		catalogAuthorityVersion: 'bealls-family-catalog-v1',
-		syntheticProvenance: 'parity-fixture-v1',
-	};
-}
 
 function read(path: string): string {
 	return readFileSync(resolve(repoRoot, path), 'utf8');

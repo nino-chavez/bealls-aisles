@@ -2,13 +2,12 @@ import { z } from 'zod';
 import { AssuranceStripCheckoutSection, LastChanceUpsellRowSection } from '../blocks';
 
 /**
- * CheckoutLayoutSchema — narrowest composition latitude.
+ * CheckoutLayoutSchema — legacy fixture schema, not a shopper publication path.
  *
  * Per the foundation research consensus + FND-010, real checkout hands
  * off to BC Optimized One-Page Checkout. CheckoutLayoutSchema covers
- * the *handoff page* between cart CTA and the BC redirect: the AI's
- * job is to choose an assurance-strip variant + an optional last-chance
- * upsell row before handoff.
+ * the *handoff page* between cart CTA and the BC redirect. The current
+ * shopper route uses a fixed assurance fallback and no model upsell.
  *
  * The BC redirect itself is foundation-rendered (in +page.server.ts);
  * everything below the place-order CTA on the BC side is BC's. This
@@ -27,7 +26,7 @@ export const CheckoutLayoutSchema = z.object({
 	sections: z
 		.array(z.discriminatedUnion('component', [AssuranceStripCheckoutSection, LastChanceUpsellRowSection]))
 		.max(2)
-		.describe('AI-composed checkout-handoff blocks (0–2: assurance strip + optional last-chance upsell). BC redirect is foundation-rendered.'),
+		.describe('Legacy fixture checkout blocks. Shopper runtime publication is retired.'),
 });
 
 export type CheckoutLayout = z.infer<typeof CheckoutLayoutSchema>;

@@ -17,8 +17,8 @@ const STORE_FRONT_SURFACES = {
 	home: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
 	plp: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
 	pdp: { preset: 'preserve', decisionMode: 'rules', publicationMode: 'live' },
-	cart: { preset: 'assist', decisionMode: 'model', publicationMode: 'live' },
-	checkout: { preset: 'assist', decisionMode: 'model', publicationMode: 'live' },
+	cart: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
+	checkout: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
 	search: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
 	account: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
 	compare: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
@@ -61,22 +61,13 @@ const ZONE_OVERRIDES = {
 		'pdp.below-recs': FIXED_ZONE,
 	},
 	cart: {
-		'cart.above-checkout-cta': {
-			capabilities: ['rank_products', 'select_products', 'select_copy_variant', 'generate_bounded_copy', 'select_component_variant'],
-			decisionMode: 'model',
-		},
+		'cart.above-checkout-cta': FIXED_ZONE,
 		'cart.below-fold': FIXED_ZONE,
 		'cart.empty-state': FIXED_ZONE,
 	},
 	checkout: {
-		'checkout.assurance-strip': {
-			capabilities: ['select_copy_variant', 'generate_bounded_copy', 'select_component_variant'],
-			decisionMode: 'model',
-		},
-		'checkout.last-chance-upsell': {
-			capabilities: ['rank_products', 'select_products', 'select_copy_variant', 'generate_bounded_copy', 'select_component_variant'],
-			decisionMode: 'model',
-		},
+		'checkout.assurance-strip': FIXED_ZONE,
+		'checkout.last-chance-upsell': FIXED_ZONE,
 	},
 	search: {
 		'search.empty-state': FIXED_ZONE,
@@ -109,7 +100,7 @@ function observedStorefrontPolicy(brandId: 'bealls' | 'beallsflorida'): BrandCom
 	return {
 		organizationId: 'example-merchant',
 		brandId,
-		policyVersion: `${brandId}-executable-runtime-v4`,
+		policyVersion: `${brandId}-executable-runtime-v5`,
 		maximum: { capabilities: AUTONOMY_CAPABILITIES, decisionMode: 'model', publicationMode: 'live' },
 		reference: { state: 'uncontracted' },
 		surfaces: {
@@ -129,7 +120,7 @@ function observedStorefrontPolicy(brandId: 'bealls' | 'beallsflorida'): BrandCom
 const homecentric: BrandCompositionPolicy = {
 	organizationId: 'example-merchant',
 	brandId: 'homecentric',
-	policyVersion: 'homecentric-executable-runtime-v4',
+	policyVersion: 'homecentric-executable-runtime-v5',
 	maximum: { capabilities: AUTONOMY_CAPABILITIES, decisionMode: 'model', publicationMode: 'live' },
 	reference: { state: 'uncontracted' },
 	surfaces: {

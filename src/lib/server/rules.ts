@@ -1,9 +1,8 @@
 /**
  * Merchandising rules — read from the shared Neon Postgres database.
  *
- * Rules are created by the Aisles Admin app (BC marketplace app)
- * and read here at layout generation time. They override the AI's
- * default persona-driven behavior.
+ * Rules are created by the Aisles Admin app (BC marketplace app).
+ * No current shopper endpoint consumes this legacy layout-rule reader.
  *
  * Rule types:
  * - pin: force a product into a specific layout position
@@ -25,10 +24,8 @@ export interface MerchandisingRule {
 }
 
 /**
- * Per-(persona, category) rules cache. Called inside the `/api/layout`
- * cache-miss path on every fresh generation. Rules churn slowly relative
- * to layout TTL; 60s is short enough that a publish from the admin shows
- * up on the next generation, long enough to absorb burst traffic.
+ * Per-(persona, category) rules cache retained for a future authenticated
+ * merchant operation. Shopper requests cannot invoke it.
  *
  * The rules check involves a NOW()-bounded query (starts_at/expires_at),
  * so a long TTL would prevent seasonal rules from activating/expiring on

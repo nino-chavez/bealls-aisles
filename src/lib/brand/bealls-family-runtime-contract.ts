@@ -24,7 +24,7 @@ export const EXTERNAL_REFERENCE_BOUNDARY = {
 } as const;
 
 export type RouteAudience = 'shopper' | 'merchant-review' | 'operator' | 'development' | 'runtime-api';
-export type RouteAvailability = 'available' | 'input-gated' | 'not-applicable';
+export type RouteAvailability = 'available' | 'not-applicable';
 
 export interface RuntimeRouteContract {
 	routeId: string;
@@ -44,15 +44,15 @@ export interface RuntimeRouteContract {
 
 const ALL_AVAILABLE = { bealls: 'available', beallsflorida: 'available', homecentric: 'available' } as const;
 const STOREFRONT_ONLY = { bealls: 'available', beallsflorida: 'available', homecentric: 'not-applicable' } as const;
-const INPUT_GATED = { bealls: 'input-gated', beallsflorida: 'input-gated', homecentric: 'input-gated' } as const;
+const NO_BRAND_AUTHORITY = { bealls: 'not-applicable', beallsflorida: 'not-applicable', homecentric: 'not-applicable' } as const;
 
 /** One entry for every executable SvelteKit page, error, and API endpoint in src/routes. */
 const RUNTIME_ROUTE_DEFINITIONS = [
 	{ routeId: '/', path: '/', sourceFiles: ['src/routes/+page.server.ts', 'src/routes/+page.svelte'], audience: 'shopper', chrome: 'family', commerce: 'catalog', componentTree: ['brand-hero', 'named-zone-renderers', 'zone-execution-evidence'], policySurface: 'home', availability: ALL_AVAILABLE },
 	{ routeId: '/account', path: '/account', sourceFiles: ['src/routes/account/+page.server.ts', 'src/routes/account/+page.svelte'], audience: 'shopper', chrome: 'family', commerce: 'catalog', componentTree: ['account-dashboard', 'persona-ranked-product-row'], policySurface: 'account', availability: STOREFRONT_ONLY },
-	{ routeId: '/cart', path: '/cart', sourceFiles: ['src/routes/cart/+page.server.ts', 'src/routes/cart/+page.svelte'], audience: 'shopper', chrome: 'family', commerce: 'cart', componentTree: ['cart-scaffold', 'last-chance-upsell-row', 'empty-rescue'], policySurface: 'cart', availability: STOREFRONT_ONLY },
+	{ routeId: '/cart', path: '/cart', sourceFiles: ['src/routes/cart/+page.server.ts', 'src/routes/cart/+page.svelte'], audience: 'shopper', chrome: 'family', commerce: 'cart', componentTree: ['cart-scaffold', 'named-zone-terminals', 'empty-rescue'], policySurface: 'cart', availability: STOREFRONT_ONLY },
 	{ routeId: '/category/[slug]', path: '/category/:slug', sourceFiles: ['src/routes/category/[slug]/+page.server.ts', 'src/routes/category/[slug]/+page.svelte'], audience: 'shopper', chrome: 'family', commerce: 'input-gated', componentTree: ['category-route-switch', 'storefront-persona-layout|content-category-surface', 'named-zone-renderers'], policySurface: 'brand-normalized', availability: ALL_AVAILABLE },
-	{ routeId: '/checkout', path: '/checkout', sourceFiles: ['src/routes/checkout/+page.server.ts', 'src/routes/checkout/+page.svelte'], audience: 'shopper', chrome: 'family', commerce: 'checkout-handoff', componentTree: ['checkout-handoff', 'assurance-strip-checkout', 'last-chance-upsell-row'], policySurface: 'checkout', availability: STOREFRONT_ONLY },
+	{ routeId: '/checkout', path: '/checkout', sourceFiles: ['src/routes/checkout/+page.server.ts', 'src/routes/checkout/+page.svelte'], audience: 'shopper', chrome: 'family', commerce: 'checkout-handoff', componentTree: ['checkout-handoff', 'assurance-strip-checkout', 'named-zone-terminals'], policySurface: 'checkout', availability: STOREFRONT_ONLY },
 	{ routeId: '/compare', path: '/compare', sourceFiles: ['src/routes/compare/+page.server.ts', 'src/routes/compare/+page.svelte'], audience: 'shopper', chrome: 'family', commerce: 'catalog', componentTree: ['comparison-table'], policySurface: 'compare', availability: STOREFRONT_ONLY },
 	{ routeId: '/observe', path: '/observe', sourceFiles: ['src/routes/observe/+page.server.ts', 'src/routes/observe/+page.svelte'], audience: 'operator', chrome: 'none', commerce: 'none', componentTree: ['operator-access-gate', 'observability-console'], policySurface: null, availability: ALL_AVAILABLE },
 	{ routeId: '/product/[slug]', path: '/product/:slug', sourceFiles: ['src/routes/product/[slug]/+page.server.ts', 'src/routes/product/[slug]/+page.svelte'], audience: 'shopper', chrome: 'family', commerce: 'catalog', componentTree: ['pdp-fixed-scaffold', 'five-zone-renderers', 'trusted-rule-pairings'], policySurface: 'pdp', availability: STOREFRONT_ONLY },
@@ -66,8 +66,8 @@ const RUNTIME_ROUTE_DEFINITIONS = [
 	{ routeId: '/+error', path: '<sveltekit-error>', sourceFiles: ['src/routes/+layout.server.ts', 'src/routes/+error.svelte'], audience: 'shopper', chrome: 'family', commerce: 'none', componentTree: ['fixed-empty-rescue', 'named-zone-terminals'], policySurface: 'reason-normalized', availability: ALL_AVAILABLE },
 	{ routeId: '/api/cart', path: '/api/cart', sourceFiles: ['src/routes/api/cart/+server.ts'], audience: 'runtime-api', chrome: 'none', commerce: 'cart', componentTree: ['cart-api'], policySurface: 'cart', availability: STOREFRONT_ONLY },
 	{ routeId: '/api/email-signup', path: '/api/email-signup', sourceFiles: ['src/routes/api/email-signup/+server.ts'], audience: 'runtime-api', chrome: 'none', commerce: 'none', componentTree: ['email-signup-api'], policySurface: null, availability: ALL_AVAILABLE },
-	{ routeId: '/api/layout', path: '/api/layout', sourceFiles: ['src/routes/api/layout/+server.ts'], audience: 'runtime-api', chrome: 'none', commerce: 'input-gated', componentTree: ['signed-route-grant', 'named-zone-schema', 'decision-envelope'], policySurface: 'server-bound', availability: INPUT_GATED },
-	{ routeId: '/api/layout/stream', path: '/api/layout/stream', sourceFiles: ['src/routes/api/layout/stream/+server.ts'], audience: 'runtime-api', chrome: 'none', commerce: 'input-gated', componentTree: ['whole-layout-publication-rejected'], policySurface: null, availability: INPUT_GATED },
+	{ routeId: '/api/layout', path: '/api/layout', sourceFiles: ['src/routes/api/layout/+server.ts'], audience: 'runtime-api', chrome: 'none', commerce: 'none', componentTree: ['shopper-model-execution-retired'], policySurface: null, availability: NO_BRAND_AUTHORITY },
+	{ routeId: '/api/layout/stream', path: '/api/layout/stream', sourceFiles: ['src/routes/api/layout/stream/+server.ts'], audience: 'runtime-api', chrome: 'none', commerce: 'none', componentTree: ['whole-layout-publication-rejected'], policySurface: null, availability: NO_BRAND_AUTHORITY },
 	{ routeId: '/api/observe/enrichment', path: '/api/observe/enrichment', sourceFiles: ['src/routes/api/observe/enrichment/+server.ts'], audience: 'runtime-api', chrome: 'none', commerce: 'none', componentTree: ['observability-api'], policySurface: null, availability: ALL_AVAILABLE },
 	{ routeId: '/api/observe/inference', path: '/api/observe/inference', sourceFiles: ['src/routes/api/observe/inference/+server.ts'], audience: 'runtime-api', chrome: 'none', commerce: 'none', componentTree: ['observability-api'], policySurface: null, availability: ALL_AVAILABLE },
 	{ routeId: '/api/observe/logs', path: '/api/observe/logs', sourceFiles: ['src/routes/api/observe/logs/+server.ts'], audience: 'runtime-api', chrome: 'none', commerce: 'none', componentTree: ['observability-api'], policySurface: null, availability: ALL_AVAILABLE },
@@ -152,12 +152,10 @@ export interface TrustedShopperRouteContext {
 }
 
 /**
- * Model authority exists only on the exact cart and checkout page routes.
- * Global overlays retain fixed shopper behavior and never borrow a page's
- * grant to manufacture cart authority. Request JSON cannot choose a surface.
+ * Shopper routes never grant model execution. A future model operation must
+ * use a separately authenticated merchant contract with explicit cost limits.
  */
 export function trustedModelZoneApiContext(context: TrustedShopperRouteContext): TrustedShopperRouteContext {
-	if (context.surface === 'cart' || context.surface === 'checkout') return context;
 	throw new ShopperRouteContractError(`route "${context.routeId}" has no model-zone API authority`);
 }
 
@@ -218,33 +216,6 @@ export function normalizeTrustedShopperRoute(
 			return parsed ? ZONES[parsed.family].surface === zoneSurface : false;
 		}) : [],
 	};
-}
-
-/** Server-only request binding: the body cannot select a route or surface. */
-export function normalizeTrustedShopperRequest(
-	request: Request,
-	brandId: BeallsFamilyBrandId,
-): TrustedShopperRouteContext {
-	const origin = request.headers.get('origin');
-	const referrer = request.headers.get('referer');
-	if (!origin) throw new ShopperRouteContractError('same-origin Origin is required');
-	if (!referrer) throw new ShopperRouteContractError('same-origin Referer is required');
-	let requestUrl: URL;
-	let referrerUrl: URL;
-	try {
-		requestUrl = new URL(request.url);
-		referrerUrl = new URL(referrer);
-	} catch {
-		throw new ShopperRouteContractError('invalid request URL');
-	}
-	if (origin !== requestUrl.origin) throw new ShopperRouteContractError('cross-origin Origin is forbidden');
-	if (requestUrl.origin !== referrerUrl.origin) throw new ShopperRouteContractError('cross-origin Referer is forbidden');
-	const fetchSite = request.headers.get('sec-fetch-site');
-	if (fetchSite && fetchSite !== 'same-origin') throw new ShopperRouteContractError('non-same-origin Fetch Metadata is forbidden');
-	if (referrerUrl.username || referrerUrl.password || referrerUrl.pathname.includes('%')) {
-		throw new ShopperRouteContractError('encoded or credentialed Referer path is forbidden');
-	}
-	return normalizeTrustedShopperRoute(brandId, referrerUrl.pathname);
 }
 
 export function trustedErrorRouteContext(

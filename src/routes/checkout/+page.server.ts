@@ -10,12 +10,11 @@ import { applyTrustedEmptyRouteState } from '$lib/server/route-zone-runtime';
  *
  * Per ADR-006/-007 and FND-010: BC Optimized One-Page Checkout handles
  * the actual purchase flow. This page is the *handoff UX* — it renders
- * AI-composed assurance copy + last-chance upsell, then continues to
- * BC's hosted checkout via the minted redirect URL.
+ * the fixed brand assurance fallback, then continues to BC's hosted
+ * checkout via the minted redirect URL. Shopper model upsells are retired.
  *
  * Previous behavior auto-redirected when a checkoutUrl was available.
- * We now render the handoff page first (so the AI-composed content is
- * visible) and put the BC redirect behind
+ * We now render the handoff page first and put the BC redirect behind
  * a "Proceed to checkout" CTA. Demo channels without Optimized Checkout
  * still fall back to the demo-splash CTA.
  */

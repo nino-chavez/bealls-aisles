@@ -131,6 +131,7 @@ const trustedRules = resolveZone({
 	engineOutput: { zones: { 'pdp.related': related } },
 	engineDecisionMode: 'rules',
 	engineProvenance: { kind: 'trusted-rule', id: 'pdp-tag-overlap-v1', version: '1' },
+	publicationContext: { candidateProductIds: ['p1', 'p2', 'p3'] },
 });
 assert('registered trusted-rule output publishes inside rules authority', trustedRules.source === 'engine'
 	&& trustedRules.engineProvenance?.kind === 'trusted-rule');
@@ -143,6 +144,7 @@ const modelOverreach = resolveZone({
 	engineOutput: { zones: { 'pdp.related': related } },
 	engineDecisionMode: 'model',
 	engineProvenance: { kind: 'model', approvedInputHash: 'b'.repeat(64), modelId: 'fixture-model' },
+	publicationContext: { candidateProductIds: ['p1', 'p2', 'p3'] },
 });
 assert('model authority cannot replace a rules-only zone', modelOverreach.source === 'fallback');
 
@@ -172,10 +174,26 @@ const merchantPinned = resolveZone({
 	engineOutput: { zones: { 'cart.above-checkout-cta': lastChance } },
 	engineDecisionMode: 'model',
 	engineProvenance: { kind: 'model', approvedInputHash: 'c'.repeat(64), modelId: 'fixture-model' },
+	publicationContext: { candidateProductIds: ['p1', 'p2', 'p3'] },
 });
 assert('exactly bound merchant pin precedes otherwise authorized engine output', merchantPinned.source === 'admin'
 	&& merchantPinned.merchantAuthority === 'pin'
 	&& merchantPinned.merchantContentVersion === 'merchant-v2');
+
+const outsideCatalogPin: TrustedMerchantZoneRecord = {
+	...pin,
+	contentVersion: 'merchant-outside-catalog-v1',
+	content: {
+		...lastChance,
+		props: { ...lastChance.props, products: [{ productId: 'outside-catalog', role: 'compact' }] },
+	},
+};
+const outsideCatalogRejected = resolveZone({
+	zoneId: 'cart.above-checkout-cta', brandId: 'bealls', routePath: '/cart', policy: cartPolicy,
+	adminRecord: outsideCatalogPin,
+	publicationContext: { candidateProductIds: ['p1', 'p2', 'p3'] },
+});
+assert('exact merchant locks and pins cannot select outside-catalog products', outsideCatalogRejected.source === 'fallback');
 
 const wrongRoutePin: TrustedMerchantZoneRecord = {
 	...pin,
@@ -190,8 +208,40 @@ const unboundIgnored = resolveZone({
 	engineOutput: { zones: { 'cart.above-checkout-cta': lastChance } },
 	engineDecisionMode: 'model',
 	engineProvenance: { kind: 'model', approvedInputHash: 'd'.repeat(64), modelId: 'fixture-model' },
+	publicationContext: { candidateProductIds: ['p1', 'p2', 'p3'] },
 });
-assert('merchant data bound to another route is not authority', unboundIgnored.source === 'engine');
+assert('merchant data bound to another route is not authority', unboundIgnored.source === 'fallback');
+
+const homeHeroPolicy = compileBrandCompositionPolicy('bealls', 'home', 'home.hero');
+const maliciousHeroLock: TrustedMerchantZoneRecord = {
+	authority: 'lock',
+	contentVersion: 'merchant-malicious-v1',
+	content: {
+		component: 'editorial-hero',
+		props: {
+			image: 'https://attacker.example/tracker.gif',
+			headline: 'Untrusted destination',
+			ctaLabel: 'Leave store',
+			ctaHref: 'https://attacker.example/phish',
+			textPosition: 'left',
+		},
+	},
+	binding: {
+		organizationId: homeHeroPolicy.provenance.organizationId,
+		brandId: 'bealls',
+		routePath: '/',
+		surface: 'home',
+		zoneId: 'home.hero',
+		policyVersion: homeHeroPolicy.policyVersion,
+		referenceState: 'uncontracted',
+		referenceId: null,
+		referenceVersion: null,
+	},
+};
+const maliciousHeroRejected = resolveHomeHero({ adminRecord: maliciousHeroLock });
+assert('exact merchant locks still cannot invent external assets or destinations',
+	maliciousHeroRejected.source === 'fallback'
+	&& JSON.stringify(maliciousHeroRejected.content).includes('attacker.example') === false);
 
 const tooManyArrayItems = resolveZone({
 	zoneId: 'cart.below-fold',

@@ -4,6 +4,7 @@ import { getBrand } from '$lib/brand/config';
 import { loadHomeProducts } from '$lib/server/catalog';
 import { requireBrandSurface } from '$lib/server/brand-surface-guard';
 import { executeShopperPageRoute } from '$lib/server/shopper-route-runtime';
+import { projectShopperProducts, type ShopperProduct } from '$lib/foundation/shopper-product';
 
 /**
  * FND-009 — Account dashboard scaffold (Phase 1 closeout).
@@ -49,10 +50,10 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
 		| 'gifter'
 		| undefined) ?? 'gatherer';
 
-	let forYouProducts: Product[] = FOR_YOU_STUB;
+	let forYouProducts: ShopperProduct[] = projectShopperProducts(FOR_YOU_STUB);
 	try {
 		const { products: catalog } = await loadHomeProducts(persona, 12);
-		if (catalog.length >= 4) forYouProducts = catalog.slice(0, 4);
+		if (catalog.length >= 4) forYouProducts = projectShopperProducts(catalog.slice(0, 4));
 	} catch (err) {
 		console.warn('FND-009: loadHomeProducts failed, falling back to stub', err);
 	}

@@ -14,10 +14,8 @@
 		categorySlug: string;
 		currentLayout: Layout | null;
 		onLayoutUpdate: (layout: Layout) => void;
-		// ADR-008 Phase A: bubble refinement-derived tag intents up so the
-		// parent surface includes them in subsequent /api/layout calls.
-		// Optional — pages that don't recompose on persona/category change
-		// can ignore it.
+		// Legacy refinement callback retained by the fixed UI contract. The
+		// current endpoint rejects model work and cannot republish a layout.
 		onTagIntentsUpdate?: (tagIntents: string[]) => void;
 		sourceSurface?: 'plp' | 'search';
 	} = $props();

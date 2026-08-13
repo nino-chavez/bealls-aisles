@@ -4,11 +4,9 @@
  * Checkout is the narrowest-latitude surface. Two zones:
  *
  * - checkout.assurance-strip: brand-default trust strip
- *   (returns / shipping / secure-checkout). The AI overrides with a
- *   variant by inferred shopper signal (first-time → safety/return,
- *   returning → speed/welcome-back, loyalty-known → tier benefits).
- * - checkout.last-chance-upsell: Hidden by default. AI populates when
- *   it finds qualifying neighborhood products; otherwise no upsell.
+ *   (returns / shipping / secure-checkout). Current policy is fixed.
+ * - checkout.last-chance-upsell: Hidden by default. Shopper model
+ *   execution is retired.
  */
 
 import { getBrandById } from '$lib/brand/config';

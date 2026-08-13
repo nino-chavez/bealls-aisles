@@ -1,12 +1,11 @@
 /**
  * Storefront-side reads for the admin app's authored data.
  *
- * Three round-trips the demo needs:
+ * Three narrowly scoped admin-side readers:
  *
  *   1. Brand voice override   — admin/BrandVoiceTab → brand_overrides
- *      Storefront prompt construction picks this up ahead of brand-config
- *      voiceGuidance, so a brand manager edits voice in admin and the next
- *      AI generation reflects it (no code deploy).
+ *      Retained for explicit operator/offline tooling. No current shopper
+ *      model path consumes it.
  *
  *   2. Zone content           — optional, separately provisioned zone_content
  *      The resolver can consume a route-bound merchant record, but this repo
@@ -35,6 +34,7 @@ import { isCachingDisabledGlobally } from './cache-flags';
 import type { TrustedMerchantZoneRecord } from '$lib/foundation/resolve-zone';
 import { env } from '$env/dynamic/private';
 import { readCompatibleZoneContentRows, TRUSTED_ZONE_CONTENT_SCHEMA_VERSION } from './zone-content-store-gate';
+import { parseZoneInstance, type ZoneInstanceId } from '$lib/foundation/zones';
 
 const TTL_MS = 60 * 1000;
 
@@ -44,11 +44,12 @@ interface CacheEntry<T> {
 }
 
 const voiceCache = new Map<string, CacheEntry<BrandVoiceOverride | null>>();
-const zoneCache = new Map<string, CacheEntry<TrustedMerchantZoneRecord | null>>();
+const zoneCache = new Map<string, CacheEntry<ReadonlyMap<string, TrustedMerchantZoneRecord>>>();
 const personaFitCache = new Map<string, CacheEntry<Map<string, PersonaFitOverride>>>();
 
 let voiceTableMissing = false;
-const zoneStoreState = { unavailable: false };
+let zoneStoreUnavailable = false;
+const zoneStoreStates = new Map<string, { unavailable: boolean; cooldownUntil?: number; inFlight?: Promise<unknown | null> }>();
 let personaFitTableMissing = false;
 
 export interface BrandVoiceOverride {
@@ -103,81 +104,107 @@ export async function getBrandVoiceOverride(brandId: string): Promise<BrandVoice
  * complete runtime decision context. Legacy `(brand_id, zone_id, content)`
  * rows are deliberately not authority and therefore cannot be returned.
  */
-export async function getZoneContent(input: {
+export interface RouteZoneContentBinding {
 	organizationId: string;
 	brandId: string;
 	routePath: string;
 	surface: string;
-	zoneId: string;
 	policyVersion: string;
 	referenceState: 'uncontracted';
 	referenceId: string | null;
 	referenceVersion: string | null;
-}): Promise<TrustedMerchantZoneRecord | null> {
-	if (env.AISLES_ZONE_CONTENT_SCHEMA_VERSION !== TRUSTED_ZONE_CONTENT_SCHEMA_VERSION || zoneStoreState.unavailable) return null;
+}
+
+/**
+ * Bulk-read every expected zone for one trusted route in one store query.
+ * Per-route single-flight and cooldown state prevent a transient failure from
+ * multiplying into one retry per zone.
+ */
+export async function getRouteZoneContents(input: RouteZoneContentBinding & {
+	zoneIds: readonly string[];
+}): Promise<ReadonlyMap<string, TrustedMerchantZoneRecord>> {
+	if (env.AISLES_ZONE_CONTENT_SCHEMA_VERSION !== TRUSTED_ZONE_CONTENT_SCHEMA_VERSION || zoneStoreUnavailable) return new Map();
 
 	const key = [
-		input.organizationId, input.brandId, input.routePath, input.surface, input.zoneId,
+		input.organizationId, input.brandId, input.routePath, input.surface,
 		input.policyVersion, input.referenceState, input.referenceId ?? '', input.referenceVersion ?? '',
 	].join('|');
+	const expectedZoneIds = new Set(input.zoneIds);
 	if (!isCachingDisabledGlobally()) {
 		const cached = zoneCache.get(key);
-		if (cached && cached.expiresAt > Date.now()) return cached.value;
+		if (cached && cached.expiresAt > Date.now()) return selectExpectedZoneRecords(cached.value, expectedZoneIds);
 	}
+	const state = zoneStoreStates.get(key) ?? { unavailable: false };
+	zoneStoreStates.set(key, state);
 
-	try {
-		const rows = await readCompatibleZoneContentRows({
-			configuredSchemaVersion: env.AISLES_ZONE_CONTENT_SCHEMA_VERSION,
-			state: zoneStoreState,
-			query: async () => {
-				const sql = getDb();
-				return sql`
-					SELECT
-						content, content_version, merchant_authority,
-						organization_id, brand_id, route_path, surface, zone_id,
-						policy_version, reference_state, reference_id, reference_version
-					FROM zone_content
-					WHERE organization_id = ${input.organizationId}
-						AND brand_id = ${input.brandId}
-						AND route_path = ${input.routePath}
-						AND surface = ${input.surface}
-						AND zone_id = ${input.zoneId}
-						AND policy_version = ${input.policyVersion}
-						AND reference_state = ${input.referenceState}
-						AND reference_id IS NOT DISTINCT FROM ${input.referenceId}
-						AND reference_version IS NOT DISTINCT FROM ${input.referenceVersion}
-						AND published = true
-					LIMIT 1
-				`;
+	const rows = await readCompatibleZoneContentRows({
+		configuredSchemaVersion: env.AISLES_ZONE_CONTENT_SCHEMA_VERSION,
+		state,
+		query: async () => {
+			const sql = getDb();
+			return sql`
+				SELECT
+					content, content_version, merchant_authority,
+					organization_id, brand_id, route_path, surface, zone_id,
+					policy_version, reference_state, reference_id, reference_version
+				FROM zone_content
+				WHERE organization_id = ${input.organizationId}
+					AND brand_id = ${input.brandId}
+					AND route_path = ${input.routePath}
+					AND surface = ${input.surface}
+					AND policy_version = ${input.policyVersion}
+					AND reference_state = ${input.referenceState}
+					AND reference_id IS NOT DISTINCT FROM ${input.referenceId}
+					AND reference_version IS NOT DISTINCT FROM ${input.referenceVersion}
+					AND published = true
+				LIMIT 64
+			`;
+		},
+		onTransientError: (error) => console.warn('[admin-overrides] route zone content fetch failed:', errMsg(error)),
+	});
+	if (state.unavailable) zoneStoreUnavailable = true;
+	if (rows === null) return new Map();
+
+	const value = new Map<string, TrustedMerchantZoneRecord>();
+	for (const row of rows) {
+		const zoneId = String(row.zone_id);
+		const authority = row.merchant_authority;
+		if (!parseZoneInstance(zoneId)
+			|| (authority !== 'authored' && authority !== 'pin' && authority !== 'lock')
+			|| String(row.organization_id) !== input.organizationId
+			|| String(row.brand_id) !== input.brandId
+			|| String(row.route_path) !== input.routePath
+			|| String(row.surface) !== input.surface
+			|| String(row.policy_version) !== input.policyVersion
+			|| String(row.reference_state) !== input.referenceState
+			|| (row.reference_id == null ? null : String(row.reference_id)) !== input.referenceId
+			|| (row.reference_version == null ? null : String(row.reference_version)) !== input.referenceVersion) continue;
+		value.set(zoneId, {
+			authority,
+			contentVersion: String(row.content_version ?? ''),
+			content: row.content,
+			binding: {
+				organizationId: String(row.organization_id),
+				brandId: String(row.brand_id),
+				routePath: String(row.route_path),
+				surface: String(row.surface),
+				zoneId: zoneId as ZoneInstanceId,
+				policyVersion: String(row.policy_version),
+				referenceState: 'uncontracted',
+				referenceId: row.reference_id == null ? null : String(row.reference_id),
+				referenceVersion: row.reference_version == null ? null : String(row.reference_version),
 			},
 		});
-		if (rows === null) return null;
-		const row = rows[0];
-		const authority = row?.merchant_authority;
-		const value: TrustedMerchantZoneRecord | null = row && (authority === 'authored' || authority === 'pin' || authority === 'lock')
-			? {
-				authority,
-				contentVersion: String(row.content_version ?? ''),
-				content: row.content,
-				binding: {
-					organizationId: String(row.organization_id),
-					brandId: String(row.brand_id),
-					routePath: String(row.route_path),
-					surface: String(row.surface),
-					zoneId: String(row.zone_id),
-					policyVersion: String(row.policy_version),
-					referenceState: 'uncontracted',
-					referenceId: row.reference_id == null ? null : String(row.reference_id),
-					referenceVersion: row.reference_version == null ? null : String(row.reference_version),
-				},
-			}
-			: null;
-		zoneCache.set(key, { value, expiresAt: Date.now() + TTL_MS });
-		return value;
-	} catch (err) {
-		console.warn('[admin-overrides] zone content fetch failed:', errMsg(err));
-		return null;
 	}
+	zoneCache.set(key, { value, expiresAt: Date.now() + TTL_MS });
+	return selectExpectedZoneRecords(value, expectedZoneIds);
+}
+
+function selectExpectedZoneRecords(
+	records: ReadonlyMap<string, TrustedMerchantZoneRecord>,
+	expected: ReadonlySet<string>,
+): ReadonlyMap<string, TrustedMerchantZoneRecord> {
+	return new Map([...records].filter(([zoneId]) => expected.has(zoneId)));
 }
 
 /**

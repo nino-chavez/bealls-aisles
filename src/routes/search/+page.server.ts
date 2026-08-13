@@ -6,6 +6,7 @@ import { createStoreFromRequest } from '$lib/signals/request';
 import { searchProducts } from '$lib/server/search';
 import { requireBrandSurface } from '$lib/server/brand-surface-guard';
 import { executeShopperPageRoute, executeTrustedErrorZones } from '$lib/server/shopper-route-runtime';
+import { projectShopperProducts } from '$lib/foundation/shopper-product';
 
 export const load: PageServerLoad = async ({ url, cookies, request, parent }) => {
 	const zoneExecution = await executeShopperPageRoute(url, '/search');
@@ -23,7 +24,7 @@ export const load: PageServerLoad = async ({ url, cookies, request, parent }) =>
 
 	// Try enrichment-powered search first, fall back to text match
 	const enrichedResults = await searchProducts(query, 20);
-	let matched;
+	let matched: Array<ReturnType<typeof transformProduct> & { relevanceScore: number | null; semanticTags: string[] }>;
 	let searchMethod: 'enriched' | 'text';
 
 	if (enrichedResults.length > 0) {
@@ -70,7 +71,7 @@ export const load: PageServerLoad = async ({ url, cookies, request, parent }) =>
 
 	return {
 		query,
-		results: matched,
+		results: projectShopperProducts(matched),
 		resultCount: matched.length,
 		searchMethod,
 		inference,

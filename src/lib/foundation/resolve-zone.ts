@@ -2,6 +2,7 @@ import { ZoneSchemas } from './zone-schemas';
 import { ZONES, parseZoneInstance, type ZoneId, type ZoneInstanceId, type ZoneMetadata } from './zones';
 import { getFallback } from './fallbacks';
 import type { AutonomyCapability, DecisionMode, EffectiveCompositionPolicy } from './composition-policy';
+import { getBrandById } from '$lib/brand/config';
 
 export type ZoneSource = 'engine' | 'admin' | 'fallback';
 export type ZoneTerminal = 'materialized' | 'hidden';
@@ -53,6 +54,13 @@ export interface ResolveZoneOpts {
 	engineDecisionMode?: DecisionMode;
 	engineProvenance?: EngineProvenance;
 	adminRecord?: TrustedMerchantZoneRecord | null;
+	/** Server-derived catalog and asset closure for every publication source. */
+	publicationContext?: ZonePublicationContext;
+}
+
+export interface ZonePublicationContext {
+	candidateProductIds?: readonly string[];
+	candidateAssetUrls?: readonly string[];
 }
 
 export function resolveZone(opts: ResolveZoneOpts): ZoneResolution {
@@ -67,7 +75,7 @@ export function resolveZone(opts: ResolveZoneOpts): ZoneResolution {
 
 	const engineRaw = opts.engineOutput?.zones?.[opts.zoneId];
 	if (engineRaw !== undefined && meta.engineComposable && permitsEngineOutput(opts, family, engineRaw)) {
-		const validated = validateForZone(family, engineRaw, meta);
+		const validated = validatePublicationForZone(opts, engineRaw);
 		if (validated.ok) {
 			return resolution(opts, family, index, 'engine', validated.content, { engineProvenance: opts.engineProvenance });
 		}
@@ -78,7 +86,7 @@ export function resolveZone(opts: ResolveZoneOpts): ZoneResolution {
 
 	const fallbackRaw = getFallback(family, opts.brandId);
 	if (fallbackRaw === null || fallbackRaw === undefined) return resolution(opts, family, index, 'fallback', null);
-	const fallback = validateForZone(family, fallbackRaw, meta);
+	const fallback = validatePublicationForZone(opts, fallbackRaw);
 	return resolution(opts, family, index, 'fallback', fallback.ok ? fallback.content : null);
 }
 
@@ -176,7 +184,7 @@ function trustedMerchantContent(
 		b.referenceId !== null || b.referenceVersion !== null ||
 		record.contentVersion.trim() === ''
 	) return null;
-	const validated = validateForZone(family, record.content, meta);
+	const validated = validatePublicationForZone(opts, record.content);
 	return validated.ok ? { ...record, content: validated.content } : null;
 }
 
@@ -185,6 +193,77 @@ export function validateZoneContent(zoneId: ZoneInstanceId, raw: unknown): unkno
 	if (!parsed) return null;
 	const validated = validateForZone(parsed.family, raw, ZONES[parsed.family] as ZoneMetadata);
 	return validated.ok ? validated.content : null;
+}
+
+const FORBIDDEN_PUBLICATION_KEYS = new Set([
+	'class', 'className', 'css', 'style', 'styles', 'stylesheet', 'html', 'innerHTML',
+]);
+
+/**
+ * Apply the exact renderer schema plus catalog, asset, and destination closure.
+ * This boundary is source-independent: merchant locks, rules, models, and
+ * static fallbacks all pass the same publication check.
+ */
+export function validateZonePublicationContent(input: {
+	brandId: string;
+	zoneId: ZoneInstanceId;
+	raw: unknown;
+	publicationContext?: ZonePublicationContext;
+}): unknown {
+	const parsed = parseZoneInstance(input.zoneId);
+	if (!parsed) throw new Error(`zone publication contract: unsupported zone "${input.zoneId}"`);
+	const meta = ZONES[parsed.family] as ZoneMetadata;
+	const validated = validateForZone(parsed.family, input.raw, meta);
+	if (!validated.ok) throw new Error(`zone publication contract: content is invalid for "${input.zoneId}"`);
+	const brand = getBrandById(input.brandId);
+	if (!brand) throw new Error(`zone publication contract: unknown brand "${input.brandId}"`);
+	const candidateProductIds = (input.publicationContext?.candidateProductIds ?? []).map(String);
+	const productIds = new Set(candidateProductIds);
+	const allowedHrefs = new Set([
+		'/', '/store-locator', '/search', '/cart', '/checkout',
+		...Object.keys(brand.categories).map((slug) => `/category/${slug}`),
+		...candidateProductIds.map((id) => `/product/${id}`),
+	]);
+	const assets = new Set([
+		brand.homepage.heroImage,
+		...Object.values(brand.categories).map((category) => category.tileImage),
+		...(input.publicationContext?.candidateAssetUrls ?? []),
+	].filter((value): value is string => !!value));
+
+	walk(validated.content, (key, value) => {
+		if (FORBIDDEN_PUBLICATION_KEYS.has(key) || key.startsWith('--')) {
+			throw new Error(`zone publication contract: forbidden key "${key}"`);
+		}
+		if (key === 'productId' && typeof value === 'string' && !productIds.has(value)) {
+			throw new Error(`zone publication contract: product "${value}" is outside the approved catalog`);
+		}
+		if ((key === 'href' || key.endsWith('Href')) && typeof value === 'string' && !allowedHrefs.has(normalizeHref(value))) {
+			throw new Error(`zone publication contract: destination "${value}" is not registered`);
+		}
+		if ((key === 'image' || key === 'url' || key.endsWith('Image')) && typeof value === 'string' && !assets.has(value)) {
+			throw new Error(`zone publication contract: asset "${value}" is not registered`);
+		}
+	});
+	return validated.content;
+}
+
+function validatePublicationForZone(
+	opts: ResolveZoneOpts,
+	raw: unknown,
+): { ok: true; content: unknown } | { ok: false } {
+	try {
+		return {
+			ok: true,
+			content: validateZonePublicationContent({
+				brandId: opts.brandId,
+				zoneId: opts.zoneId,
+				raw,
+				publicationContext: opts.publicationContext,
+			}),
+		};
+	} catch {
+		return { ok: false };
+	}
 }
 
 function validateForZone(
@@ -216,5 +295,14 @@ function walk(value: unknown, visit: (key: string, child: unknown) => void): voi
 	for (const [key, child] of Object.entries(value)) {
 		visit(key, child);
 		walk(child, visit);
+	}
+}
+
+function normalizeHref(value: string): string {
+	try {
+		const parsed = new URL(value, 'https://runtime.invalid');
+		return parsed.origin === 'https://runtime.invalid' ? parsed.pathname : value;
+	} catch {
+		return value;
 	}
 }

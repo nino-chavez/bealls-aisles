@@ -14,8 +14,6 @@
 		isDevMode,
 		setDevMode,
 		getTraces,
-		isFreshMode,
-		toggleFreshMode,
 	} from '$lib/stores/dev-mode.svelte';
 	import { getBrand } from '$lib/brand/config';
 
@@ -40,7 +38,6 @@
 	$effect(() => {
 		if (active) everActive = true;
 	});
-	const fresh = $derived(mounted && isFreshMode());
 	const traces = $derived(mounted ? getTraces() : []);
 	const recentLatency = $derived(
 		traces.length > 0 ? Math.round(traces.reduce((s, t) => s + t.generationMs, 0) / traces.length) : null,
@@ -73,23 +70,6 @@
 					</span>
 				</button>
 
-				<button
-					type="button"
-					class="fresh-toggle"
-					class:on={fresh}
-					onclick={() => {
-						toggleFreshMode();
-						// Force a navigation so SSR loads see the new cookie state.
-						window.location.reload();
-					}}
-				>
-					<span class="fresh-track"><span class="fresh-thumb"></span></span>
-					<span class="fresh-label">
-						<span class="fresh-title">Fresh mode</span>
-						<span class="fresh-sub">{fresh ? 'caches bypassed (cold-start)' : 'caches active (warm)'}</span>
-					</span>
-				</button>
-
 				<div class="row">
 					<span class="label">Brand</span>
 					<span class="value">{brand.id}</span>
@@ -110,7 +90,7 @@
 					</div>
 				{/if}
 				<div class="legend">
-					<div class="legend-row"><span class="swatch swatch-engine"></span> AI · /api/layout</div>
+					<div class="legend-row"><span class="swatch swatch-engine"></span> Trusted rule · PDP</div>
 					<div class="legend-row"><span class="swatch swatch-admin"></span> Authored · admin</div>
 					<div class="legend-row"><span class="swatch swatch-fallback"></span> Fallback · static</div>
 					<div class="legend-row"><span class="swatch swatch-foundation"></span> Foundation · primitive</div>
@@ -185,8 +165,7 @@
 		letter-spacing: 0.04em;
 	}
 
-	.collapse,
-	.hide {
+	.collapse {
 		padding: 0 4px;
 		font-size: 11px;
 		line-height: 14px;
@@ -196,8 +175,7 @@
 		cursor: pointer;
 	}
 
-	.collapse:hover,
-	.hide:hover {
+	.collapse:hover {
 		color: #f4f4f5;
 	}
 

@@ -5,6 +5,7 @@ import { loadCategoryProducts, CATEGORY_MAP } from '$lib/server/catalog';
 import { getBrand, getBrandMode } from '$lib/brand/config';
 import { requireBrandSurface } from '$lib/server/brand-surface-guard';
 import { executeShopperPageRoute, throwShopperNotFound } from '$lib/server/shopper-route-runtime';
+import { projectShopperProducts } from '$lib/foundation/shopper-product';
 
 export const load: PageServerLoad = async ({ params, url, cookies, request, parent }) => {
 	const slug = params.slug;
@@ -79,7 +80,7 @@ export const load: PageServerLoad = async ({ params, url, cookies, request, pare
 			name: result.categoryName,
 			description: '',
 		},
-		products: result.products,
+		products: projectShopperProducts(result.products),
 		inference,
 		persona: inference.primary,
 		confidence: inference.confidence,

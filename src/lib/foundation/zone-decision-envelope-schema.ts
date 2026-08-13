@@ -50,3 +50,19 @@ export const ZoneDecisionEnvelopeSchema = z.strictObject({
 	content: z.unknown().nullable(),
 });
 export type ZoneDecisionEnvelope = z.infer<typeof ZoneDecisionEnvelopeSchema>;
+
+/** One source/provenance/terminal invariant shared by creation, cache, and clients. */
+export function hasConsistentZoneDecisionEnvelope(envelope: ZoneDecisionEnvelope): boolean {
+	if ((envelope.terminal === 'hidden') !== (envelope.content === null)) return false;
+	if (envelope.terminal === 'hidden' && envelope.provenance.source !== 'fallback') return false;
+
+	const { source, engine, merchantAuthority } = envelope.provenance;
+	if (source === 'admin') return engine === null && merchantAuthority !== null && envelope.terminal === 'materialized';
+	if (source === 'fallback') return engine === null && merchantAuthority === null;
+	if (engine === null || merchantAuthority !== null || envelope.terminal !== 'materialized'
+		|| envelope.context.publicationMode !== 'live' || envelope.context.decisionMode === 'fixed') return false;
+	if (engine.kind === 'model') {
+		return envelope.context.decisionMode === 'model' && engine.version === envelope.context.approvedInputHash;
+	}
+	return envelope.context.decisionMode === 'rules';
+}
