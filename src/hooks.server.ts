@@ -26,6 +26,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 		if (process.env.AISLES_PARITY_FIXTURE !== 'v1') {
 			return rejectedBinding(runtimeBrand.id);
 		}
+		if (!/^[a-f0-9]{64}$/.test(process.env.AISLES_BUILD_ID ?? '')
+			|| !/^[a-f0-9]{40}$/.test(process.env.AISLES_SOURCE_COMMIT ?? '')) {
+			return rejectedBinding(runtimeBrand.id);
+		}
 	}
 
 	const response = await resolve(event);
@@ -34,6 +38,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (hostingProfile === CLOUDFLARE_PREVIEW_PROFILE) {
 		response.headers.set('x-aisles-hosting-profile', hostingProfile);
 		response.headers.set('x-aisles-catalog-mode', 'parity-fixture-v1');
+		response.headers.set('x-aisles-build-id', process.env.AISLES_BUILD_ID!);
+		response.headers.set('x-aisles-source-commit', process.env.AISLES_SOURCE_COMMIT!);
 	}
 	return response;
 };

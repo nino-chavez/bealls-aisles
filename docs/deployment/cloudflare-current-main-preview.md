@@ -24,11 +24,11 @@ Sleep Country is excluded from this port. Current `main` has no Sleep Country br
 | Home Centric | `homecentric` | `aisles-homecentric-current-preview` | Promote after Bealls smoke passes |
 | Bealls Florida | `beallsflorida` | `aisles-beallsflorida-current-preview` | Buildable; promotion blocked pending catalog validity |
 
-Each environment binds only three non-secret values: exact `BRAND_ID`, the fixture version, and the hosting profile. The browser bundle also bakes the same exact brand through `VITE_BRAND_ID`. The deployment wrapper refuses to deploy a build receipt for another brand.
+Each environment declares three stable non-secret values: exact `BRAND_ID`, the fixture version, and the hosting profile. The guarded build adds two more non-secret values to its resolved deployment config: the full deployable-output identity and source commit. The browser bundle also bakes the same exact brand through `VITE_BRAND_ID`. The deployment wrapper refuses to deploy a build receipt for another brand.
 
 The root Wrangler target binds an intentionally invalid brand. A bare `wrangler deploy` can create no usable storefront; it returns the same `503` binding rejection. Use the guarded package commands with an exact brand.
 
-The shopper HTML exposes the active value as `data-brand-id`. Every response also carries `x-aisles-brand-id`, `x-aisles-hosting-profile`, `x-aisles-catalog-mode`, and `x-aisles-shopper-model-authority`. The server returns `503` before route execution if the runtime brand, compiled brand, or fixture binding does not match.
+The shopper HTML exposes the active value as `data-brand-id`. Application, SSR, and API responses carry `x-aisles-brand-id`, `x-aisles-hosting-profile`, `x-aisles-catalog-mode`, `x-aisles-shopper-model-authority`, `x-aisles-build-id`, and `x-aisles-source-commit`. Static assets may be served before the Worker and do not carry this application proof. The server returns `503` before route execution if the runtime brand, compiled brand, fixture, build identity, or source-commit binding is invalid.
 
 The smoke command checks those fields instead of inferring the brand from colors, copy, or the Worker name.
 
@@ -55,15 +55,20 @@ For each brand, the wrapper:
 1. removes application, catalog, database, cache, and model credentials from the build child process
 2. selects the Cloudflare adapter and exact brand
 3. enables the deterministic fixture
-4. writes a build receipt with the source commit, Worker name, brand, environment, fixture, and bundle hash
-5. scans the shopper JavaScript for `/api/layout`, `/api/refine`, and `/api/suggest`
-6. runs `wrangler deploy --dry-run` against the named environment
+4. refuses to attest any dirty tracked or untracked source
+5. writes a build receipt over the full deployable directory, source commit, Worker name, brand, environment, and fixture
+6. creates a resolved per-brand deployment config containing that build identity and source commit
+7. re-hashes the full deployable directory and Wrangler dry-run output before deployment, so added, removed, or modified files fail closed
+8. scans the shopper JavaScript for `/api/layout`, `/api/refine`, and `/api/suggest`
+9. runs `wrangler deploy --dry-run` against the resolved named Worker config
 
 Vercel remains the default adapter for ordinary `npm run build`.
 
 ## Promotion order
 
-Cloudflare account authentication must come from the operator or CI environment. The repository does not store an account ID or API token.
+Cloudflare account authentication must come from the operator or CI environment. The public account ID is pinned to `b6ffcf200d56bab5749e243f024658d2`; an absent config value or mismatched ambient `CLOUDFLARE_ACCOUNT_ID` fails before remote inspection. The repository stores no API token.
+
+Immediately before mutation, the wrapper reads the exact target Worker through Wrangler. A missing new Worker is safe. An existing Worker is allowed only when every active version exposes the declared plain-text values and `ASSETS` binding, and `wrangler secret list` returns empty. Any inherited secret, service, D1, KV, AI, database, backend, or otherwise undeclared binding blocks deployment. The preflight never deletes or edits remote state. Omitting a binding from the local config does not clear it.
 
 Deploy Bealls first:
 
@@ -86,6 +91,10 @@ Bealls Florida can be built and dry-run now. Its deploy command fails intentiona
 The smoke command makes only these deterministic preview requests:
 
 - `GET /` returns `200`, the exact `data-brand-id`, and matching runtime proof headers
+- the runtime build identity and commit exactly match the fresh local receipt
+- storefront fixture PDP policy is exactly `fixed / rules / rules / rules / fixed`
+- storefront PLP and search policy zones remain exactly `fixed`
+- Home Centric proves its fixed content-category boundary instead of pretending to have storefront PDP/search routes
 - `POST /api/layout` returns `403` with `modelCalled: false`
 - `POST /api/layout/stream` returns `410`
 - `POST /api/refine` returns `403`
@@ -95,7 +104,7 @@ The fixture prevents server access to BigCommerce, Redis, Postgres, search provi
 
 ## What remains unresolved
 
-- Cloudflare deploy authentication has not been verified for this branch. The operator or CI job needs a token authorized to deploy Workers in the intended account.
+- Cloudflare OAuth has been independently verified for the pinned account. The deploy wrapper still requires that authenticated read/write context and runs a read-only remote inventory before mutation.
 - The final preview URLs are unknown until the named Workers are deployed.
 - Bealls Florida catalog validity is not established. Its promotion remains blocked.
 - These previews do not validate live commerce. Moving any brand from fixture data to live catalog, cart, or checkout needs a separate credential, channel, and behavior review.
