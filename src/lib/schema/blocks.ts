@@ -549,11 +549,10 @@ export const BOPISStripSection = z.object({
  * PLP grid. Each chip links to a curation page or filtered view that
  * spans subcategories. The pattern is a common off-price PLP move.
  *
- * The block is BOTH:
- *   - admin-authorable (merchandiser curates seasonal themes via the
- *     Content Authoring tab → published into `zone_content`)
- *   - engine-composable (when the AI detects a strong cross-subcategory
- *     theme in the candidate pool, e.g. via tag-overlap clustering)
+ * The vocabulary supports both a future trusted merchant record and bounded
+ * engine composition. This repository does not ship the route-bound merchant
+ * storage migration or write path; runtime database reads stay disabled until
+ * a compatible schema is separately provisioned and version-enabled.
  *
  * Per the lowercase brand-voice rule, chip labels render in
  * TRACKING-WIDE UPPERCASE on the surface but are stored Title Case

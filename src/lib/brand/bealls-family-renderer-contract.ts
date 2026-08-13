@@ -146,6 +146,7 @@ export const BEALLS_FAMILY_RENDERER_SOURCE_FILES = [
 	'src/lib/server/shopper-route-runtime.ts',
 	'src/lib/server/zone-output-runtime.ts',
 	'src/lib/server/zone-decision-envelope.ts',
+	'src/lib/server/zone-content-store-gate.ts',
 	'src/lib/server/brand-surface-guard.ts',
 	'src/lib/server/resolve-zone-async.ts',
 	'src/lib/stores/picks.svelte.ts',
@@ -302,7 +303,7 @@ const RESPONSIVE_STRATEGY = {
 const SOURCE_SNAPSHOT = {
 	algorithm: 'sha256',
 	files: [...BEALLS_FAMILY_RENDERER_SOURCE_FILES],
-	fingerprint: '88a33843f7c6406d722fdf94698395366ffab39cf95f5bbcf433deb15745053e',
+	fingerprint: 'eeb336f264261d9bc0afaa10bb20ed93ee72093bd28d878c54be7441ad93bb3b',
 } as const;
 
 interface DesignSnapshotLiteral {

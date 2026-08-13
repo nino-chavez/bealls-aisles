@@ -33,6 +33,10 @@ import {
 	type ZoneDecisionContext,
 } from '../server/zone-decision-envelope';
 import { validateZoneEngineOutput } from '../server/zone-output-runtime';
+import {
+	readCompatibleZoneContentRows,
+	TRUSTED_ZONE_CONTENT_SCHEMA_VERSION,
+} from '../server/zone-content-store-gate';
 
 let failures = 0;
 function assert(name: string, condition: boolean, detail = ''): void {
@@ -277,6 +281,39 @@ assert('cart and checkout render model envelopes only through the shared provena
 	&& read('src/routes/checkout/+page.svelte').includes('RuntimeEnvelopeZone')
 	&& !read('src/routes/cart/+page.svelte').includes('data-zone-source="engine"')
 	&& !read('src/routes/checkout/+page.svelte').includes('data-zone-source="engine"'));
+
+let disabledZoneStoreQueries = 0;
+const disabledZoneStoreState = { unavailable: false };
+await readCompatibleZoneContentRows({
+	configuredSchemaVersion: undefined,
+	state: disabledZoneStoreState,
+	query: async () => { disabledZoneStoreQueries++; return []; },
+});
+await readCompatibleZoneContentRows({
+	configuredSchemaVersion: 'legacy',
+	state: disabledZoneStoreState,
+	query: async () => { disabledZoneStoreQueries++; return []; },
+});
+assert('unconfigured or legacy merchant zone storage performs no database queries', disabledZoneStoreQueries === 0);
+for (const [code, reason] of [['42P01', 'missing table'], ['42703', 'missing route-bound column']] as const) {
+	let incompatibleZoneStoreQueries = 0;
+	const incompatibleZoneStoreState = { unavailable: false };
+	await readCompatibleZoneContentRows({
+		configuredSchemaVersion: TRUSTED_ZONE_CONTENT_SCHEMA_VERSION,
+		state: incompatibleZoneStoreState,
+		query: async () => {
+			incompatibleZoneStoreQueries++;
+			throw Object.assign(new Error(reason), { code });
+		},
+	});
+	await readCompatibleZoneContentRows({
+		configuredSchemaVersion: TRUSTED_ZONE_CONTENT_SCHEMA_VERSION,
+		state: incompatibleZoneStoreState,
+		query: async () => { incompatibleZoneStoreQueries++; return []; },
+	});
+	assert(`${reason} disables merchant reads after one failed query`, incompatibleZoneStoreQueries === 1
+		&& incompatibleZoneStoreState.unavailable);
+}
 
 const cacheDimensions: Array<[string, ZoneDecisionContext]> = [
 	['organization', { ...baseContext, organizationId: 'another-org' }],

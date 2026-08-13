@@ -8,32 +8,33 @@
  *      voiceGuidance, so a brand manager edits voice in admin and the next
  *      AI generation reflects it (no code deploy).
  *
- *   2. Zone content           — admin/ContentAuthoringTab → zone_content
- *      The three-source resolver cascade (engine → admin → fallback) reads
- *      authored content here. Admin authors content for a zone; when the
- *      engine doesn't compose into that zone, the storefront falls through
- *      to the authored entry instead of the static fallback.
+ *   2. Zone content           — optional, separately provisioned zone_content
+ *      The resolver can consume a route-bound merchant record, but this repo
+ *      ships neither the compatible table migration nor a write path. Reads
+ *      remain disabled unless the operator explicitly enables the supported
+ *      schema version. Legacy brand+zone records never become authority.
  *
  *   3. Persona-fit overrides  — admin/PersonaFitTab → persona_fit_overrides
  *      Catalog ranker layers per-product overrides on top of the
  *      enrichment-computed persona fit so a merchandiser can pin a product
  *      to "always rank top for hunter."
  *
- * Tables are created lazily by the admin app's API handlers; if the
- * storefront queries them before they exist (e.g. fresh deploy, admin
- * never opened), the queries return null gracefully. We don't try to
- * create them from the storefront — that's the admin's responsibility.
+ * The voice and persona tables are created lazily by the admin app's API
+ * handlers. The route-bound zone table is different: no compatible schema is
+ * supplied by this repo, and storefront code never creates or writes it.
  *
  * Caching strategy: a tiny per-process Map with 60s TTL. Vercel lambdas
  * don't share memory but do reuse instances (Fluid Compute), so the cache
- * absorbs duplicate reads on a hot lambda. Crucially we *fail open* on
- * cache miss + DB error — empty override is the same as "no override
- * authored," which is the correct default behavior.
+ * absorbs duplicate reads on a hot lambda. Voice/persona DB failures preserve
+ * their current no-override behavior. Zone authority fails closed: an absent,
+ * legacy, or incompatible schema cannot supply merchant content.
  */
 
 import { getDb } from './db';
 import { isCachingDisabledGlobally } from './cache-flags';
 import type { TrustedMerchantZoneRecord } from '$lib/foundation/resolve-zone';
+import { env } from '$env/dynamic/private';
+import { readCompatibleZoneContentRows, TRUSTED_ZONE_CONTENT_SCHEMA_VERSION } from './zone-content-store-gate';
 
 const TTL_MS = 60 * 1000;
 
@@ -47,7 +48,7 @@ const zoneCache = new Map<string, CacheEntry<TrustedMerchantZoneRecord | null>>(
 const personaFitCache = new Map<string, CacheEntry<Map<string, PersonaFitOverride>>>();
 
 let voiceTableMissing = false;
-let zoneTableMissing = false;
+const zoneStoreState = { unavailable: false };
 let personaFitTableMissing = false;
 
 export interface BrandVoiceOverride {
@@ -113,7 +114,7 @@ export async function getZoneContent(input: {
 	referenceId: string | null;
 	referenceVersion: string | null;
 }): Promise<TrustedMerchantZoneRecord | null> {
-	if (zoneTableMissing) return null;
+	if (env.AISLES_ZONE_CONTENT_SCHEMA_VERSION !== TRUSTED_ZONE_CONTENT_SCHEMA_VERSION || zoneStoreState.unavailable) return null;
 
 	const key = [
 		input.organizationId, input.brandId, input.routePath, input.surface, input.zoneId,
@@ -125,25 +126,32 @@ export async function getZoneContent(input: {
 	}
 
 	try {
-		const sql = getDb();
-		const rows = await sql`
-			SELECT
-				content, content_version, merchant_authority,
-				organization_id, brand_id, route_path, surface, zone_id,
-				policy_version, reference_state, reference_id, reference_version
-			FROM zone_content
-			WHERE organization_id = ${input.organizationId}
-				AND brand_id = ${input.brandId}
-				AND route_path = ${input.routePath}
-				AND surface = ${input.surface}
-				AND zone_id = ${input.zoneId}
-				AND policy_version = ${input.policyVersion}
-				AND reference_state = ${input.referenceState}
-				AND reference_id IS NOT DISTINCT FROM ${input.referenceId}
-				AND reference_version IS NOT DISTINCT FROM ${input.referenceVersion}
-				AND published = true
-			LIMIT 1
-		`;
+		const rows = await readCompatibleZoneContentRows({
+			configuredSchemaVersion: env.AISLES_ZONE_CONTENT_SCHEMA_VERSION,
+			state: zoneStoreState,
+			query: async () => {
+				const sql = getDb();
+				return sql`
+					SELECT
+						content, content_version, merchant_authority,
+						organization_id, brand_id, route_path, surface, zone_id,
+						policy_version, reference_state, reference_id, reference_version
+					FROM zone_content
+					WHERE organization_id = ${input.organizationId}
+						AND brand_id = ${input.brandId}
+						AND route_path = ${input.routePath}
+						AND surface = ${input.surface}
+						AND zone_id = ${input.zoneId}
+						AND policy_version = ${input.policyVersion}
+						AND reference_state = ${input.referenceState}
+						AND reference_id IS NOT DISTINCT FROM ${input.referenceId}
+						AND reference_version IS NOT DISTINCT FROM ${input.referenceVersion}
+						AND published = true
+					LIMIT 1
+				`;
+			},
+		});
+		if (rows === null) return null;
 		const row = rows[0];
 		const authority = row?.merchant_authority;
 		const value: TrustedMerchantZoneRecord | null = row && (authority === 'authored' || authority === 'pin' || authority === 'lock')
@@ -167,8 +175,7 @@ export async function getZoneContent(input: {
 		zoneCache.set(key, { value, expiresAt: Date.now() + TTL_MS });
 		return value;
 	} catch (err) {
-		if (isUndefinedTable(err)) zoneTableMissing = true;
-		else console.warn('[admin-overrides] zone content fetch failed:', errMsg(err));
+		console.warn('[admin-overrides] zone content fetch failed:', errMsg(err));
 		return null;
 	}
 }
