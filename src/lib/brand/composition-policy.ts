@@ -20,27 +20,36 @@ const STORE_FRONT_SURFACES = {
 	checkout: { preset: 'assist', decisionMode: 'model', publicationMode: 'live' },
 } as const;
 
+// These surfaces are present for every configured family brand today.
+// Locator keeps a fixed route scaffold; its current load path supplies no
+// engine output. EmptyRescue calls the layout API and falls back statically.
+const SHARED_SURFACES = {
+	locator: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
+	'error-404': { preset: 'compose', decisionMode: 'model', publicationMode: 'live' },
+	'error-empty': { preset: 'compose', decisionMode: 'model', publicationMode: 'live' },
+} as const;
+
 function observedStorefrontPolicy(brandId: 'bealls' | 'beallsflorida'): BrandCompositionPolicy {
 	return {
 		organizationId: 'example-merchant',
 		brandId,
-		policyVersion: `${brandId}-observed-legacy-v1`,
+		policyVersion: `${brandId}-observed-legacy-v2`,
 		maximum: { capabilities: AUTONOMY_CAPABILITIES, decisionMode: 'model', publicationMode: 'live' },
 		reference: { state: 'uncontracted' },
-		surfaces: STORE_FRONT_SURFACES,
+		surfaces: { ...STORE_FRONT_SURFACES, ...SHARED_SURFACES },
 	};
 }
 
 const homecentric: BrandCompositionPolicy = {
 	organizationId: 'example-merchant',
 	brandId: 'homecentric',
-	policyVersion: 'homecentric-observed-legacy-v1',
+	policyVersion: 'homecentric-observed-legacy-v2',
 	maximum: { capabilities: AUTONOMY_CAPABILITIES, decisionMode: 'model', publicationMode: 'live' },
 	reference: { state: 'uncontracted' },
 	surfaces: {
 		home: { preset: 'compose', decisionMode: 'model', publicationMode: 'live' },
 		category: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
-		locator: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
+		...SHARED_SURFACES,
 	},
 };
 

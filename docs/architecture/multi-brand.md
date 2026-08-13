@@ -1,7 +1,7 @@
 # Aisles — Multi-Brand Setup Guide
 
-**Version**: 0.2.0
-**Last Updated**: 2026-05-02
+**Version**: 0.2.1
+**Last Updated**: 2026-08-12
 **Audience**: Developers, Platform Operators
 
 ## Overview
@@ -10,11 +10,15 @@ A single Aisles codebase serves related brands for one example merchant organiza
 
 ## Scope limit
 
-Bealls, Bealls Florida, and Home Centric are separate brand configurations under the same `example-merchant` organization. Their shared code does not mean they share a visual identity, and it does not prove that an unrelated merchant can preserve an existing storefront through tokens, prompts, and configuration alone. Each current brand has a separate internal integrated-renderer contract in `src/lib/brand/bealls-family-renderer-contract.ts`. It names the renderer implementation this repository actually integrates: supported surfaces, shared chrome/components, token source, responsive strategy, and autonomy-policy linkage. The three records stay distinct even where they point to the same shared implementation.
+Bealls, Bealls Florida, and Home Centric are separate brand configurations under the same `example-merchant` organization. Their shared code does not mean they share a visual identity, and it does not prove that an unrelated merchant can preserve an existing storefront through tokens, prompts, and configuration alone. Each current brand has a separate internal integrated-renderer contract in `src/lib/brand/bealls-family-renderer-contract.ts`. It records the surfaces that exist now, including the shared store-locator route and the 404 and empty-state rescue paths. The three records stay distinct even where they point to the same implementation.
+
+The contract keeps mounted chrome separate from exposed chrome. The root layout mounts the brand strip, primary nav, footer, cart drawer, and picks tray for all three brands. Home Centric's content-mode nav does not expose the cart or picks controls, so its exposed list omits both. This describes the current implementation without presenting hidden controls as usable brand affordances.
+
+The focused source gate is `npm run test:renderer-contract`. It reads the source files listed by the contract and recomputes one deterministic SHA-256 fingerprint. It separately fingerprints the normalized `BrandConfig` inputs that affect the rendered surfaces, including category values, theme tokens, homepage and prompt content, incentives, pricing mode, and the exact Google Fonts URL. The gate detects drift against the recorded snapshot. It cannot prove that every implementation change must increment `contractVersion`; that remains an explicit review and update step.
 
 That internal-family integration is independent of external-reference preservation. The contract does not preserve a third-party storefront, claim visual parity, or change `reference.state`. External-reference onboarding still needs a separately versioned reference contract, merchant-native components and page recipes, responsive behavior, and explicit autonomy policy. The canonical Aisles reference-contract/autonomy direction owns that work; this repository records only the current example-merchant implementation.
 
-`src/lib/brand/composition-policy.ts` now makes that current boundary machine-readable. It assigns the three brands separate policy records under `example-merchant` and labels every reference state `uncontracted`. This is an observed legacy classification only. It is not wired into route resolution and does not satisfy preserve-mode adoption.
+`src/lib/brand/composition-policy.ts` makes that current boundary machine-readable. It assigns the three brands separate policy records under `example-merchant` and labels every reference state `uncontracted`. It classifies the locator as a fixed scaffold because the current route supplies no model output. It classifies 404 and empty-state rescues as model-composed because `EmptyRescue` calls the layout API and falls back to static content on failure. These are observed legacy classifications. They are not wired into route resolution and do not satisfy preserve-mode adoption.
 
 The internal renderer inventory links to those policy versions only to state its autonomy ceiling. A successful internal-contract validation must still leave the policy provenance `uncontracted`; the two axes are intentionally separate.
 

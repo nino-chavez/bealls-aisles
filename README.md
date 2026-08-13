@@ -28,7 +28,9 @@ This is not evidence that configuration alone can preserve an unrelated merchant
 
 The local policy foundation records Bealls, Bealls Florida, and Home Centric as three separate brands under the `example-merchant` organization. Those records classify observed behavior and are explicitly `uncontracted`.
 
-Separately, [`src/lib/brand/bealls-family-renderer-contract.ts`](src/lib/brand/bealls-family-renderer-contract.ts) inventories the current internal renderer integration for each brand: mode, surfaces, shared chrome and components, token source, responsive behavior, and policy linkage. It is a versioned inventory of this repository's implementation, not an external-reference contract. It does not claim visual parity or preservation, and it does not change route behavior.
+Separately, [`src/lib/brand/bealls-family-renderer-contract.ts`](src/lib/brand/bealls-family-renderer-contract.ts) inventories the current internal renderer integration for each brand. It records the routes and rescue surfaces that exist now, the chrome that the root layout mounts, the controls each brand exposes, the runtime design inputs, and the linked policy versions. Home Centric therefore records the mounted cart and picks drawers without claiming that its content-mode navigation exposes those controls.
+
+Run `npm run test:renderer-contract` to check that snapshot. The test recomputes SHA-256 fingerprints from the recorded route, component, CSS, and config owners. It also fingerprints the normalized runtime brand inputs, including the Google Fonts URL. A mismatch blocks the focused test until the snapshot is reviewed. This is a versioned snapshot gate, not a claim that Git can force a `contractVersion` bump. The records remain internal inventories, leave every `reference.state` value `uncontracted`, and do not change route behavior or claim visual preservation.
 
 It's built as an **"art of the possible" prototype** — an artifact to react to and pull capabilities from, not a product being sold.
 
