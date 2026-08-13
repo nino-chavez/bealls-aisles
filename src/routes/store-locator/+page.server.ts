@@ -2,7 +2,8 @@ import type { PageServerLoad } from './$types';
 import { getBrand } from '$lib/brand/config';
 import { getStoresForBrand, type Store } from '$lib/server/locator/stores';
 import { geocodeZip, nearestStores } from '$lib/server/locator/proximity';
-import { resolveZoneAsync } from '$lib/server/resolve-zone-async';
+import { executeShopperPageRoute } from '$lib/server/shopper-route-runtime';
+import { routeZoneDecision } from '$lib/server/route-zone-runtime';
 
 /**
  * Store locator surface (PRD-FND-014).
@@ -24,11 +25,8 @@ export const load: PageServerLoad = async ({ url }) => {
 		? nearestStores(allStores, origin, { limit: 10 })
 		: allStores;
 
-	const editorialIntroZone = await resolveZoneAsync({
-		zoneId: 'locator.editorial-intro',
-		brandId: brand.id,
-		engineOutput: {},
-	});
+	const zoneExecution = await executeShopperPageRoute(url, '/store-locator');
+	const editorialIntroZone = routeZoneDecision(zoneExecution, 'locator.editorial-intro').resolution;
 
 	return {
 		brand: { id: brand.id, name: brand.prompt.storeName },
@@ -37,5 +35,6 @@ export const load: PageServerLoad = async ({ url }) => {
 		zipResolvedLabel: origin?.label ?? null,
 		stores,
 		editorialIntroZone,
+		zoneExecution,
 	};
 };

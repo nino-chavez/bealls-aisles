@@ -2,14 +2,11 @@
 	import type { PageData } from './$types';
 	import HunterLayout from '$lib/components/layouts/HunterLayout.svelte';
 	import GathererLayout from '$lib/components/layouts/GathererLayout.svelte';
-	import RefinementChat from '$lib/components/RefinementChat.svelte';
 	import EmptyRescue from '$lib/components/EmptyRescue.svelte';
-	import type { Layout } from '$lib/schema/layout';
 	import { getBrand } from '$lib/brand/config';
+	import ZoneExecutionEvidence from '$lib/foundation/ZoneExecutionEvidence.svelte';
 
 	let { data }: { data: PageData } = $props();
-	let refinedLayout = $state<Layout | null>(null);
-
 	const brandCategories = Object.entries(getBrand().categories).map(([slug, c]) => ({
 		slug,
 		name: c.displayName,
@@ -37,6 +34,7 @@
 	{/if}
 
 	{#if data.results.length === 0}
+		<div data-empty-state="empty-search">
 		<!-- PRD-FND-012: zero-result rescue. Foundation owns the headline copy
 			 (so the shopper instantly understands what happened); engine
 			 composes the rescue band beneath. -->
@@ -53,6 +51,7 @@
 				persona={data.persona ?? 'gatherer'}
 				categories={brandCategories}
 			/>
+		</div>
 		</div>
 	{:else if data.suggestedCategory}
 		<!-- Route to category page with persona-appropriate layout -->
@@ -96,13 +95,4 @@
 	{/if}
 </div>
 
-<!-- Refinement chat — floats over the page, same as category pages -->
-{#if data.results.length > 0 && (data.suggestedCategory || data.persona)}
-	<RefinementChat
-		persona={data.persona}
-		categorySlug={data.suggestedCategory || 'living-room'}
-		currentLayout={refinedLayout}
-		sourceSurface="search"
-		onLayoutUpdate={(newLayout) => { refinedLayout = newLayout; }}
-	/>
-{/if}
+<ZoneExecutionEvidence executions={data.emptyZoneExecution ? [data.zoneExecution, data.emptyZoneExecution] : [data.zoneExecution]} />

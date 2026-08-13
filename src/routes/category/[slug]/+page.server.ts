@@ -1,17 +1,18 @@
 import type { PageServerLoad } from './$types';
-import { error } from '@sveltejs/kit';
 import { infer } from '$lib/signals/inference';
 import { createStoreFromRequest } from '$lib/signals/request';
 import { loadCategoryProducts, CATEGORY_MAP } from '$lib/server/catalog';
 import { getBrand, getBrandMode } from '$lib/brand/config';
 import { requireBrandSurface } from '$lib/server/brand-surface-guard';
+import { executeShopperPageRoute, throwShopperNotFound } from '$lib/server/shopper-route-runtime';
 
 export const load: PageServerLoad = async ({ params, url, cookies, request, parent }) => {
 	const slug = params.slug;
+	const zoneExecution = await executeShopperPageRoute(url, '/category/[slug]');
 	const { devMode } = await parent();
 
 	if (!CATEGORY_MAP[slug]) {
-		throw error(404, `Category "${slug}" not found`);
+		return throwShopperNotFound(url, `Category "${slug}" not found`);
 	}
 
 	// ─── Content-mode short-circuit ────────────────────────────────
@@ -42,6 +43,7 @@ export const load: PageServerLoad = async ({ params, url, cookies, request, pare
 			locatorCta: 'Find a Store Near You',
 			locatorBody: `${categoryDisplayName} arrivals refresh weekly. Visit your nearest ${brand.name} store to see what's new.`,
 			devMode,
+			zoneExecution,
 		};
 	}
 
@@ -53,7 +55,7 @@ export const load: PageServerLoad = async ({ params, url, cookies, request, pare
 	// ─── Load products with enrichment, sorted by persona-fit ──────
 	const result = await loadCategoryProducts(slug, inference.primary);
 	if (!result) {
-		throw error(404, `Category "${slug}" not found in BigCommerce`);
+		return throwShopperNotFound(url, `Category "${slug}" not found in BigCommerce`);
 	}
 
 	// 2026-05-02 audit P0 §3.4 fix — Bealls Home category renders zero
@@ -62,7 +64,7 @@ export const load: PageServerLoad = async ({ params, url, cookies, request, pare
 	// 404 to the rescue surface rather than letting the AI fabricate
 	// off-category content.
 	if (result.products.length === 0) {
-		throw error(404, `Category "${slug}" has no products available`);
+		return throwShopperNotFound(url, `Category "${slug}" has no products available`);
 	}
 
 	// Store current session state in cookies
@@ -92,5 +94,6 @@ export const load: PageServerLoad = async ({ params, url, cookies, request, pare
 			signalCount: store.eventCount,
 		},
 		sessionId: cookies.get('aisles_session') || null,
+		zoneExecution,
 	};
 };

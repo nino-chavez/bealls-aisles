@@ -1,28 +1,21 @@
 <script lang="ts">
 	import type { PageData } from './$types';
-	import type { Layout } from '$lib/schema/layout';
 	import type { PersonaInference } from '$lib/signals/types';
 	import { PERSONAS } from '$lib/signals/types';
-	import LayoutRenderer from '$lib/components/layouts/LayoutRenderer.svelte';
 	import FilterStrip from '$lib/components/primitives/FilterStrip.svelte';
 	import SortSelector from '$lib/components/primitives/SortSelector.svelte';
-	import LayoutBuildingState from '$lib/components/LayoutBuildingState.svelte';
 	import GathererLayout from '$lib/components/layouts/GathererLayout.svelte';
 	import HunterLayout from '$lib/components/layouts/HunterLayout.svelte';
 	import ResearcherLayout from '$lib/components/layouts/ResearcherLayout.svelte';
 	import GifterLayout from '$lib/components/layouts/GifterLayout.svelte';
 	import ContentCategorySurface from '$lib/components/layouts/ContentCategorySurface.svelte';
-	import RefinementChat from '$lib/components/RefinementChat.svelte';
-	import { picksContextForPrompt } from '$lib/stores/picks.svelte';
 	import { getEmitter } from '$lib/signals/emitter';
+	import RuntimeZone from '$lib/foundation/RuntimeZone.svelte';
+	import ZoneExecutionEvidence from '$lib/foundation/ZoneExecutionEvidence.svelte';
 
 	let { data }: { data: PageData } = $props();
 	const isContentMode = $derived(data.contentMode === true);
 
-	let aiLayout = $state<Layout | null>(null);
-	let aiMeta = $state<{ generationTimeMs: number; persona: string; cacheHit?: boolean } | null>(null);
-	let aiError = $state<string | null>(null);
-	let isUpgrading = $state(true);
 	let overridePersona = $state<string | null>(null);
 	// Tracks whether the override was set explicitly by the user (via dev panel
 	// button) vs. by the inference pipeline. When true, the inference-update
@@ -31,11 +24,6 @@
 	let manualOverride = $state(false);
 	let sessionCost = $state<{ totalCost: number; generations: number; tokens: number; cacheHitRate: number } | null>(null);
 	let currentPersona = $derived(overridePersona ?? data.persona ?? 'gatherer');
-	// ADR-008 Phase A: tag intents extracted by the refinement chat. When
-	// the shopper says "warm and cozy", the chat surfaces those tags here
-	// and subsequent /api/layout calls pass them through for filtering/rerank.
-	// Resets when the category changes (intent is contextual to the surface).
-	let tagIntents = $state<string[]>([]);
 
 	// Persona-default sort. Hunter is restocking -> price-low; gatherer
 	// is exploring -> newest; researcher wants reviews -> bestsellers.
@@ -57,28 +45,8 @@
 		sortValue = defaultSortFor(currentPersona);
 	});
 
-	// Fetch AI-generated layout on mount / persona change
-	// Track category to reset layout on navigation
-	let lastCategory = $state(data.category.slug);
-
-	$effect(() => {
-		if (isContentMode) return;
-		const persona = currentPersona;
-		const slug = data.category.slug;
-
-		// Clear stale layout when category changes
-		if (slug !== lastCategory) {
-			aiLayout = null;
-			aiMeta = null;
-			tagIntents = [];
-			lastCategory = slug;
-			// Clear manual override when navigating — intent is contextual to surface.
-			manualOverride = false;
-			overridePersona = null;
-		}
-
-		fetchLayout(persona);
-	});
+	// Whole-layout upgrades are disabled until a named PLP zone is granted
+	// model authority. The current policy marks every PLP zone fixed.
 
 	// Listen for inference updates from the signal pipeline. Skip the update
 	// when the user has explicitly chosen a persona via the dev panel — their
@@ -95,86 +63,6 @@
 		window.addEventListener('aisles-inference-update', handleInferenceUpdate);
 		return () => window.removeEventListener('aisles-inference-update', handleInferenceUpdate);
 	});
-
-	async function fetchLayout(persona: string) {
-		isUpgrading = true;
-		aiError = null;
-
-		try {
-			const controller = new AbortController();
-			const timeout = setTimeout(() => controller.abort(), 30000);
-
-			const res = await fetch('/api/layout/stream', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					persona,
-					categorySlug: data.category.slug,
-					picksContext: picksContextForPrompt(),
-					probabilities: data.inference?.probabilities,
-					tagIntents,
-				}),
-				signal: controller.signal,
-			});
-
-			clearTimeout(timeout);
-
-			if (!res.ok) {
-				const err = await res.json();
-				throw new Error(err.message || 'Layout generation failed');
-			}
-
-			const contentType = res.headers.get('content-type') || '';
-
-			if (contentType.includes('application/json')) {
-				// Cache hit — complete JSON response
-				const result = await res.json();
-				aiLayout = result.layout;
-				aiMeta = result.meta;
-			} else {
-				// Cache miss — SSE stream of partial objects
-				const reader = res.body?.getReader();
-				if (!reader) throw new Error('No response body');
-
-				const decoder = new TextDecoder();
-				let buffer = '';
-
-				while (true) {
-					const { done, value } = await reader.read();
-					if (done) break;
-
-					buffer += decoder.decode(value, { stream: true });
-
-					// Parse SSE events from buffer
-					const lines = buffer.split('\n\n');
-					buffer = lines.pop() || ''; // Keep incomplete chunk
-
-					for (const chunk of lines) {
-						const line = chunk.trim();
-						if (!line.startsWith('data: ')) continue;
-
-						const payload = JSON.parse(line.slice(6));
-
-						if (payload.__done) {
-							// Final validated layout
-							aiLayout = payload.layout;
-							aiMeta = payload.meta;
-						} else if (payload.__error) {
-							throw new Error(payload.message);
-						} else if (payload.sections?.length) {
-							// Partial layout — render sections as they arrive
-							aiLayout = payload as Layout;
-						}
-					}
-				}
-			}
-		} catch (err) {
-			aiError = err instanceof Error ? err.message : 'Unknown error';
-			console.error('AI layout generation failed, using static layout:', aiError);
-		} finally {
-			isUpgrading = false;
-		}
-	}
 
 	// Fetch session cost data in dev mode
 	$effect(() => {
@@ -274,15 +162,6 @@
 						{#if inf.shift.detected}
 							&middot; <span class="font-semibold text-warning">SHIFT: {inf.shift.from} &rarr; {inf.primary}</span>
 						{/if}
-						{#if aiMeta}
-							&middot; Layout in {aiMeta.generationTimeMs}ms
-							{#if aiMeta.cacheHit}
-								&middot; <span class="font-medium text-accent">CACHE HIT</span>
-							{/if}
-						{/if}
-						{#if aiError}
-							&middot; <span class="text-error">Fallback: {aiError}</span>
-						{/if}
 					</p>
 
 					<!-- Probability vector bar -->
@@ -359,17 +238,6 @@
 				</div>
 			</div>
 
-			<!-- Show AI reasoning and raw schema -->
-			{#if aiLayout}
-				<details class="mt-3">
-					<summary class="cursor-pointer text-xs text-accent hover:underline">View AI reasoning & schema</summary>
-					<div class="mt-2 rounded-sm bg-surface-card p-3">
-						<p class="text-sm text-surface-muted-fg"><strong>Reasoning:</strong> {aiLayout.reasoning}</p>
-						<pre class="mt-2 max-h-64 overflow-auto rounded-sm bg-neutral-950 p-3 text-xs text-neutral-300">{JSON.stringify(aiLayout, null, 2)}</pre>
-					</div>
-				</details>
-			{/if}
-
 			<!-- Signal breakdown — which rules fired and why -->
 			{#if inf.ruleMatches?.length > 0}
 				<details class="mt-2" open>
@@ -431,32 +299,17 @@
 	     Filter chips render when active filters are present (none by default in the demo);
 	     sort selector defaults per persona and stays sticky. -->
 	{#if !isContentMode}
+		<div class="pt-4">
+			<RuntimeZone execution={data.zoneExecution} zoneId="plp.banner" products={data.products ?? []} />
+		</div>
 		<div class="flex items-end justify-between gap-4 pt-4">
 			<FilterStrip resultCount={data.products?.length ?? 0} />
 			<SortSelector options={SORT_OPTIONS} bind:value={sortValue} />
 		</div>
 	{/if}
 
-	<!-- Content area: show static fallback instantly, upgrade to AI layout when ready -->
-	{#if aiLayout}
-		<LayoutRenderer layout={aiLayout} products={data.products ?? []} />
-	{:else if isUpgrading}
-		<div class="-mx-6">
-			<LayoutBuildingState persona={currentPersona} surface="category" categoryName={data.category.name} />
-		</div>
-		<!-- Subtle skeleton beneath the banner -->
-		<div class="mt-12 animate-pulse">
-			<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-				{#each Array(6) as _}
-					<div>
-						<div class="aspect-[4/3] rounded bg-surface-muted"></div>
-						<div class="mt-3 h-4 w-3/4 rounded bg-surface-muted"></div>
-						<div class="mt-2 h-4 w-1/3 rounded bg-surface-muted"></div>
-					</div>
-				{/each}
-			</div>
-		</div>
-	{:else if currentPersona === 'gatherer'}
+	<!-- Current PLP policy is rules/fixed only; the existing persona recipe remains in control. -->
+	{#if currentPersona === 'gatherer'}
 		<GathererLayout category={data.category} products={data.products ?? []} />
 	{:else if currentPersona === 'hunter'}
 		<HunterLayout category={data.category} products={data.products ?? []} />
@@ -468,24 +321,8 @@
 		<GathererLayout category={data.category} products={data.products ?? []} />
 	{/if}
 
-	<!-- Personalizing indicator — subtle pill at bottom-left -->
-	{#if isUpgrading}
-		<div class="fixed bottom-20 left-6 z-30 flex items-center gap-2 rounded-full bg-surface-card px-4 py-2 text-xs text-surface-muted-fg shadow-md border border-surface-border">
-			<span class="inline-block h-1.5 w-1.5 rounded-full bg-accent animate-pulse"></span>
-			Personalizing...
-		</div>
-	{/if}
 </div>
 
-<!-- Refinement chat — floats over the page -->
-{#if !isUpgrading && !isContentMode}
-	<RefinementChat
-		persona={currentPersona}
-		categorySlug={data.category.slug}
-		currentLayout={aiLayout}
-		sourceSurface="plp"
-		onLayoutUpdate={(newLayout) => { aiLayout = newLayout; }}
-		onTagIntentsUpdate={(next) => { tagIntents = next; }}
-	/>
 {/if}
-{/if}
+
+<ZoneExecutionEvidence executions={[data.zoneExecution]} />

@@ -1,167 +1,242 @@
-/**
- * Zone schemas — Zod unions per zone, declared per the per-zone
- * section-authoring model.
- *
- * Where a referenced block schema exists in `$lib/schema/blocks.ts`, the
- * existing schema is reused. Where a block schema does not yet exist
- * (P0 / P1 missing per `composition-taxonomy.md` §7), a stub schema is
- * declared inline in this file. Stubs accept any `props` shape so that
- * Phase 3+ can tighten them when the block lands without breaking the
- * zone contract.
- *
- * The discriminator on every zone is `component` — matching the existing
- * block-schema convention.
- */
-
 import { z } from 'zod';
-import {
-	EditorialHeaderSection,
-	EditorialHeroSection,
-	LifestylePriceHeroSection,
-	ProductGridSection,
-	ProductCarouselSection,
-	CategoryTileGridSection,
-	PromoStripSection,
-	CouponStripSection,
-	BeallsBucksCalloutSection,
-	ForYouRowSection,
-	BOPISPickerSection,
-	BOPISStripSection,
-	ClusterChipRowSection,
-	LastChanceUpsellRowSection,
-	AssuranceStripCheckoutSection,
-	// P0 marketing/capture/service additions (PRD-ENG-020).
-	EventCountdownSection,
-	BrandSpotlightSection,
-	TrendShopSection,
-	EmailCaptureInlineSection,
-	ServiceCalloutsGridSection,
-	LocatorStripSection,
-	// PDP scaffold blocks (description-tabs, reviews-summary, reviews-list, plus
-	// the Slice 1 scaffold) are NOT zone-targeted per ADR-007 §3.3 — they're
-	// part of the fixed PDP scaffold and rendered directly by +page.svelte.
-} from '$lib/schema/blocks';
 import type { ZoneId } from './zones';
 
-// ─── Stub schemas for blocks not yet built (Phase 3+ tighten these) ─
-
-function stubBlock<C extends string>(component: C) {
-	return z.object({
-		component: z.literal(component),
-		props: z.looseObject({}),
-	});
-}
-
-const EditorialArticleTeaserStub = stubBlock('editorial-article-teaser');
-const EmptyStateRescueStub = stubBlock('empty-state-rescue');
-const PaginationStub = stubBlock('pagination');
-const ComparisonTableStub = stubBlock('comparison-table');
-const CompleteTheLookStub = stubBlock('complete-the-look');
-const RecentlyViewedRowStub = stubBlock('recently-viewed');
-const BucksEarnRowStub = stubBlock('bucks-earn-row');
-const AlsoBoughtCarouselStub = stubBlock('also-bought-carousel');
-const PopularSearchesRowStub = stubBlock('popular-searches-row');
-const AccountWelcomeCardStub = stubBlock('account-welcome-card');
-const OrderHistoryListStub = stubBlock('order-history-list');
-const WishlistGridStub = stubBlock('wishlist-grid');
-const TierStatusCardStub = stubBlock('tier-status-card');
-const BackInStockAlertCardStub = stubBlock('back-in-stock-alert-card');
-const ReviewsToWriteRowStub = stubBlock('reviews-to-write-row');
-
-// ─── Per-zone schemas ──────────────────────────────────────────────
-
 /**
- * Schema per zone family. Per section-authoring.md §4: indexed zones share
- * the schema for their family — the index is bookkeeping for ordering,
- * not a separate type.
+ * Runtime zone vocabulary.
  *
- * Multiplicity is encoded in the registry, not the schema. The schema
- * always describes ONE item; array zones validate each list element
- * independently in the resolver.
+ * These schemas intentionally do not reuse the broader prompt/layout schemas.
+ * A zone may accept only a component that ZoneRenderer can actually dispatch,
+ * every object is strict, and shopper-visible strings/collections are bounded.
+ * A `z.never()` zone is Hidden-only until a real renderer contract lands.
  */
+
+const label = z.string().trim().min(1).max(80);
+const headline = z.string().trim().min(1).max(140);
+const body = z.string().trim().min(1).max(420);
+const href = z.string().trim().min(1).max(256);
+const asset = z.string().trim().min(1).max(2048);
+const productId = z.string().trim().min(1).max(128);
+
+const ProductRef = z.strictObject({
+	productId,
+	role: z.enum(['hero', 'featured', 'standard', 'compact']),
+});
+
+const EditorialHeader = z.strictObject({
+	component: z.literal('editorial-header'),
+	props: z.strictObject({ eyebrow: label, headline, body }),
+});
+
+const EditorialHero = z.strictObject({
+	component: z.literal('editorial-hero'),
+	props: z.strictObject({
+		image: asset,
+		eyebrow: label.optional(),
+		headline,
+		body: body.optional(),
+		ctaLabel: label.optional(),
+		ctaHref: href.optional(),
+		textPosition: z.enum(['left', 'center', 'right']),
+	}),
+});
+
+const LifestylePriceHero = z.strictObject({
+	component: z.literal('lifestyle-price-hero'),
+	props: z.strictObject({ image: asset, category: label, priceLabel: label, ctaLabel: label, ctaHref: href }),
+});
+
+const ProductGrid = z.strictObject({
+	component: z.literal('product-grid'),
+	props: z.strictObject({
+		columns: z.union([z.literal(2), z.literal(3), z.literal(4)]),
+		products: z.array(ProductRef).min(1).max(24),
+		imageRatio: z.enum(['landscape', 'square']),
+		showDescription: z.boolean(),
+		showSpecs: z.boolean(),
+		showQuickAdd: z.boolean(),
+		showRating: z.boolean().optional(),
+		showBadges: z.boolean().optional(),
+	}),
+});
+
+const ProductCarousel = z.strictObject({
+	component: z.literal('product-carousel'),
+	props: z.strictObject({
+		title: headline,
+		products: z.array(ProductRef).min(1).max(12),
+		showRating: z.boolean().optional(),
+		showBadges: z.boolean().optional(),
+		showQuickAdd: z.boolean().optional(),
+	}),
+});
+
+const CategoryTile = z.strictObject({ label, image: asset, href, description: body.optional() });
+const CategoryTileGrid = z.strictObject({
+	component: z.literal('category-tile-grid'),
+	props: z.strictObject({
+		sectionLabel: label.optional(),
+		columns: z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
+		tiles: z.array(CategoryTile).min(1).max(8),
+	}),
+});
+
+const PromoStrip = z.strictObject({
+	component: z.literal('promo-strip'),
+	props: z.strictObject({
+		eyebrow: label.optional(), headline, ctaLabel: label.optional(), ctaHref: href.optional(),
+		urgency: z.enum(['none', 'soft', 'hard']),
+	}),
+});
+
+const CouponStrip = z.strictObject({
+	component: z.literal('coupon-strip'),
+	props: z.strictObject({
+		eyebrow: label, headline, body: body.optional(), code: z.string().trim().min(1).max(32).optional(), ctaLabel: label,
+	}),
+});
+
+const BrandSpotlight = z.strictObject({
+	component: z.literal('brand-spotlight'),
+	props: z.strictObject({
+		brandName: label, eyebrow: label.optional(), headline, body, image: asset,
+		ctaLabel: label.optional(), ctaHref: href.optional(),
+	}),
+});
+
+const EventCountdown = z.strictObject({
+	component: z.literal('event-countdown'),
+	props: z.strictObject({
+		eyebrow: label.optional(), headline, body: body.optional(), endsAt: z.string().trim().min(1).max(64),
+		ctaLabel: label.optional(), ctaHref: href.optional(),
+	}),
+});
+
+const TrendShop = z.strictObject({
+	component: z.literal('trend-shop'),
+	props: z.strictObject({ sectionLabel: label.optional(), headline, image: asset, ctaLabel: label, ctaHref: href }),
+});
+
+const EmailCaptureInline = z.strictObject({
+	component: z.literal('email-capture-inline'),
+	props: z.strictObject({
+		eyebrow: label.optional(), headline, body: body.optional(), offerCopy: body.optional(), ctaLabel: label,
+		privacyNote: body.optional(),
+	}),
+});
+
+const Callout = z.strictObject({ icon: label, label, body: body.optional() });
+const ServiceCalloutsGrid = z.strictObject({
+	component: z.literal('service-callouts-grid'),
+	props: z.strictObject({ columns: z.union([z.literal(3), z.literal(4)]), callouts: z.array(Callout).min(1).max(4) }),
+});
+
+const LocatorStrip = z.strictObject({
+	component: z.literal('locator-strip'),
+	props: z.strictObject({ eyebrow: label.optional(), headline, body: body.optional(), ctaLabel: label, ctaHref: href }),
+});
+
+const BOPISStrip = z.strictObject({
+	component: z.literal('bopis-strip'),
+	props: z.strictObject({
+		storeName: label, distanceMi: z.number().nonnegative().max(500), readyByLabel: label,
+		productName: label.optional(), ctaLabel: label.optional(), ctaHref: href.optional(),
+	}),
+});
+
+const ClusterChipRow = z.strictObject({
+	component: z.literal('cluster-chip-row'),
+	props: z.strictObject({
+		sectionLabel: label.optional(),
+		chips: z.array(z.strictObject({ label, href })).min(1).max(12),
+	}),
+});
+
+const LastChanceUpsellRow = z.strictObject({
+	component: z.literal('last-chance-upsell-row'),
+	props: z.strictObject({ title: headline, products: z.array(ProductRef).min(1).max(6) }),
+});
+
+const AssuranceStripCheckout = z.strictObject({
+	component: z.literal('assurance-strip-checkout'),
+	props: z.strictObject({
+		items: z.array(z.strictObject({ icon: label, label, body: body.optional() })).min(2).max(4),
+		variant: z.enum(['first-time', 'returning', 'loyalty-known']),
+	}),
+});
+
+const ForYouRow = z.strictObject({
+	component: z.literal('for-you-row'),
+	props: z.strictObject({ title: headline, reasoning: body.optional(), products: z.array(ProductRef).min(1).max(8) }),
+});
+
+const BOPISPicker = z.strictObject({
+	component: z.literal('bopis-picker'),
+	props: z.strictObject({
+		zip: z.string().regex(/^\d{5}$/).optional(),
+		stores: z.array(z.strictObject({
+			id: productId, name: label, address: body, distanceMi: z.number().nonnegative().max(500).optional(),
+			hours: label, pickupReady: z.boolean(), readyByLabel: label.optional(),
+		})).max(12),
+		productName: label.optional(),
+	}),
+});
+
+const BeallsBucksCallout = z.strictObject({
+	component: z.literal('bealls-bucks-callout'),
+	props: z.strictObject({
+		mode: z.enum(['earn', 'redeem', 'tier-progress']), amount: z.number().finite(), unit: label,
+		threshold: z.number().finite().optional(), tierLabel: label.optional(),
+	}),
+});
+
+const HiddenOnly = z.never();
+
 export const ZoneSchemas = {
-	// Home
-	'home.hero': z.union([EditorialHeroSection, LifestylePriceHeroSection, EditorialHeaderSection]),
-	'home.featured-row': z.union([
-		ProductGridSection,
-		ProductCarouselSection,
-		EditorialHeaderSection,
-		EventCountdownSection,
-		BrandSpotlightSection,
-		TrendShopSection,
-	]),
-	'home.editorial-strip': z.union([EditorialArticleTeaserStub, BrandSpotlightSection]),
-	'home.brand-spotlight': BrandSpotlightSection,
-	'home.below-fold': z.union([
-		CategoryTileGridSection,
-		PromoStripSection,
-		BOPISStripSection,
-		EmailCaptureInlineSection,
-		ServiceCalloutsGridSection,
-		LocatorStripSection,
-	]),
+	'home.hero': z.union([EditorialHero, LifestylePriceHero, EditorialHeader]),
+	'home.featured-row': z.union([ProductGrid, ProductCarousel, EditorialHeader, EventCountdown, BrandSpotlight, TrendShop]),
+	'home.editorial-strip': z.union([CategoryTileGrid, BrandSpotlight]),
+	'home.brand-spotlight': BrandSpotlight,
+	'home.below-fold': z.union([CategoryTileGrid, PromoStrip, BOPISStrip, EmailCaptureInline, ServiceCalloutsGrid, LocatorStrip]),
 
-	// PLP
-	'plp.banner': z.union([
-		PromoStripSection,
-		CouponStripSection,
-		EditorialHeaderSection,
-		EventCountdownSection,
-		BrandSpotlightSection,
-		EmailCaptureInlineSection,
-		ServiceCalloutsGridSection,
-		LocatorStripSection,
-	]),
-	'plp.editorial-header': z.union([EditorialHeroSection, EditorialHeaderSection]),
-	'plp.cluster-row': ClusterChipRowSection,
-	'plp.between-thirds': z.union([EditorialArticleTeaserStub, PromoStripSection]),
-	'plp.below-grid': z.union([CategoryTileGridSection, PaginationStub]),
-	'plp.empty-state': EmptyStateRescueStub,
+	'plp.banner': z.union([PromoStrip, CouponStrip, EditorialHeader, EventCountdown, BrandSpotlight, EmailCaptureInline, ServiceCalloutsGrid, LocatorStrip]),
+	'plp.editorial-header': z.union([EditorialHero, EditorialHeader]),
+	'plp.cluster-row': ClusterChipRow,
+	'plp.between-thirds': PromoStrip,
+	'plp.below-grid': CategoryTileGrid,
+	'plp.empty-state': HiddenOnly,
 
-	// PDP — scaffold blocks (image-gallery, product-title-block, variant-selector,
-	// stock-signal, add-to-cart-bar, description-tabs, reviews-summary, reviews-list)
-	// are NOT zone-targeted per ADR-007 §3.3; rendered directly by +page.svelte.
-	// Zones below are insertion points the engine/admin can compose into.
-	'pdp.below-description': z.union([BrandSpotlightSection, EditorialArticleTeaserStub, ComparisonTableStub]),
-	'pdp.related': ProductCarouselSection,
-	'pdp.cross-sell': z.union([CompleteTheLookStub, ProductCarouselSection]),
-	'pdp.recently-viewed': z.union([ProductCarouselSection, RecentlyViewedRowStub]),
-	'pdp.below-recs': z.union([BOPISPickerSection, BucksEarnRowStub]),
+	'pdp.below-description': BrandSpotlight,
+	'pdp.related': ProductCarousel,
+	'pdp.cross-sell': ProductCarousel,
+	'pdp.recently-viewed': ProductCarousel,
+	'pdp.below-recs': BOPISPicker,
 
-	// Cart — Phase 3 specialization (PRD-ENG-015, ADR-007 §3.4).
-	// `cart.above-checkout-cta` is the single AI-composed cart zone.
-	// Foundation renders line items / summary / meter / promo entry / CTA
-	// directly from cart state; they are NOT zone-targeted.
-	'cart.above-checkout-cta': z.union([LastChanceUpsellRowSection, CouponStripSection]),
-	'cart.below-fold': z.union([AlsoBoughtCarouselStub, RecentlyViewedRowStub, BeallsBucksCalloutSection]),
-	'cart.empty-state': EmptyStateRescueStub,
+	'cart.above-checkout-cta': LastChanceUpsellRow,
+	'cart.below-fold': z.union([ProductCarousel, BeallsBucksCallout]),
+	'cart.empty-state': HiddenOnly,
 
-	// Checkout — Phase 3 specialization (PRD-ENG-016, ADR-007 §3.5).
-	// Both zones are AI-composed; BC handoff itself is foundation logic.
-	'checkout.assurance-strip': AssuranceStripCheckoutSection,
-	'checkout.last-chance-upsell': LastChanceUpsellRowSection,
+	'checkout.assurance-strip': AssuranceStripCheckout,
+	'checkout.last-chance-upsell': LastChanceUpsellRow,
 
-	// Search
-	'search.empty-state': EmptyStateRescueStub,
-	'search.zero-results-rescue': z.union([CategoryTileGridSection, PopularSearchesRowStub, ProductCarouselSection]),
+	'search.empty-state': HiddenOnly,
+	'search.zero-results-rescue': z.union([CategoryTileGrid, ProductCarousel]),
 
-	// Account
-	'account.welcome': z.union([AccountWelcomeCardStub, EmailCaptureInlineSection, ServiceCalloutsGridSection]),
-	'account.dashboard-pick': z.union([
-		OrderHistoryListStub,
-		WishlistGridStub,
-		TierStatusCardStub,
-		ForYouRowSection,
-		BackInStockAlertCardStub,
-		ReviewsToWriteRowStub,
-	]),
+	'account.welcome': z.union([EmailCaptureInline, ServiceCalloutsGrid]),
+	'account.dashboard-pick': ForYouRow,
 
-	// Locator
-	'locator.editorial-intro': EditorialHeaderSection,
+	'locator.editorial-intro': EditorialHeader,
 
-	// Error
-	'error-404.rescue': z.union([EmptyStateRescueStub, CategoryTileGridSection, ProductCarouselSection]),
-	'error-empty.rescue': EmptyStateRescueStub,
+	'error-404.rescue': z.union([CategoryTileGrid, ProductCarousel]),
+	'error-empty.rescue': HiddenOnly,
 } as const satisfies Record<ZoneId, z.ZodTypeAny>;
 
+export const RENDERABLE_ZONE_COMPONENT_IDS = [
+	'editorial-header', 'editorial-hero', 'lifestyle-price-hero', 'product-grid', 'product-carousel',
+	'category-tile-grid', 'promo-strip', 'coupon-strip', 'brand-spotlight', 'event-countdown',
+	'trend-shop', 'email-capture-inline', 'service-callouts-grid', 'locator-strip', 'bopis-strip',
+	'cluster-chip-row', 'last-chance-upsell-row', 'assurance-strip-checkout', 'for-you-row',
+	'bopis-picker', 'bealls-bucks-callout',
+] as const;
+
+export type RenderableZoneComponentId = (typeof RENDERABLE_ZONE_COMPONENT_IDS)[number];
 export type ZoneContent<Z extends ZoneId> = z.infer<(typeof ZoneSchemas)[Z]>;

@@ -3,6 +3,7 @@ import { getCachedCart, getSessionCookie } from '$lib/server/cart-store';
 import { getCart } from '$lib/server/bigcommerce';
 import { getBrand } from '$lib/brand/config';
 import { requireBrandSurface } from '$lib/server/brand-surface-guard';
+import { executeShopperPageRoute, executeTrustedErrorZones } from '$lib/server/shopper-route-runtime';
 
 /**
  * /cart — full cart page (companion to the cart drawer).
@@ -16,7 +17,8 @@ import { requireBrandSurface } from '$lib/server/brand-surface-guard';
  * aren't visible to `site.cart()` without the visitor session cookie
  * replay; the cache is the source of truth — see cart-store.ts).
  */
-export const load: PageServerLoad = async ({ cookies }) => {
+export const load: PageServerLoad = async ({ cookies, url }) => {
+	const zoneExecution = await executeShopperPageRoute(url, '/cart');
 	requireBrandSurface('cart');
 	const cartId = cookies.get('bc_cart_id');
 	const brand = getBrand();
@@ -28,6 +30,8 @@ export const load: PageServerLoad = async ({ cookies }) => {
 			itemCount: 0,
 			subtotal: 0,
 			freeShippingThreshold: freeShippingThresholdMinor != null ? freeShippingThresholdMinor / 100 : null,
+			zoneExecution,
+			emptyZoneExecution: await executeTrustedErrorZones(url, 'empty'),
 		};
 	}
 
@@ -50,5 +54,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
 		itemCount,
 		subtotal,
 		freeShippingThreshold: freeShippingThresholdMinor != null ? freeShippingThresholdMinor / 100 : null,
+		zoneExecution,
+		emptyZoneExecution: items.length === 0 ? await executeTrustedErrorZones(url, 'empty') : null,
 	};
 };

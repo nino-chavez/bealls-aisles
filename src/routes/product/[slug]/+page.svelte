@@ -11,8 +11,8 @@
 	import ReviewsSummary from '$lib/components/layouts/sections/ReviewsSummary.svelte';
 	import ReviewsList from '$lib/components/layouts/sections/ReviewsList.svelte';
 	import BOPISStrip from '$lib/components/layouts/sections/BOPISStrip.svelte';
-	import AILoadingInline from '$lib/components/AILoadingInline.svelte';
-	import ZoneRenderer from '$lib/foundation/ZoneRenderer.svelte';
+	import RuntimeZone from '$lib/foundation/RuntimeZone.svelte';
+	import ZoneExecutionEvidence from '$lib/foundation/ZoneExecutionEvidence.svelte';
 	import DevZoneBadge from '$lib/components/dev/DevZoneBadge.svelte';
 	import StructuredData from '$lib/components/primitives/StructuredData.svelte';
 	import { productLd, breadcrumbLd } from '$lib/seo/jsonld';
@@ -66,26 +66,6 @@
 		};
 	});
 
-	let pairings = $state<Array<{ id: string; name: string; price: number; reason: string }>>([]);
-	let pairingsLoading = $state(false);
-
-	$effect(() => {
-		const p = product;
-		if (!p) return;
-		pairingsLoading = true;
-		fetch('/api/suggest', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				sourceSurface: 'pdp',
-				picks: [{ id: p.id, name: p.name, price: p.price, category: p.category, specs: p.specs }],
-			}),
-		})
-			.then((r) => r.json())
-			.then((data) => { pairings = data.suggestions || []; })
-			.catch(() => {})
-			.finally(() => { pairingsLoading = false; });
-	});
 </script>
 
 <svelte:head>
@@ -169,36 +149,6 @@
 				{isPicked(product.id) ? 'In Your Picks' : 'Add to Picks'}
 			</button>
 
-			{#if pairingsLoading}
-				<div class="border-t border-surface-border pt-6">
-					<h3 class="font-display text-lg">Pairs well with</h3>
-					<div class="mt-3">
-						<AILoadingInline label="Finding pieces that pair with this" size="small" />
-					</div>
-				</div>
-			{:else if pairings.length > 0}
-				<DevZoneBadge zoneId="pdp.pairings (api/suggest)" source="engine" layer="engine">
-					<div class="border-t border-surface-border pt-6">
-						<h3 class="font-display text-lg">Pairs well with</h3>
-						<ul class="mt-3 space-y-2">
-							{#each pairings as pairing}
-								<li>
-									<a
-										href="/product/{pairing.id}"
-										class="flex items-center justify-between rounded-sm border border-surface-border px-4 py-3 transition-colors hover:bg-surface-muted"
-									>
-										<div>
-											<span class="text-sm font-medium">{pairing.name}</span>
-											<span class="ml-2 text-xs text-surface-muted-fg">{pairing.reason}</span>
-										</div>
-										<span class="text-sm font-medium">${pairing.price.toLocaleString()}</span>
-									</a>
-								</li>
-							{/each}
-						</ul>
-					</div>
-				</DevZoneBadge>
-			{/if}
 		</div>
 	</div>
 
@@ -209,7 +159,7 @@
 
 	<!-- pdp.below-description zone — engine/admin/static cascade -->
 	<div class="mt-12">
-		<ZoneRenderer resolution={data.belowDescriptionZone} products={relatedProducts} />
+		<RuntimeZone execution={data.zoneExecution} zoneId="pdp.below-description" products={relatedProducts} />
 	</div>
 
 	<!-- Reviews scaffold (Slice 2) — synthetic data until reviews integration ships -->
@@ -225,22 +175,24 @@
 
 	<!-- pdp.cross-sell zone — tag-overlap neighborhood (ADR-008 Phase B / PRD-ENG-019) -->
 	<div class="mt-16">
-		<ZoneRenderer resolution={data.crossSellZone} products={relatedProducts} />
+		<RuntimeZone execution={data.zoneExecution} zoneId="pdp.cross-sell" products={relatedProducts} />
 	</div>
 
 	<!-- pdp.related zone — tag-overlap neighborhood, stricter (minOverlap=3) -->
 	<div class="mt-12">
-		<ZoneRenderer resolution={data.relatedZone} products={relatedProducts} />
+		<RuntimeZone execution={data.zoneExecution} zoneId="pdp.related" products={relatedProducts} />
 	</div>
 
 	<!-- pdp.recently-viewed zone — tag-overlap fallback substrate per ADR-008 §Cold-start safe;
 	     real session-tracked viewed-products list lands with PRD-FND-018. -->
 	<div class="mt-12">
-		<ZoneRenderer resolution={data.recentlyViewedZone} products={relatedProducts} />
+		<RuntimeZone execution={data.zoneExecution} zoneId="pdp.recently-viewed" products={relatedProducts} />
 	</div>
 
 	<!-- pdp.below-recs zone — BOPIS picker scaffold (locator surface ships in Phase 6) -->
 	<div class="mt-12">
-		<ZoneRenderer resolution={data.belowRecsZone} />
+		<RuntimeZone execution={data.zoneExecution} zoneId="pdp.below-recs" />
 	</div>
 </div>
+
+<ZoneExecutionEvidence executions={[data.zoneExecution]} />

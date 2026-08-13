@@ -21,12 +21,12 @@ const MODES = ['storefront', 'content'] as const;
 const SURFACES = [
 	'home', 'plp', 'pdp', 'cart', 'checkout', 'search', 'account', 'compare', 'category', 'locator', 'style-guide', 'error-404', 'error-empty',
 ] as const;
-const RESCUE_REASONS = ['not-found', 'empty-cart', 'empty-search', 'empty-wishlist'] as const;
+const RESCUE_REASONS = ['not-found', 'empty-cart', 'empty-search'] as const;
 const RECIPE_IDS = [
 	'home.storefront', 'plp.storefront', 'pdp.storefront', 'cart.storefront', 'checkout.storefront',
 	'search.storefront', 'account.storefront', 'compare.storefront',
 	'home.content', 'category.content', 'locator.shared', 'style-guide.shared', 'error-404.shared',
-	'error-empty.storefront', 'error-empty.content',
+	'error-empty.storefront',
 ] as const;
 const CHROME_IDS = ['brand-strip-nav', 'primary-nav', 'footer', 'cart-drawer', 'picks-tray'] as const;
 const COMPONENT_IDS = [
@@ -35,7 +35,7 @@ const COMPONENT_IDS = [
 	'description-tabs', 'reviews-summary', 'reviews-list', 'bopis-strip',
 	'cart-line-items', 'cart-summary', 'free-shipping-meter', 'promo-code-entry',
 	'last-chance-upsell-row', 'assurance-strip-checkout',
-	'search-results', 'refinement-chat', 'account-dashboard', 'persona-ranked-product-row', 'comparison-table',
+	'search-results', 'account-dashboard', 'persona-ranked-product-row', 'comparison-table',
 ] as const;
 
 /**
@@ -57,7 +57,6 @@ export const BEALLS_FAMILY_RENDERER_SOURCE_FILES = [
 	'src/lib/components/LayoutBuildingState.svelte',
 	'src/lib/components/Nav.svelte',
 	'src/lib/components/PicksTray.svelte',
-	'src/lib/components/RefinementChat.svelte',
 	'src/lib/components/dev/DevToolbar.svelte',
 	'src/lib/components/dev/DevZoneBadge.svelte',
 	'src/lib/components/layouts/ContentCategorySurface.svelte',
@@ -111,7 +110,10 @@ export const BEALLS_FAMILY_RENDERER_SOURCE_FILES = [
 	'src/lib/components/primitives/SortSelector.svelte',
 	'src/lib/components/primitives/StructuredData.svelte',
 	'src/lib/components/primitives/Toast.svelte',
+	'src/lib/foundation/RuntimeZone.svelte',
+	'src/lib/foundation/RuntimeEnvelopeZone.svelte',
 	'src/lib/foundation/ZoneRenderer.svelte',
+	'src/lib/foundation/ZoneExecutionEvidence.svelte',
 	'src/lib/foundation/composition-policy.ts',
 	'src/lib/foundation/fallbacks/cart.ts',
 	'src/lib/foundation/fallbacks/checkout.ts',
@@ -120,6 +122,9 @@ export const BEALLS_FAMILY_RENDERER_SOURCE_FILES = [
 	'src/lib/foundation/fallbacks/pdp.ts',
 	'src/lib/foundation/fallbacks/plp.ts',
 	'src/lib/foundation/resolve-zone.ts',
+	'src/lib/foundation/runtime-zone-envelope.ts',
+	'src/lib/foundation/shopper-route-grant.ts',
+	'src/lib/foundation/zone-decision-envelope-schema.ts',
 	'src/lib/foundation/zone-schemas.ts',
 	'src/lib/foundation/zones.ts',
 	'src/lib/schema/blocks.ts',
@@ -131,7 +136,16 @@ export const BEALLS_FAMILY_RENDERER_SOURCE_FILES = [
 	'src/lib/schema/layouts/pdp.ts',
 	'src/lib/schema/layouts/plp.ts',
 	'src/lib/server/layout-prompt.ts',
-	'src/lib/server/layout-runtime-contract.ts',
+	'src/lib/server/access-gates.ts',
+	'src/lib/server/admin-overrides.ts',
+	'src/lib/server/bigcommerce.ts',
+	'src/lib/server/cache.ts',
+	'src/lib/server/parity-fixture.ts',
+	'src/lib/server/route-zone-runtime.ts',
+	'src/lib/server/shopper-route-grant.ts',
+	'src/lib/server/shopper-route-runtime.ts',
+	'src/lib/server/zone-output-runtime.ts',
+	'src/lib/server/zone-decision-envelope.ts',
 	'src/lib/server/brand-surface-guard.ts',
 	'src/lib/server/resolve-zone-async.ts',
 	'src/lib/stores/picks.svelte.ts',
@@ -142,6 +156,11 @@ export const BEALLS_FAMILY_RENDERER_SOURCE_FILES = [
 	'src/routes/+page.svelte',
 	'src/routes/api/layout/+server.ts',
 	'src/routes/api/layout/stream/+server.ts',
+	'src/routes/api/observe/enrichment/+server.ts',
+	'src/routes/api/observe/inference/+server.ts',
+	'src/routes/api/observe/logs/+server.ts',
+	'src/routes/api/observe/session/+server.ts',
+	'src/routes/api/observe/sessions/+server.ts',
 	'src/routes/api/refine/+server.ts',
 	'src/routes/api/suggest/+server.ts',
 	'src/routes/account/+page.server.ts',
@@ -156,12 +175,14 @@ export const BEALLS_FAMILY_RENDERER_SOURCE_FILES = [
 	'src/routes/compare/+page.svelte',
 	'src/routes/product/[slug]/+page.server.ts',
 	'src/routes/product/[slug]/+page.svelte',
+	'src/routes/observe/+page.server.ts',
 	'src/routes/search/+page.server.ts',
 	'src/routes/search/+page.svelte',
 	'src/routes/store-locator/+page.server.ts',
 	'src/routes/store-locator/+page.svelte',
 	'src/routes/style-guide/+page.server.ts',
 	'src/routes/style-guide/+page.svelte',
+	'src/routes/test/+layout.server.ts',
 	'src/routes/test/components/+page.svelte',
 ] as const;
 
@@ -186,8 +207,6 @@ export interface RendererRouteEvidence {
  * source snapshot without being presented as a supported shopper surface.
  */
 export const BEALLS_FAMILY_LAYOUT_RENDERER_ROUTE_EVIDENCE = [
-	{ file: 'src/routes/+page.svelte', kind: 'brand-surface', surfaces: ['home'] },
-	{ file: 'src/routes/category/[slug]/+page.svelte', kind: 'brand-surface', surfaces: ['plp', 'category'] },
 	{ file: 'src/routes/style-guide/+page.svelte', kind: 'brand-surface', surfaces: ['style-guide'] },
 	{ file: 'src/routes/test/components/+page.svelte', kind: 'development-harness', surfaces: [] },
 ] as const satisfies readonly RendererRouteEvidence[];
@@ -240,12 +259,12 @@ export const BeallsFamilyRendererContractSchema = z.object({
 export type BeallsFamilyRendererContract = z.infer<typeof BeallsFamilyRendererContractSchema>;
 
 const STOREFRONT_SURFACES = [
-	{ surface: 'home', recipeId: 'home.storefront', componentIds: ['layout-renderer', 'zone-renderer'], rescueReasons: [] },
-	{ surface: 'plp', recipeId: 'plp.storefront', componentIds: ['layout-renderer'], rescueReasons: [] },
+	{ surface: 'home', recipeId: 'home.storefront', componentIds: ['zone-renderer'], rescueReasons: [] },
+	{ surface: 'plp', recipeId: 'plp.storefront', componentIds: ['zone-renderer'], rescueReasons: [] },
 	{ surface: 'pdp', recipeId: 'pdp.storefront', componentIds: ['image-gallery', 'product-title-block', 'variant-selector', 'stock-signal', 'add-to-cart-bar', 'description-tabs', 'reviews-summary', 'reviews-list', 'bopis-strip', 'zone-renderer'], rescueReasons: [] },
 	{ surface: 'cart', recipeId: 'cart.storefront', componentIds: ['cart-line-items', 'cart-summary', 'free-shipping-meter', 'promo-code-entry', 'last-chance-upsell-row'], rescueReasons: [] },
 	{ surface: 'checkout', recipeId: 'checkout.storefront', componentIds: ['assurance-strip-checkout', 'last-chance-upsell-row'], rescueReasons: [] },
-	{ surface: 'search', recipeId: 'search.storefront', componentIds: ['search-results', 'refinement-chat', 'empty-rescue'], rescueReasons: [] },
+	{ surface: 'search', recipeId: 'search.storefront', componentIds: ['search-results', 'empty-rescue'], rescueReasons: [] },
 	{ surface: 'account', recipeId: 'account.storefront', componentIds: ['account-dashboard', 'persona-ranked-product-row'], rescueReasons: [] },
 	{ surface: 'compare', recipeId: 'compare.storefront', componentIds: ['comparison-table'], rescueReasons: [] },
 ] as const;
@@ -259,17 +278,12 @@ const STYLE_GUIDE_SURFACE = {
 } as const;
 const ERROR_404_SURFACE = {
 	surface: 'error-404', recipeId: 'error-404.shared',
-	componentIds: ['empty-rescue', 'layout-renderer'], rescueReasons: ['not-found'],
+	componentIds: ['empty-rescue'], rescueReasons: ['not-found'],
 } as const;
 const STOREFRONT_EMPTY_SURFACE = {
 	surface: 'error-empty', recipeId: 'error-empty.storefront',
-	componentIds: ['empty-rescue', 'layout-renderer'],
-	rescueReasons: ['empty-cart', 'empty-search', 'empty-wishlist'],
-} as const;
-const CONTENT_EMPTY_SURFACE = {
-	surface: 'error-empty', recipeId: 'error-empty.content',
-	componentIds: ['empty-rescue', 'layout-renderer'],
-	rescueReasons: ['empty-cart', 'empty-search', 'empty-wishlist'],
+	componentIds: ['empty-rescue'],
+	rescueReasons: ['empty-cart', 'empty-search'],
 } as const;
 
 const MOUNTED_CHROME = ['brand-strip-nav', 'primary-nav', 'footer', 'cart-drawer', 'picks-tray'] as const;
@@ -288,7 +302,7 @@ const RESPONSIVE_STRATEGY = {
 const SOURCE_SNAPSHOT = {
 	algorithm: 'sha256',
 	files: [...BEALLS_FAMILY_RENDERER_SOURCE_FILES],
-	fingerprint: 'ec76fd0660d7113c2735015cfa283aafa53eca04043f99443fcf1cef70db378a',
+	fingerprint: '88a33843f7c6406d722fdf94698395366ffab39cf95f5bbcf433deb15745053e',
 } as const;
 
 interface DesignSnapshotLiteral {
@@ -303,7 +317,7 @@ function storefrontContract(
 	designSnapshot: DesignSnapshotLiteral,
 ): BeallsFamilyRendererContract {
 	return {
-		contractVersion: '2.0.0', organizationId: 'example-merchant', brandId, brandName, mode: 'storefront',
+		contractVersion: '2.1.0', organizationId: 'example-merchant', brandId, brandName, mode: 'storefront',
 		supportedSurfaces: [...STOREFRONT_SURFACES, LOCATOR_SURFACE, STYLE_GUIDE_SURFACE, ERROR_404_SURFACE, STOREFRONT_EMPTY_SURFACE].map(cloneSurface),
 		mountedChromeIds: [...MOUNTED_CHROME], exposedChromeIds: [...STOREFRONT_EXPOSED_CHROME],
 		designConfigSnapshot: { algorithm: 'sha256', inputs: [...DESIGN_CONFIG_INPUTS], ...designSnapshot },
@@ -324,11 +338,11 @@ export const BEALLS_FAMILY_RENDERER_CONTRACTS: Readonly<Record<(typeof BRAND_IDS
 		fingerprint: '746ae8604bccee7b0169b1a961bc0104186f95b2c314dac8c5e191e94fe34222',
 	}),
 	homecentric: {
-		contractVersion: '2.0.0', organizationId: 'example-merchant', brandId: 'homecentric', brandName: 'Home Centric', mode: 'content',
+		contractVersion: '2.1.0', organizationId: 'example-merchant', brandId: 'homecentric', brandName: 'Home Centric', mode: 'content',
 		supportedSurfaces: ([
-			{ surface: 'home', recipeId: 'home.content', componentIds: ['layout-renderer', 'zone-renderer'], rescueReasons: [] },
+			{ surface: 'home', recipeId: 'home.content', componentIds: ['zone-renderer'], rescueReasons: [] },
 			{ surface: 'category', recipeId: 'category.content', componentIds: ['content-category-surface'], rescueReasons: [] },
-			LOCATOR_SURFACE, STYLE_GUIDE_SURFACE, ERROR_404_SURFACE, CONTENT_EMPTY_SURFACE,
+			LOCATOR_SURFACE, STYLE_GUIDE_SURFACE, ERROR_404_SURFACE,
 		] as const).map(cloneSurface),
 		mountedChromeIds: [...MOUNTED_CHROME], exposedChromeIds: [...CONTENT_EXPOSED_CHROME],
 		designConfigSnapshot: {
@@ -501,32 +515,29 @@ const RECIPE_SURFACES: Record<(typeof RECIPE_IDS)[number], { surface: RendererCo
 	'style-guide.shared': { surface: 'style-guide', modes: ['storefront', 'content'] },
 	'error-404.shared': { surface: 'error-404', modes: ['storefront', 'content'] },
 	'error-empty.storefront': { surface: 'error-empty', modes: ['storefront'] },
-	'error-empty.content': { surface: 'error-empty', modes: ['content'] },
 };
 const RECIPE_COMPONENTS: Record<(typeof RECIPE_IDS)[number], readonly RendererComponentId[]> = {
-	'home.storefront': ['layout-renderer', 'zone-renderer'],
-	'plp.storefront': ['layout-renderer'],
+	'home.storefront': ['zone-renderer'],
+	'plp.storefront': ['zone-renderer'],
 	'pdp.storefront': ['image-gallery', 'product-title-block', 'variant-selector', 'stock-signal', 'add-to-cart-bar', 'description-tabs', 'reviews-summary', 'reviews-list', 'bopis-strip', 'zone-renderer'],
 	'cart.storefront': ['cart-line-items', 'cart-summary', 'free-shipping-meter', 'promo-code-entry', 'last-chance-upsell-row'],
 	'checkout.storefront': ['assurance-strip-checkout', 'last-chance-upsell-row'],
-	'search.storefront': ['search-results', 'refinement-chat', 'empty-rescue'],
+	'search.storefront': ['search-results', 'empty-rescue'],
 	'account.storefront': ['account-dashboard', 'persona-ranked-product-row'],
 	'compare.storefront': ['comparison-table'],
-	'home.content': ['layout-renderer', 'zone-renderer'],
+	'home.content': ['zone-renderer'],
 	'category.content': ['content-category-surface'],
 	'locator.shared': ['store-locator-surface', 'zone-renderer'],
 	'style-guide.shared': ['layout-renderer'],
-	'error-404.shared': ['empty-rescue', 'layout-renderer'],
-	'error-empty.storefront': ['empty-rescue', 'layout-renderer'],
-	'error-empty.content': ['empty-rescue', 'layout-renderer'],
+	'error-404.shared': ['empty-rescue'],
+	'error-empty.storefront': ['empty-rescue'],
 };
 const RECIPE_RESCUE_REASONS: Record<(typeof RECIPE_IDS)[number], readonly (typeof RESCUE_REASONS)[number][]> = {
 	'home.storefront': [], 'plp.storefront': [], 'pdp.storefront': [], 'cart.storefront': [], 'checkout.storefront': [],
 	'search.storefront': [], 'account.storefront': [], 'compare.storefront': [],
 	'home.content': [], 'category.content': [], 'locator.shared': [], 'style-guide.shared': [],
 	'error-404.shared': ['not-found'],
-	'error-empty.storefront': ['empty-cart', 'empty-search', 'empty-wishlist'],
-	'error-empty.content': ['empty-cart', 'empty-search', 'empty-wishlist'],
+	'error-empty.storefront': ['empty-cart', 'empty-search'],
 };
 
 function cloneSurface<T extends { componentIds: readonly RendererComponentId[]; rescueReasons: readonly (typeof RESCUE_REASONS)[number][] }>(surface: T) {

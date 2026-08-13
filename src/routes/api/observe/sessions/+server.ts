@@ -1,13 +1,15 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { listSessionIds, getSessionStore } from '$lib/signals/session';
+import { requireOperatorAccess } from '$lib/server/access-gates';
 
 /**
  * GET /api/observe/sessions
  * Returns active session IDs sorted by most recent event timestamp
  * so "watch latest" actually picks the freshest session.
  */
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async ({ url, request }) => {
+	requireOperatorAccess(url, request);
 	const ids = await listSessionIds();
 
 	const withActivity = await Promise.all(

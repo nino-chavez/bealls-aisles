@@ -20,10 +20,11 @@
 	import LifestylePriceHero from '$lib/components/layouts/sections/LifestylePriceHero.svelte';
 	import CategoryTileGrid from '$lib/components/layouts/sections/CategoryTileGrid.svelte';
 	import PromoStrip from '$lib/components/layouts/sections/PromoStrip.svelte';
+	import CouponStrip from '$lib/components/layouts/sections/CouponStrip.svelte';
+	import ProductGrid from '$lib/components/layouts/sections/ProductGrid.svelte';
 	import ProductCarousel from '$lib/components/layouts/sections/ProductCarousel.svelte';
-	import DescriptionTabs from '$lib/components/layouts/sections/DescriptionTabs.svelte';
-	import ReviewsSummary from '$lib/components/layouts/sections/ReviewsSummary.svelte';
-	import ReviewsList from '$lib/components/layouts/sections/ReviewsList.svelte';
+	import ForYouRow from '$lib/components/layouts/sections/ForYouRow.svelte';
+	import BeallsBucksCallout from '$lib/components/layouts/sections/BeallsBucksCallout.svelte';
 	import BOPISPicker from '$lib/components/layouts/sections/BOPISPicker.svelte';
 	import LastChanceUpsellRow from '$lib/components/layouts/sections/LastChanceUpsellRow.svelte';
 	import AssuranceStripCheckout from '$lib/components/layouts/sections/AssuranceStripCheckout.svelte';
@@ -111,6 +112,28 @@
 			ctaHref={item.props.ctaHref as string | undefined}
 			urgency={item.props.urgency as 'none' | 'soft' | 'hard'}
 		/>
+	{:else if item.component === 'coupon-strip'}
+		<CouponStrip
+			eyebrow={item.props.eyebrow as string}
+			headline={item.props.headline as string}
+			body={item.props.body as string | undefined}
+			code={item.props.code as string | undefined}
+			ctaLabel={item.props.ctaLabel as string}
+		/>
+	{:else if item.component === 'product-grid'}
+		{@const gridProducts = resolveProducts((item.props.products as Array<{ productId: string }>) ?? [])}
+		{#if gridProducts.length > 0}
+			<ProductGrid
+				columns={item.props.columns as 2 | 3 | 4}
+				products={gridProducts}
+				imageRatio={item.props.imageRatio as 'landscape' | 'square'}
+				showDescription={item.props.showDescription as boolean}
+				showSpecs={item.props.showSpecs as boolean}
+				showQuickAdd={item.props.showQuickAdd as boolean}
+				showRating={item.props.showRating as boolean | undefined}
+				showBadges={item.props.showBadges as boolean | undefined}
+			/>
+		{/if}
 	{:else if item.component === 'product-carousel'}
 		{@const carouselProducts = resolveProducts((item.props.products as Array<{ productId: string }>) ?? [])}
 		{#if carouselProducts.length > 0}
@@ -122,31 +145,22 @@
 				showQuickAdd={item.props.showQuickAdd as boolean | undefined}
 			/>
 		{/if}
-	{:else if item.component === 'description-tabs'}
-		<DescriptionTabs
-			tabs={item.props.tabs as Array<{ label: string; content: string }>}
-			initialIndex={item.props.initialIndex as number | undefined}
-		/>
-	{:else if item.component === 'reviews-summary'}
-		<ReviewsSummary
-			avgRating={item.props.avgRating as number}
-			reviewCount={item.props.reviewCount as number}
-			histogram={item.props.histogram as number[]}
-			writeReviewHref={item.props.writeReviewHref as string | undefined}
-		/>
-	{:else if item.component === 'reviews-list'}
-		<ReviewsList
-			reviews={item.props.reviews as Array<{
-				id: string;
-				author: string;
-				date: string;
-				rating: number;
-				title?: string;
-				body: string;
-				helpful?: number;
-				verifiedPurchase?: boolean;
-			}>}
-			filters={item.props.filters as { sort?: 'recent' | 'helpful' | 'highest' | 'lowest' } | undefined}
+	{:else if item.component === 'for-you-row'}
+		{@const forYouProducts = resolveProducts((item.props.products as Array<{ productId: string }>) ?? [])}
+		{#if forYouProducts.length > 0}
+			<ForYouRow
+				title={item.props.title as string}
+				reasoning={item.props.reasoning as string | undefined}
+				products={forYouProducts}
+			/>
+		{/if}
+	{:else if item.component === 'bealls-bucks-callout'}
+		<BeallsBucksCallout
+			mode={item.props.mode as 'earn' | 'redeem' | 'tier-progress'}
+			amount={item.props.amount as number}
+			unit={item.props.unit as string}
+			threshold={item.props.threshold as number | undefined}
+			tierLabel={item.props.tierLabel as string | undefined}
 		/>
 	{:else if item.component === 'bopis-picker'}
 		<BOPISPicker

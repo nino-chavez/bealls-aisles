@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { getPickItems, removePick, type PickItem } from '$lib/stores/picks.svelte';
 	import { getBrand } from '$lib/brand/config';
+	import ZoneExecutionEvidence from '$lib/foundation/ZoneExecutionEvidence.svelte';
+	import type { PageData } from './$types';
 
+	let { data }: { data: PageData } = $props();
 	let items = $derived(getPickItems());
 	const brand = getBrand();
 
@@ -134,3 +137,5 @@
 		</div>
 	{/if}
 </div>
+
+<ZoneExecutionEvidence executions={[data.zoneExecution]} />

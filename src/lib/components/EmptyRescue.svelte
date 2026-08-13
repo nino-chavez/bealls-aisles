@@ -1,20 +1,5 @@
 <script lang="ts">
-	/**
-	 * EmptyRescue — foundation-layer rescue band for empty/404 surfaces (PRD-FND-012).
-	 *
-	 * Calls the engine with `surface='empty'` + a `reason` discriminator and
-	 * renders the AI-composed rescue layout. While generating it shows the
-	 * standard LayoutBuildingState; on engine failure it falls back to a
-	 * brand-aware static rescue (categories grid + go-home CTA).
-	 *
-	 * The static fallback is the always-defined render path per the
-	 * fail-fast principle — engine outage ≠ blank screen.
-	 */
-	import type { Layout } from '$lib/schema/layout';
-	import type { Product } from '$lib/types';
-	import LayoutRenderer from '$lib/components/layouts/LayoutRenderer.svelte';
-	import LayoutBuildingState from '$lib/components/LayoutBuildingState.svelte';
-
+	/** Fixed rescue shell. Named rescue zones currently terminate Hidden. */
 	let {
 		reason,
 		persona = 'gatherer',
@@ -24,50 +9,9 @@
 		persona?: string;
 		categories?: Array<{ slug: string; name: string }>;
 	} = $props();
-
-	let layout = $state<Layout | null>(null);
-	let products = $state<Product[]>([]);
-	let isLoading = $state(true);
-	let failed = $state(false);
-
-	$effect(() => {
-		fetchRescue();
-	});
-
-	async function fetchRescue() {
-		isLoading = true;
-		failed = false;
-		try {
-			const res = await fetch('/api/layout', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					persona,
-					categorySlug: 'home',
-					surface: 'empty',
-					reason,
-				}),
-			});
-			if (!res.ok) throw new Error(`rescue ${res.status}`);
-			const json = await res.json();
-			if (!json.layout) throw new Error('no layout');
-			layout = json.layout;
-			products = json.products ?? [];
-		} catch (e) {
-			failed = true;
-			console.warn(`Rescue (${reason}) failed:`, e);
-		} finally {
-			isLoading = false;
-		}
-	}
 </script>
 
-{#if isLoading}
-	<LayoutBuildingState {persona} surface={reason === 'empty-cart' ? 'cart' : 'rescue'} />
-{:else if layout && !failed}
-	<LayoutRenderer {layout} {products} />
-{:else}
-	<!-- Static fallback — brand-aware, always renders -->
+<div data-rescue-reason={reason} data-rescue-persona={persona}>
 	{#if categories.length > 0}
 		<section>
 			<h2 class="font-display text-2xl tracking-tight">Browse by category</h2>
@@ -94,4 +38,4 @@
 			Go to homepage
 		</a>
 	</div>
-{/if}
+</div>

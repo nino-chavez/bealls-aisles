@@ -3,7 +3,8 @@ import { getBrand, getBrandMode } from '$lib/brand/config';
 import { infer } from '$lib/signals/inference';
 import { createStoreFromRequest } from '$lib/signals/request';
 import { loadHomeProducts } from '$lib/server/catalog';
-import { resolveZoneAsync } from '$lib/server/resolve-zone-async';
+import { executeShopperPageRoute } from '$lib/server/shopper-route-runtime';
+import { routeZoneDecision } from '$lib/server/route-zone-runtime';
 
 export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	const brand = getBrand();
@@ -47,7 +48,8 @@ export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	// Phase 2 vertical slice — resolve home.hero through the zone system.
 	// Engine wiring (Phase 3) will pass engineOutput here; for now the
 	// resolver falls through to the brand-aware static fallback.
-	const heroZone = await resolveZoneAsync({ zoneId: 'home.hero', brandId: brand.id });
+	const zoneExecution = await executeShopperPageRoute(url, '/');
+	const heroZone = routeZoneDecision(zoneExecution, 'home.hero').resolution;
 
 	return {
 		featured,
@@ -66,5 +68,6 @@ export const load: PageServerLoad = async ({ url, cookies, request }) => {
 		probabilities: inference.probabilities,
 		sessionId: cookies.get('aisles_session') || null,
 		heroZone,
+		zoneExecution,
 	};
 };

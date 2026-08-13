@@ -31,7 +31,6 @@ export const pdpFallbacks: Partial<Record<string, ZoneFallback>> = {
 			component: 'bopis-picker',
 			props: {
 				stores: [],
-				productName: '',
 			},
 		};
 	},

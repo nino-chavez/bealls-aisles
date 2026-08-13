@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { getPickItems, removePick, clearPicks, totalPrice, pickCount } from '$lib/stores/picks.svelte';
 	import EmptyRescue from '$lib/components/EmptyRescue.svelte';
-	import AILoadingInline from '$lib/components/AILoadingInline.svelte';
-	import DevZoneBadge from '$lib/components/dev/DevZoneBadge.svelte';
 
 	let {
 		open = false,
@@ -19,39 +17,9 @@
 	let items = $derived(getPickItems());
 	let total = $derived(totalPrice());
 	let count = $derived(pickCount());
-	let suggestions = $state<Array<{ id: string; name: string; price: number; reason: string }>>([]);
-	let loadingSuggestions = $state(false);
-
-	// Fetch AI suggestions when tray opens with items
-	$effect(() => {
-		if (open && items.length > 0 && suggestions.length === 0) {
-			fetchSuggestions();
-		}
-	});
-
-	async function fetchSuggestions() {
-		if (items.length === 0) return;
-		loadingSuggestions = true;
-		try {
-			const res = await fetch('/api/suggest', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					sourceSurface: 'picks',
-					picks: items.map((p) => ({ id: p.id, name: p.name, price: p.price, category: p.category, specs: p.specs })),
-				}),
-			});
-			if (res.ok) {
-				const data = await res.json();
-				suggestions = data.suggestions || [];
-			}
-		} catch { /* non-critical */ }
-		finally { loadingSuggestions = false; }
-	}
 
 	function handleRemove(id: string) {
 		removePick(id);
-		suggestions = []; // re-fetch on next open
 	}
 </script>
 
@@ -100,7 +68,7 @@
 							Continue browsing
 						</button>
 					</div>
-					<!-- PRD-FND-012: AI rescue band beneath the standard empty copy. -->
+					<!-- PRD-FND-012: fixed rescue band beneath the standard empty copy. -->
 					<div class="mt-8 border-t border-surface-border pt-6">
 						<EmptyRescue
 							reason="empty-wishlist"
@@ -134,35 +102,6 @@
 						{/each}
 					</ul>
 
-					<!-- AI Suggestions -->
-					{#if loadingSuggestions}
-						<div class="mt-4 border-t border-surface-border pt-4">
-							<AILoadingInline label="Building suggestions from your picks" size="small" />
-						</div>
-					{:else if suggestions.length > 0}
-						<DevZoneBadge zoneId="picks.suggestions (api/suggest)" source="engine" layer="engine">
-							<div class="mt-4 border-t border-surface-border pt-4">
-								<p class="text-xs font-medium uppercase tracking-wider text-surface-muted-fg">Suggested for you</p>
-								<ul class="mt-2 space-y-2">
-									{#each suggestions as suggestion}
-										<li>
-											<a
-												href="/product/{suggestion.id}"
-												onclick={onclose}
-												class="flex items-center justify-between rounded-sm border border-surface-border px-3 py-2 text-sm transition-colors hover:bg-surface-muted"
-											>
-												<div>
-													<span class="font-medium">{suggestion.name}</span>
-													<span class="ml-2 text-xs text-surface-muted-fg">{suggestion.reason}</span>
-												</div>
-												<span class="text-xs font-medium">${suggestion.price.toLocaleString()}</span>
-											</a>
-										</li>
-									{/each}
-								</ul>
-							</div>
-						</DevZoneBadge>
-					{/if}
 				{/if}
 			</div>
 
@@ -178,7 +117,7 @@
 							Compare ({count})
 						</a>
 						<button
-							onclick={() => { clearPicks(); suggestions = []; }}
+							onclick={() => { clearPicks(); }}
 							class="rounded-sm border border-surface-border px-4 py-3 text-sm text-surface-muted-fg transition-colors hover:text-surface-fg"
 						>
 							Clear

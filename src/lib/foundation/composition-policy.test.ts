@@ -20,13 +20,14 @@ const registry = BEALLS_COMPOSITION_POLICY;
 const beallsHome = () => compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'home', registry });
 
 const home = beallsHome();
-assert('Bealls home records live model composition', home.decisionMode === 'model' && home.publicationMode === 'live' && home.provenance.preset === 'compose');
+assert('Bealls home records the fixed live route now implemented', home.decisionMode === 'fixed'
+	&& home.publicationMode === 'live' && home.provenance.preset === 'preserve' && home.capabilities.length === 0);
 const pdp = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'pdp', registry });
 const pdpRelated = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'pdp', zoneId: 'pdp.related', registry });
 const pdpBelowDescription = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'pdp', zoneId: 'pdp.below-description', registry });
-assert('Bealls PDP records the existing model suggestion path while named zones narrow to rules or fixed', pdp.decisionMode === 'model'
+assert('Bealls PDP permits only trusted rules while named zones narrow to rules or fixed', pdp.decisionMode === 'rules'
 	&& pdp.publicationMode === 'live'
-	&& pdp.provenance.preset === 'assist'
+	&& pdp.provenance.preset === 'preserve'
 	&& pdpRelated.decisionMode === 'rules'
 	&& pdpBelowDescription.decisionMode === 'fixed');
 const florida = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'beallsflorida', surface: 'plp', registry });
@@ -59,20 +60,20 @@ const narrowedBrand: BrandCompositionPolicy = {
 	},
 };
 const narrowBrandRegistry: CompositionPolicyRegistry = { ...registry, brands: { ...registry.brands, bealls: narrowedBrand } };
-throws('rejects a surface expansion beyond the brand ceiling', () => compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'home', registry: narrowBrandRegistry }), /home surface expands brand maximum/);
+throws('rejects a surface expansion beyond the brand ceiling', () => compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'cart', registry: narrowBrandRegistry }), /cart surface expands decision mode/);
 
 const expandedZone: BrandCompositionPolicy = {
 	...registry.brands.bealls,
 	surfaces: {
 		...registry.brands.bealls.surfaces,
-		home: {
-			...registry.brands.bealls.surfaces.home!,
-			capabilities: ['rank_products', 'select_products'],
-			zoneOverrides: { 'home.hero': { capabilities: ['select_page_recipe'] } },
+		cart: {
+			...registry.brands.bealls.surfaces.cart!,
+			capabilities: ['rank_products'],
+			zoneOverrides: { 'cart.empty-state': { capabilities: ['select_products'] } },
 		},
 	},
 };
 const expandedZoneRegistry: CompositionPolicyRegistry = { ...registry, brands: { ...registry.brands, bealls: expandedZone } };
-throws('rejects a zone expansion beyond its surface', () => compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'home', zoneId: 'home.hero', registry: expandedZoneRegistry }), /home.hero zone expands surface/);
+throws('rejects a zone expansion beyond its surface', () => compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'cart', zoneId: 'cart.empty-state', registry: expandedZoneRegistry }), /cart.empty-state zone expands surface/);
 
 if (failures) process.exitCode = 1;

@@ -1,285 +1,239 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { generateText, Output } from 'ai';
+import { z } from 'zod';
+import { env } from '$env/dynamic/private';
+import { getBrand } from '$lib/brand/config';
 import {
-	getLayoutSchemaForSurface,
-	inferSurfaceFromCategorySlug,
-	EmptyReason,
-		type Surface,
-	type EmptyReason as EmptyReasonType,
-} from '$lib/schema/layout';
-import { buildLayoutPrompt } from '$lib/server/layout-prompt';
-import { loadCategoryProducts, loadHomeProducts, loadProductsByTagOverlapAggregate, type EnrichedProduct, type TagOverlapProduct } from '$lib/server/catalog';
-import { getCachedLayout, cacheLayout, hashPicks } from '$lib/server/cache';
-
-// ADR-008 Phase A: tagIntents is a prompt-affecting input alongside picks.
-// Phase B: cart-seed entityIds are too — the upsell's candidate pool is the
-// tag-overlap neighborhood of those seeds. Compose all three into one
-// discriminator so the cache key reflects every prompt-affecting input.
-// A non-empty value on any axis, even with no picks, still gets a suffix.
-function composeCacheDiscriminator(
-	picksContext?: string,
-	tagIntents: string[] = [],
-	cartSeedEntityIds: number[] = [],
-): string | undefined {
-	const tagPart = tagIntents.length > 0
-		? 'tags:' + [...tagIntents].map((t) => t.toLowerCase()).sort().join(',')
-		: '';
-	const seedPart = cartSeedEntityIds.length > 0
-		? 'seeds:' + [...cartSeedEntityIds].sort((a, b) => a - b).join(',')
-		: '';
-	const combined = picksContext || tagPart || seedPart
-		? `${picksContext ?? ''}|${tagPart}|${seedPart}`
-		: undefined;
-	return hashPicks(combined);
-}
-import { logGeneration } from '$lib/server/generation-log';
-import { logZoneRetrieval } from '$lib/server/zone-retrieval-log';
-import { getActiveRules, rulesToPromptContext } from '$lib/server/rules';
-import { layoutModel, gatewayProviderOptions } from '$lib/server/ai-model';
-import { getBrand, getBrandMode } from '$lib/brand/config';
-import { getBrandVoiceOverride } from '$lib/server/admin-overrides';
+	type BeallsFamilyBrandId,
+} from '$lib/brand/bealls-family-runtime-contract';
+import { ZoneSchemas } from '$lib/foundation/zone-schemas';
+import { loadHomeProducts, loadProductsByTagOverlapAggregate } from '$lib/server/catalog';
+import { cacheZoneDecision, getCachedZoneDecision } from '$lib/server/cache';
 import { shouldBypassCache } from '$lib/server/cache-flags';
-import { Surface as LayoutSurfaceSchema } from '$lib/schema/layout';
-import { scopedLayoutCacheSlug, requireModelLayoutPolicy, validateRuntimeLayout } from '$lib/server/layout-runtime-contract';
-import type { BeallsFamilyBrandId } from '$lib/brand/bealls-family-runtime-contract';
+import { layoutModel, gatewayProviderOptions } from '$lib/server/ai-model';
+import { executeRouteZones, routeZoneDecision } from '$lib/server/route-zone-runtime';
+import {
+	approvedInputHash,
+	catalogVersion,
+	createZoneDecisionContext,
+	createZoneDecisionEnvelope,
+	type ZoneDecisionContext,
+	type ZoneDecisionEnvelope,
+} from '$lib/server/zone-decision-envelope';
+import { validateZoneEngineOutput } from '$lib/server/zone-output-runtime';
+import { trustedShopperApiContext } from '$lib/server/shopper-route-grant';
 
+const InputSchema = z.strictObject({
+	persona: z.enum(['gatherer', 'hunter', 'researcher', 'gifter']).default('gatherer'),
+	categorySlug: z.string().trim().min(1).max(128).optional(),
+	picksContext: z.string().max(4_000).optional(),
+	probabilities: z.record(z.string(), z.number().min(0).max(1)).optional(),
+	tagIntents: z.array(z.string().trim().min(1).max(80)).max(20).optional(),
+	cartItemEntityIds: z.array(z.number().int().positive()).max(50).optional(),
+});
+
+const MODEL_ZONE_IDS = {
+	cart: ['cart.above-checkout-cta'],
+	checkout: ['checkout.assurance-strip', 'checkout.last-chance-upsell'],
+} as const;
+
+const ModelOutputSchemas = {
+	cart: z.strictObject({
+		reasoning: z.string().trim().min(1).max(420),
+		zones: z.strictObject({
+			'cart.above-checkout-cta': ZoneSchemas['cart.above-checkout-cta'].optional(),
+		}),
+	}),
+	checkout: z.strictObject({
+		reasoning: z.string().trim().min(1).max(420),
+		zones: z.strictObject({
+			'checkout.assurance-strip': ZoneSchemas['checkout.assurance-strip'].optional(),
+			'checkout.last-chance-upsell': ZoneSchemas['checkout.last-chance-upsell'].optional(),
+		}),
+	}),
+};
+
+/**
+ * Model decisions exist only inside named, policy-authorized cart/checkout
+ * zones. The server derives the API surface from a page-issued signed route
+ * grant; Origin and Referer are confusion checks, not authority. Request JSON
+ * cannot select a route or surface. The response contains decision envelopes,
+ * never a whole layout.
+ */
 export const POST: RequestHandler = async ({ request, cookies, url }) => {
-	const startTime = Date.now();
-
-	const sessionId = cookies.get('aisles_session') || undefined;
-	const bypassCache = shouldBypassCache({ url, cookies });
-
+	const startedAt = Date.now();
+	const brand = getBrand();
+	const brandId = brand.id as BeallsFamilyBrandId;
+	let route;
 	try {
-		const {
-			persona,
-			categorySlug,
-			picksContext,
-			probabilities,
-			surface: explicitSurface,
-			reason: explicitReason,
-			tagIntents: rawTagIntents,
-			cartItemEntityIds: rawCartSeeds,
-		} = await request.json();
+		route = trustedShopperApiContext(request, cookies, brandId);
+	} catch (cause) {
+		return json({ error: cause instanceof Error ? cause.message : 'Untrusted shopper route' }, { status: 403 });
+	}
 
-		// Normalize tagIntents: accept undefined/null/non-array as empty.
-		// Strings are deduped lowercased downstream by the loader; here we
-		// just guard the shape so the cache key + prompt see a stable value.
-		const tagIntents: string[] = Array.isArray(rawTagIntents)
-			? rawTagIntents.filter((t): t is string => typeof t === 'string' && t.length > 0)
-			: [];
+	const parsedInput = InputSchema.safeParse(await request.json().catch(() => null));
+	if (!parsedInput.success) return json({ error: 'Invalid zone decision input', issues: parsedInput.error.issues }, { status: 400 });
+	if (route.surface !== 'cart' && route.surface !== 'checkout') {
+		return json({ error: `No model-authorized named zones for ${route.routeId}` }, { status: 403 });
+	}
 
-		// PRD-ENG-019: cart upsell candidates come from the tag-overlap
-		// neighborhood of the in-cart line items. Normalize to a numeric
-		// entityId array and dedupe; non-cart surfaces leave this empty.
-		const cartItemEntityIds: number[] = Array.isArray(rawCartSeeds)
-			? Array.from(new Set(rawCartSeeds.filter((n: unknown): n is number => typeof n === 'number' && Number.isFinite(n))))
-			: [];
-
-		if (!persona || !categorySlug) {
-			return json({ error: 'Missing required fields: persona, categorySlug' }, { status: 400 });
-		}
-
-		const brand = getBrand();
-		const brandId = brand.id;
-		const mode = getBrandMode(brand);
-		// Per ADR-006: prefer explicit surface from request; fall back to category-slug inference
-		const surfaceResult = explicitSurface === undefined ? null : LayoutSurfaceSchema.safeParse(explicitSurface);
-		if (surfaceResult && !surfaceResult.success) return json({ error: 'Invalid layout surface' }, { status: 400 });
-		const surface: Surface = surfaceResult?.data ?? inferSurfaceFromCategorySlug(categorySlug);
-		const layoutSchema = getLayoutSchemaForSurface(surface, mode);
-
-		// PRD-FND-012: empty/rescue surfaces require a reason discriminator so
-		// the AI knows whether to compose a 404, empty-cart, empty-search, or
-		// empty-wishlist rescue. The cache key includes the reason so each
-		// rescue variant caches independently.
-		const reasonResult = surface === 'empty' ? EmptyReason.safeParse(explicitReason) : null;
-		const reason: EmptyReasonType | undefined = reasonResult?.success ? reasonResult.data : undefined;
-		if (surface === 'empty' && !reason) {
-			return json({ error: "Missing/invalid 'reason' for empty surface (must be one of: not-found, empty-cart, empty-search, empty-wishlist)" }, { status: 400 });
-		}
-		let policy;
-		try {
-			policy = requireModelLayoutPolicy({ brandId, surface, reason });
-		} catch {
-			return json({ error: 'Layout generation is not authorized for this brand surface' }, { status: 403 });
-		}
-		const cacheSlug = scopedLayoutCacheSlug({
-			brandId: brandId as BeallsFamilyBrandId, surface, reason, categorySlug,
+	const targetZoneIds = MODEL_ZONE_IDS[route.surface];
+	const input = parsedInput.data;
+	const cartSeeds = [...new Set(input.cartItemEntityIds ?? [])];
+	if (route.surface === 'cart' && cartSeeds.length === 0) {
+		const fallbackExecution = await executeRouteZones({ context: route });
+		return json({
+			envelopes: await envelopesForExecution(fallbackExecution, targetZoneIds, request, input, [], 'none'),
+			products: [],
+			meta: { cacheHit: false, generationTimeMs: Date.now() - startedAt, modelCalled: false },
 		});
+	}
 
-		// ─── Cache check ───────────────────────────────────────────
-		// `picksContext`, `tagIntents`, and `cartItemEntityIds` are all
-		// prompt-affecting per-request inputs that change the generated
-		// layout (cart seeds change the candidate pool for the upsell).
-		// Compose them into a single cache discriminator so each combination
-		// caches independently and existing picks-only callers still hash
-		// to the same key.
-		const ph = composeCacheDiscriminator(picksContext, tagIntents, cartItemEntityIds);
-		const cached = bypassCache ? null : await getCachedLayout(brandId, persona, cacheSlug, ph);
-		if (cached) {
-			const elapsed = Date.now() - startTime;
+	const products = route.surface === 'cart'
+		? await loadProductsByTagOverlapAggregate(cartSeeds, { minOverlap: 2, limit: 12 })
+		: (await loadHomeProducts(input.persona, 16, input.tagIntents)).products;
+	const approvedHash = approvedInputHash({
+		route: { routeId: route.routeId, routePath: route.routePath, surface: route.surface, brandId },
+		input,
+		candidateProductIds: products.map((product) => [product.id, product.entityId]),
+	});
+	const catalogFingerprint = catalogVersion(products.map((product) => ({
+		id: product.id, entityId: product.entityId, price: product.price, salePrice: product.salePrice,
+	})));
+	const viewportClass = inferViewportClass(request);
+	const syntheticProvenance: ZoneDecisionContext['syntheticProvenance'] = env.AISLES_PARITY_FIXTURE === 'v1'
+		? { kind: 'parity-fixture', version: 'v1' }
+		: { kind: 'none', version: 'live-v1' };
 
-			logGeneration({
-				type: 'layout',
-				persona,
-				categorySlug: cacheSlug,
-				cacheHit: true,
-				generationTimeMs: elapsed,
-				sessionId,
-				brandId,
-				surface,
-				personaDistribution: probabilities,
-			}).catch(() => {});
-
-			// Empty/rescue + cart + checkout surfaces need products inline so
-			// client-only consumers (EmptyRescue, CartDrawer, checkout handoff
-			// page — no +page.server.ts in the inline-render case) can render
-			// upsell/rescue product blocks without a second roundtrip. Re-load
-			// the same candidate pool the cached layout was generated against.
-			//
-			// PRD-ENG-019: cart with seed entityIds → tag-overlap aggregate
-			// (the candidate set is the *neighborhood* of the cart, not popular
-			// products). Empty cart, empty/rescue, checkout → popular products.
-			let cachedProducts: EnrichedProduct[] | TagOverlapProduct[] = [];
-			if (surface === 'cart' && cartItemEntityIds.length > 0 && mode === 'storefront') {
-				cachedProducts = await loadProductsByTagOverlapAggregate(cartItemEntityIds, { minOverlap: 2, limit: 12 });
-			} else if ((surface === 'empty' || surface === 'cart' || surface === 'checkout') && mode === 'storefront') {
-				const popular = await loadHomeProducts(persona, undefined, tagIntents);
-				cachedProducts = popular.products;
-			}
-
-			return json({
-				layout: cached,
-				products: cachedProducts,
-				meta: {
-					persona,
-					categoryName: cacheSlug,
-					productCount: cachedProducts.length,
-					generationTimeMs: elapsed,
-					cacheHit: true,
-					contract: policy.provenance,
-				},
-			});
-		}
-
-		// ─── Cache miss — generate via AI Gateway ──────────────────
-		// Source the candidate pool. PRD-ENG-019: cart with seed entityIds
-		// pulls the tag-overlap neighborhood of the line items — the AI
-		// composes the upsell title and ordering from THIS pool, not
-		// brand-wide popular products. Empty/rescue + checkout + empty cart
-		// fall back to popular (loadHomeProducts).
-		const useHomeProducts = surface === 'empty' || surface === 'cart' || surface === 'checkout' || categorySlug === 'home';
-		let products: EnrichedProduct[] | TagOverlapProduct[];
-		let categoryName: string;
-		if (surface === 'cart' && cartItemEntityIds.length > 0 && mode === 'storefront') {
-			const overlapPool = await loadProductsByTagOverlapAggregate(cartItemEntityIds, { minOverlap: 2, limit: 12 });
-			products = overlapPool;
-			categoryName = 'Cart';
-			logZoneRetrieval({
-				surface: 'cart',
-				seedEntityIds: cartItemEntityIds,
-				sessionId,
-				brandId,
-				zones: {
-					'cart.above-checkout-cta': overlapPool.map((p) => ({
-						productId: p.id,
-						entityId: p.entityId,
-						overlapScore: p.overlapScore,
-						sharedTags: p.sharedTags,
-					})),
-				},
-			});
-		} else {
-			const result = useHomeProducts
-				? await loadHomeProducts(persona, undefined, tagIntents)
-				: await loadCategoryProducts(categorySlug, persona, tagIntents);
-			if (!result) {
-				return json({ error: `Category "${categorySlug}" not found` }, { status: 404 });
-			}
-			products = result.products;
-			categoryName = result.categoryName;
-		}
-		// Fetch merchandising rules from the admin app's shared DB
-		const rules = await getActiveRules(persona, categorySlug);
-		const rulesContext = rulesToPromptContext(rules);
-
-		// PRD-ADM-005: voice editor round-trip. When a brand manager has authored
-		// a voice override in the admin, it replaces the brand-config voice for
-		// this generation. Fail open: missing table or empty override → use the
-		// brand-config default.
-		const voiceOverride = await getBrandVoiceOverride(brandId);
-
-		const prompt = buildLayoutPrompt(persona, categoryName, products, picksContext, rulesContext, probabilities, { surface, reason, tagIntents, voiceOverride });
-
-		// Haiku primary; Sonnet fallback only via gateway path (skipped for direct).
-		const aiResult = await generateText({
-			model: layoutModel(),
-			output: Output.object({ schema: layoutSchema }),
-			prompt,
-			providerOptions: gatewayProviderOptions(persona, categorySlug),
+	// Resolve merchant authority before cache/model. A trusted pin or lock wins
+	// even when a cached engine decision exists.
+	const preflight = await executeRouteZones({ context: route });
+	const contexts = targetZoneIds.map((zoneId) => {
+		const decision = routeZoneDecision(preflight, zoneId);
+		return createZoneDecisionContext({
+			policy: decision.policy,
+			routeId: route.routeId,
+			routePath: route.routePath,
+			zoneId,
+			viewportClass,
+			catalogVersion: catalogFingerprint,
+			contentVersion: decision.resolution.merchantContentVersion ?? 'none',
+			syntheticProvenance,
+			approvedInputHash: approvedHash,
 		});
-		// The AI SDK applies the surface Zod schema. The runtime contract then
-		// binds the parsed object to registered components, products, assets,
-		// destinations, and policy provenance before it can enter the cache.
-		const layout = validateRuntimeLayout({
-			brandId: brandId as BeallsFamilyBrandId,
-			surface,
-			layout: aiResult.output,
+	});
+	const pinned = targetZoneIds.map((zoneId, index) => {
+		const decision = routeZoneDecision(preflight, zoneId);
+		return decision.resolution.merchantAuthority === 'pin' || decision.resolution.merchantAuthority === 'lock'
+			? createZoneDecisionEnvelope(contexts[index], decision.resolution)
+			: null;
+	});
+
+	const bypassCache = shouldBypassCache({ url, cookies });
+	const cached = await Promise.all(contexts.map((context, index) =>
+		pinned[index] ?? (bypassCache ? null : getCachedZoneDecision(context)),
+	));
+	if (cached.every((value): value is ZoneDecisionEnvelope => value !== null)) {
+		return json({
+			envelopes: cached,
+			products,
+			meta: { cacheHit: !pinned.every(Boolean), generationTimeMs: Date.now() - startedAt, modelCalled: false },
+		});
+	}
+
+	const remaining = cached.some((value) => value === null);
+	let engineOutput: { zones: Record<string, unknown> } = { zones: {} };
+	if (remaining) {
+		const candidateSummary = products.map((product) => ({
+			productId: product.id,
+			entityId: product.entityId,
+			name: product.name,
+			price: product.salePrice ?? product.price,
+			category: product.category,
+		}));
+		const prompt = buildNamedZonePrompt(route.surface, input.persona, candidateSummary);
+		const generatedZones = route.surface === 'cart'
+			? (await generateText({
+				model: layoutModel(),
+				output: Output.object({ schema: ModelOutputSchemas.cart }),
+				prompt,
+				providerOptions: gatewayProviderOptions(input.persona, 'cart'),
+			})).output.zones
+			: (await generateText({
+				model: layoutModel(),
+				output: Output.object({ schema: ModelOutputSchemas.checkout }),
+				prompt,
+				providerOptions: gatewayProviderOptions(input.persona, 'checkout'),
+			})).output.zones;
+		engineOutput = validateZoneEngineOutput({
+			brandId,
+			allowedZoneIds: targetZoneIds,
+			zones: generatedZones,
 			candidateProductIds: products.flatMap((product) => [String(product.id), String(product.entityId)]),
 			candidateAssetUrls: products.map((product) => product.image).filter((value): value is string => !!value),
 		});
-		const usage = aiResult.usage;
-		const model = 'anthropic/claude-haiku-4.5';
-
-		if (layout) {
-			cacheLayout(brandId, persona, cacheSlug, layout, ph).catch(() => {});
-		}
-
-		const elapsed = Date.now() - startTime;
-
-		logGeneration({
-			type: 'layout',
-			persona,
-			categorySlug: cacheSlug,
-			cacheHit: false,
-			generationTimeMs: elapsed,
-			productCount: products.length,
-			inputTokens: usage?.inputTokens,
-			outputTokens: usage?.outputTokens,
-			model,
-			sessionId,
-			brandId,
-			surface,
-			personaDistribution: probabilities,
-		}).catch(() => {});
-
-		return json({
-			layout,
-			// Inline products for empty/rescue + cart + checkout surfaces — see
-			// cache-hit branch above for rationale. PLP/PDP surfaces resolve
-			// products via their own +page.server.ts.
-			products: surface === 'empty' || surface === 'cart' || surface === 'checkout' ? products : undefined,
-			meta: {
-				persona,
-				categoryName,
-				productCount: products.length,
-				generationTimeMs: elapsed,
-				cacheHit: false,
-				contract: policy.provenance,
-			},
-		});
-	} catch (err) {
-		const elapsed = Date.now() - startTime;
-		console.error('Layout generation failed:', err);
-
-		return json(
-			{
-				error: 'Layout generation failed',
-				message: err instanceof Error ? err.message : 'Unknown error',
-				generationTimeMs: elapsed,
-			},
-			{ status: 500 }
-		);
 	}
+
+	const execution = await executeRouteZones({
+		context: route,
+		engineOutput,
+		engineDecisionMode: 'model',
+		engineProvenance: { kind: 'model', approvedInputHash: approvedHash, modelId: 'anthropic/claude-haiku-4.5' },
+	});
+	const envelopes = targetZoneIds.map((zoneId, index) => {
+		if (pinned[index]) return pinned[index];
+		return createZoneDecisionEnvelope(contexts[index], routeZoneDecision(execution, zoneId).resolution);
+	});
+	await Promise.all(envelopes.map((envelope) => cacheZoneDecision(envelope)));
+
+	return json({
+		envelopes,
+		products,
+		meta: { cacheHit: false, generationTimeMs: Date.now() - startedAt, modelCalled: remaining },
+	});
 };
+
+async function envelopesForExecution(
+	execution: Awaited<ReturnType<typeof executeRouteZones>>,
+	zoneIds: readonly string[],
+	request: Request,
+	input: z.infer<typeof InputSchema>,
+	products: unknown[],
+	contentVersion: string,
+): Promise<ZoneDecisionEnvelope[]> {
+	const hash = approvedInputHash({ routeId: execution.routeId, routePath: execution.routePath, input, products });
+	return zoneIds.map((zoneId) => {
+		const decision = routeZoneDecision(execution, zoneId);
+		const context = createZoneDecisionContext({
+			policy: decision.policy, routeId: execution.routeId, routePath: execution.routePath, zoneId,
+			viewportClass: inferViewportClass(request), catalogVersion: catalogVersion(products), contentVersion,
+			syntheticProvenance: env.AISLES_PARITY_FIXTURE === 'v1'
+				? { kind: 'parity-fixture', version: 'v1' }
+				: { kind: 'none', version: 'live-v1' },
+			approvedInputHash: hash,
+		});
+		return createZoneDecisionEnvelope(context, decision.resolution);
+	});
+}
+
+function inferViewportClass(request: Request): ZoneDecisionContext['viewportClass'] {
+	const width = Number(request.headers.get('sec-ch-viewport-width'));
+	if (Number.isFinite(width) && width > 0) return width < 600 ? 'mobile' : width < 1024 ? 'tablet' : 'desktop';
+	const ua = request.headers.get('user-agent') ?? '';
+	if (/iPad|Tablet/i.test(ua)) return 'tablet';
+	return /Mobile|Android|iPhone/i.test(ua) ? 'mobile' : 'desktop';
+}
+
+function buildNamedZonePrompt(
+	surface: 'cart' | 'checkout',
+	persona: string,
+	products: Array<{ productId: string; entityId: number; name: string; price: number; category: string }>,
+): string {
+	const contract = surface === 'cart'
+		? 'You may emit only cart.above-checkout-cta as last-chance-upsell-row.'
+		: 'You may emit only checkout.assurance-strip as assurance-strip-checkout and checkout.last-chance-upsell as last-chance-upsell-row.';
+	return `Compose named ${surface} insertion zones for persona ${persona}. ${contract}\n` +
+		`Use only exact productId values below. Keep copy concise and factual. Do not emit CSS, HTML, URLs, components, or zone IDs outside the schema.\n` +
+		JSON.stringify(products);
+}

@@ -1,12 +1,14 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getDb } from '$lib/server/db';
+import { requireOperatorAccess } from '$lib/server/access-gates';
 
 /**
  * GET /api/observe/logs?limit=20
  * Returns recent generation logs from Postgres.
  */
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, request }) => {
+	requireOperatorAccess(url, request);
 	const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100);
 	const sessionId = url.searchParams.get('session') || null;
 

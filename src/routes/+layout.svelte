@@ -134,7 +134,7 @@
 	{/if}
 </svelte:head>
 
-<div style={themeStyle}>
+<div style={themeStyle} data-brand-id={data.brand?.id ?? ''} data-brand-mode={data.brand?.mode ?? ''}>
 	{#if isObserve}
 		{@render children()}
 	{:else}

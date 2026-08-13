@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
-	import ZoneRenderer from '$lib/foundation/ZoneRenderer.svelte';
+	import RuntimeZone from '$lib/foundation/RuntimeZone.svelte';
+	import ZoneExecutionEvidence from '$lib/foundation/ZoneExecutionEvidence.svelte';
 
 	let { data }: { data: PageData } = $props();
 </script>
@@ -18,7 +19,7 @@
 		<h1 class="font-display text-3xl">Find a {data.brand.name} store</h1>
 		{#if data.editorialIntroZone.content}
 			<div class="mt-3">
-				<ZoneRenderer resolution={data.editorialIntroZone} />
+				<RuntimeZone execution={data.zoneExecution} zoneId="locator.editorial-intro" />
 			</div>
 		{:else}
 			<p class="mt-3 text-surface-muted-fg">
@@ -96,3 +97,5 @@
 		<p class="mt-8 text-sm text-surface-muted-fg">No stores found.</p>
 	{/if}
 </div>
+
+<ZoneExecutionEvidence executions={[data.zoneExecution]} />

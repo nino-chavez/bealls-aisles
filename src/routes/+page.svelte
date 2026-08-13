@@ -1,41 +1,11 @@
 <script lang="ts">
 	import type { PageData } from './$types';
-	import type { Layout } from '$lib/schema/layout';
-	import LayoutRenderer from '$lib/components/layouts/LayoutRenderer.svelte';
-	import LayoutBuildingState from '$lib/components/LayoutBuildingState.svelte';
-	import ZoneRenderer from '$lib/foundation/ZoneRenderer.svelte';
+	import RuntimeZone from '$lib/foundation/RuntimeZone.svelte';
+	import ZoneExecutionEvidence from '$lib/foundation/ZoneExecutionEvidence.svelte';
 	import Button from '$lib/components/primitives/Button.svelte';
 
 	let { data }: { data: PageData } = $props();
 
-	let aiLayout = $state<Layout | null>(null);
-	let aiError = $state<string | null>(null);
-	let isLoadingAI = $state(true);
-
-	$effect(() => {
-		fetchHomeLayout(data.persona, data.probabilities);
-	});
-
-	async function fetchHomeLayout(persona: string, probabilities: typeof data.probabilities) {
-		isLoadingAI = true;
-		aiError = null;
-		try {
-			const res = await fetch('/api/layout', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ persona, categorySlug: 'home', probabilities }),
-			});
-			if (!res.ok) throw new Error(`AI layout returned ${res.status}`);
-			const json = await res.json();
-			if (json.layout) aiLayout = json.layout;
-			else throw new Error(json.error || 'no layout');
-		} catch (e) {
-			aiError = e instanceof Error ? e.message : 'Unknown error';
-			console.warn('Home AI layout failed, using static fallback:', aiError);
-		} finally {
-			isLoadingAI = false;
-		}
-	}
 </script>
 
 <svelte:head>
@@ -97,31 +67,12 @@
 
 <!-- home.hero zone — resolves through the foundation cascade (engine → admin → static fallback) -->
 <div class="mx-auto max-w-7xl px-6 pt-16 lg:pt-20">
-	<ZoneRenderer resolution={data.heroZone} products={data.homeProducts} />
+	<RuntimeZone execution={data.zoneExecution} zoneId="home.hero" products={data.homeProducts} />
 </div>
 
-<!-- AI-generated body OR static fallback -->
+<!-- Fixed shopper body. Named zones may add only policy-authorized content. -->
 <div class="mx-auto max-w-7xl px-6 py-16 lg:py-20">
-	{#if aiLayout}
-		<LayoutRenderer layout={aiLayout} products={data.homeProducts} />
-	{:else if isLoadingAI}
-		<div class="-mx-6">
-			<LayoutBuildingState persona={data.persona} surface="homepage" />
-		</div>
-		<!-- Subtle skeleton beneath the banner -->
-		<div class="mt-12 animate-pulse">
-			<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-				{#each Array(4) as _}
-					<div>
-						<div class="aspect-[4/3] rounded bg-surface-muted"></div>
-						<div class="mt-3 h-4 w-3/4 rounded bg-surface-muted"></div>
-						<div class="mt-2 h-4 w-1/3 rounded bg-surface-muted"></div>
-					</div>
-				{/each}
-			</div>
-		</div>
-	{:else}
-		<!-- Static fallback when AI fails -->
+		<!-- Existing brand-specific static fallback -->
 		{#if data.featured.length > 0}
 			<section class="mb-16">
 				<h2 class="font-display text-3xl">Featured</h2>
@@ -165,8 +116,18 @@
 				{/each}
 			</div>
 		</section>
-	{/if}
+	<div class="mt-16">
+		<RuntimeZone execution={data.zoneExecution} zoneId="home.editorial-strip" products={data.homeProducts} />
+	</div>
+	<div class="mt-16">
+		<RuntimeZone execution={data.zoneExecution} zoneId="home.brand-spotlight" products={data.homeProducts} />
+	</div>
+	<div class="mt-16">
+		<RuntimeZone execution={data.zoneExecution} zoneId="home.below-fold" products={data.homeProducts} />
+	</div>
 </div>
+
+<ZoneExecutionEvidence executions={[data.zoneExecution]} />
 
 <!-- Value props -->
 <section class="border-t border-surface-border">

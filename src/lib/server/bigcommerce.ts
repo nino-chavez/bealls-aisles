@@ -7,6 +7,7 @@
 
 import { env } from '$env/dynamic/private';
 import { getBrand } from '$lib/brand/config';
+import { isParityFixtureEnabled, parityBCProducts, parityCategories } from './parity-fixture';
 
 function getGraphQLConfig() {
 	const brand = getBrand();
@@ -187,6 +188,7 @@ const PRODUCT_FRAGMENT = `
 `;
 
 export async function getProducts(limit = 30): Promise<BCProduct[]> {
+	if (isParityFixtureEnabled()) return parityBCProducts().slice(0, limit);
 	const data = await query<ProductsResponse>(`
 		query GetProducts($first: Int!) {
 			site {
@@ -205,6 +207,11 @@ export async function getProducts(limit = 30): Promise<BCProduct[]> {
 }
 
 export async function getProductsByCategory(categoryEntityId: number): Promise<{ category: { name: string; description: string }; products: BCProduct[] }> {
+	if (isParityFixtureEnabled()) {
+		const category = parityCategories().find((candidate) => candidate.entityId === categoryEntityId);
+		if (!category) throw new Error(`Category ${categoryEntityId} not found`);
+		return { category: { name: category.name, description: '' }, products: parityBCProducts() };
+	}
 	const data = await query<CategoryProductsResponse>(`
 		query GetCategoryProducts($categoryId: Int!) {
 			site {
@@ -247,6 +254,10 @@ interface ProductByPathResponse {
 
 export async function getProductByPath(path: string): Promise<BCProduct | null> {
 	const fullPath = path.startsWith('/') ? path : `/${path}/`;
+	if (isParityFixtureEnabled()) {
+		const normalized = `/${fullPath.replace(/^\/+|\/+$/g, '')}/`;
+		return parityBCProducts().find((product) => product.path === normalized) ?? null;
+	}
 	const data = await query<ProductByPathResponse>(`
 		query GetProductByPath($path: String!) {
 			site {
@@ -275,6 +286,10 @@ export async function getProductByPath(path: string): Promise<BCProduct | null> 
  */
 export async function getProductsByEntityIds(entityIds: number[]): Promise<BCProduct[]> {
 	if (entityIds.length === 0) return [];
+	if (isParityFixtureEnabled()) {
+		const ids = new Set(entityIds);
+		return parityBCProducts().filter((product) => ids.has(product.entityId));
+	}
 	interface ProductsByIdsResponse {
 		site: { products: { edges: Array<{ node: BCProduct }> } };
 	}
@@ -295,6 +310,7 @@ export async function getProductsByEntityIds(entityIds: number[]): Promise<BCPro
 }
 
 export async function getProductByEntityId(entityId: number): Promise<BCProduct | null> {
+	if (isParityFixtureEnabled()) return parityBCProducts().find((product) => product.entityId === entityId) ?? null;
 	interface SingleProductResponse {
 		site: { product: BCProduct | null };
 	}
@@ -345,6 +361,7 @@ async function fetchCategoriesUncached() {
 }
 
 export async function getCategories() {
+	if (isParityFixtureEnabled()) return parityCategories();
 	const { isCachingDisabledGlobally } = await import('./cache-flags');
 	const now = Date.now();
 	if (!isCachingDisabledGlobally() && categoriesCache && now - categoriesCache.cachedAt < CATEGORIES_TTL_MS) {

@@ -1,15 +1,16 @@
 import type { PageServerLoad } from './$types';
 import { getProductByPath, customFieldsToRecord, type BCProduct } from '$lib/server/bigcommerce';
-import { error } from '@sveltejs/kit';
 import { getBrand } from '$lib/brand/config';
-import { resolveZoneAsync } from '$lib/server/resolve-zone-async';
 import { loadProductsByTagOverlap, type TagOverlapProduct } from '$lib/server/catalog';
 import { logZoneRetrieval } from '$lib/server/zone-retrieval-log';
 import { getStoresForBrand } from '$lib/server/locator/stores';
 import { getBOPISContext } from '$lib/server/locator/proximity';
 import { requireBrandSurface } from '$lib/server/brand-surface-guard';
+import { executeRouteZones, routeZoneDecision } from '$lib/server/route-zone-runtime';
+import { requireTrustedShopperPageContext, throwShopperNotFound } from '$lib/server/shopper-route-runtime';
 
 export const load: PageServerLoad = async ({ params, url, parent, cookies }) => {
+	const routeContext = await requireTrustedShopperPageContext(url, '/product/[slug]');
 	requireBrandSurface('pdp');
 	const slug = params.slug;
 	const { devMode } = await parent();
@@ -21,7 +22,7 @@ export const load: PageServerLoad = async ({ params, url, parent, cookies }) => 
 	const bcProduct = await getProductByPath(`/${slug}/`);
 
 	if (!bcProduct) {
-		throw error(404, `Product "${slug}" not found`);
+		return throwShopperNotFound(url, `Product "${slug}" not found`);
 	}
 
 	const product = transformProduct(bcProduct);
@@ -163,29 +164,17 @@ export const load: PageServerLoad = async ({ params, url, parent, cookies }) => 
 			}
 		: null;
 
-	const [belowDescriptionZone, relatedZone, crossSellZone, recentlyViewedZone, belowRecsBase] = await Promise.all([
-		resolveZoneAsync({ zoneId: 'pdp.below-description', brandId: brand.id, engineOutput, engineDecisionMode: 'rules' }),
-		resolveZoneAsync({ zoneId: 'pdp.related', brandId: brand.id, engineOutput, engineDecisionMode: 'rules', engineCapabilities: ['rank_products', 'select_products'] }),
-		resolveZoneAsync({ zoneId: 'pdp.cross-sell', brandId: brand.id, engineOutput, engineDecisionMode: 'rules', engineCapabilities: ['rank_products', 'select_products'] }),
-		resolveZoneAsync({ zoneId: 'pdp.recently-viewed', brandId: brand.id, engineOutput, engineDecisionMode: 'rules', engineCapabilities: ['rank_products', 'select_products'] }),
-		resolveZoneAsync({ zoneId: 'pdp.below-recs', brandId: brand.id, engineOutput, engineDecisionMode: 'rules' }),
-	]);
-	const belowRecsZone = (() => {
-		const base = belowRecsBase;
-		// Surface the product name into the BOPIS placeholder fallback so the
-		// picker subtitle reads naturally without each fallback knowing the
-		// per-request product context.
-		if (
-			base.source === 'fallback' &&
-			base.content &&
-			typeof base.content === 'object' &&
-			(base.content as { component?: string }).component === 'bopis-picker'
-		) {
-			const c = base.content as { component: string; props: { productName?: string; stores: unknown[] } };
-			return { ...base, content: { ...c, props: { ...c.props, productName: product.name } } };
-		}
-		return base;
-	})();
+	const zoneExecution = await executeRouteZones({
+		context: routeContext,
+		engineOutput,
+		engineDecisionMode: 'rules',
+		engineProvenance: { kind: 'trusted-rule', id: 'pdp-tag-overlap-v1', version: '1' },
+	});
+	const belowDescriptionZone = routeZoneDecision(zoneExecution, 'pdp.below-description').resolution;
+	const relatedZone = routeZoneDecision(zoneExecution, 'pdp.related').resolution;
+	const crossSellZone = routeZoneDecision(zoneExecution, 'pdp.cross-sell').resolution;
+	const recentlyViewedZone = routeZoneDecision(zoneExecution, 'pdp.recently-viewed').resolution;
+	const belowRecsZone = routeZoneDecision(zoneExecution, 'pdp.below-recs').resolution;
 
 	return {
 		product,
@@ -204,6 +193,7 @@ export const load: PageServerLoad = async ({ params, url, parent, cookies }) => 
 		recentlyViewedZone,
 		belowRecsZone,
 		bopisStrip,
+		zoneExecution,
 	};
 };
 

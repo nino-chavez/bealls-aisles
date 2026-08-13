@@ -1,49 +1,34 @@
-/**
- * Server-only async variant of `resolveZone` that fetches admin-authored
- * content from `zone_content` (XLAYER-004 round-trip) before applying
- * the cascade.
- *
- * Lives under `$lib/server/` because the underlying `getZoneContent`
- * lookup hits Postgres. The pure-sync `resolveZone` stays in
- * `$lib/foundation/` so client components (e.g. checkout/+page.svelte)
- * can import it without pulling DB code into the browser bundle.
- *
- * Per-request fan-out is fine — `getZoneContent` has a 60s in-process
- * cache that absorbs duplicate lookups for the same (brand, zone).
- */
-
 import { resolveZone, type ResolveZoneOpts, type ZoneResolution } from '$lib/foundation/resolve-zone';
-import { parseZoneInstance, ZONES, type ZoneInstanceId } from '$lib/foundation/zones';
-import { compileCompositionPolicy } from '$lib/foundation/composition-policy';
-import { BEALLS_COMPOSITION_POLICY } from '$lib/brand/composition-policy';
+import { parseZoneInstance, ZONES } from '$lib/foundation/zones';
 import { getZoneContent } from './admin-overrides';
 
+/**
+ * Resolve a zone with a merchant record that is bound to the same trusted
+ * route/policy envelope. Database errors and legacy unbound rows fail closed
+ * to the static fallback; they never become merchant authority.
+ */
 export async function resolveZoneAsync(opts: ResolveZoneOpts): Promise<ZoneResolution> {
 	const parsed = parseZoneInstance(opts.zoneId);
 	if (!parsed) throw new Error(`resolveZoneAsync: unknown zone instance "${opts.zoneId}"`);
-	const policy = opts.policy ?? compileCompositionPolicy({
-		organizationId: 'example-merchant',
-		brandId: opts.brandId,
-		surface: ZONES[parsed.family].surface,
-		zoneId: parsed.family,
-		registry: BEALLS_COMPOSITION_POLICY,
-	});
-	const policyOpts = { ...opts, policy };
-	if (opts.adminContent !== undefined) {
-		// Caller already supplied admin content (e.g., bulk pre-fetched).
-		// Don't re-fetch; honor the explicit value.
-		return resolveZone(policyOpts);
-	}
 
-	let admin: { zones: Record<ZoneInstanceId, unknown> } | undefined;
+	if (opts.adminRecord !== undefined) return resolveZone(opts);
+
+	let adminRecord = null;
 	try {
-		const authored = await getZoneContent(opts.brandId, opts.zoneId);
-		if (authored !== null && authored !== undefined) {
-			admin = { zones: { [opts.zoneId]: authored } };
-		}
+		adminRecord = await getZoneContent({
+			organizationId: opts.policy.provenance.organizationId,
+			brandId: opts.brandId,
+			routePath: opts.routePath,
+			surface: ZONES[parsed.family].surface,
+			zoneId: opts.zoneId,
+			policyVersion: opts.policy.policyVersion,
+			referenceState: opts.policy.provenance.referenceState,
+			referenceId: null,
+			referenceVersion: null,
+		});
 	} catch {
-		// Fail open — admin lookup failure should not break the page.
+		adminRecord = null;
 	}
 
-	return resolveZone({ ...policyOpts, adminContent: admin });
+	return resolveZone({ ...opts, adminRecord });
 }

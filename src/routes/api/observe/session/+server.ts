@@ -2,12 +2,14 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getSessionStore, hasSession } from '$lib/signals/session';
 import { infer } from '$lib/signals/inference';
+import { requireOperatorAccess } from '$lib/server/access-gates';
 
 /**
  * GET /api/observe/session?id={sessionId}
  * Returns the full session state: events, inference, cross-session context.
  */
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, request }) => {
+	requireOperatorAccess(url, request);
 	const sessionId = url.searchParams.get('id');
 	if (!sessionId) {
 		return json({ error: 'Missing id parameter' }, { status: 400 });

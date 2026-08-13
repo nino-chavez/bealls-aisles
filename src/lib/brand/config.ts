@@ -379,15 +379,29 @@ const BRANDS: Record<string, BrandConfig> = {
 	},
 };
 
-/** Get the active brand config based on BRAND_ID env var */
+export class UnknownBrandConfigurationError extends Error {
+	constructor(brandId: string) {
+		super(`Unknown BRAND_ID "${brandId}". Expected one of: ${Object.keys(BRANDS).join(', ')}`);
+		this.name = 'UnknownBrandConfigurationError';
+	}
+}
+
+/** Resolve only an exact registered brand ID. Missing configuration defaults to Bealls. */
+export function resolveBrandId(brandId?: string): BrandConfig {
+	const normalized = brandId === undefined || brandId === '' ? 'bealls' : brandId;
+	const brand = getBrandById(normalized);
+	if (!brand) throw new UnknownBrandConfigurationError(normalized);
+	return brand;
+}
+
+/** Get the active brand config based on BRAND_ID env var. Unknown configured IDs fail closed. */
 export function getBrand(): BrandConfig {
-	// In SvelteKit, use import.meta.env; in Node scripts, use process.env
+	// In SvelteKit, use import.meta.env; in Node scripts, use process.env.
 	const brandId =
 		(typeof import.meta !== 'undefined' && import.meta.env?.VITE_BRAND_ID) ||
-		(typeof process !== 'undefined' && process.env?.BRAND_ID) ||
-		'bealls';
+		(typeof process !== 'undefined' ? process.env?.BRAND_ID : undefined);
 
-	return getBrandById(brandId) ?? BRANDS.bealls;
+	return resolveBrandId(brandId);
 }
 
 /** Get a brand by explicit ID */

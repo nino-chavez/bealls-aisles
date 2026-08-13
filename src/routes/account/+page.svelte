@@ -2,6 +2,7 @@
 	import type { PageData } from './$types';
 	import ForYouRow from '$lib/components/layouts/sections/ForYouRow.svelte';
 	import { getPickItems } from '$lib/stores/picks.svelte';
+	import ZoneExecutionEvidence from '$lib/foundation/ZoneExecutionEvidence.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -132,3 +133,5 @@
 		</div>
 	</div>
 </div>
+
+<ZoneExecutionEvidence executions={[data.zoneExecution]} />

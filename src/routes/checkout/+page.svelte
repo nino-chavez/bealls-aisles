@@ -5,8 +5,12 @@
 	import LastChanceUpsellRow from '$lib/components/layouts/sections/LastChanceUpsellRow.svelte';
 	import AILoadingInline from '$lib/components/AILoadingInline.svelte';
 	import type { Product } from '$lib/types';
-	import { resolveZone } from '$lib/foundation/resolve-zone';
-	import { compileBrandCompositionPolicy, type BeallsFamilyBrandId } from '$lib/brand/bealls-family-runtime-contract';
+	import ZoneExecutionEvidence from '$lib/foundation/ZoneExecutionEvidence.svelte';
+	import RuntimeEnvelopeZone from '$lib/foundation/RuntimeEnvelopeZone.svelte';
+	import {
+		runtimeZoneViewFromEnvelope,
+		type RuntimeZoneEnvelopeView,
+	} from '$lib/foundation/runtime-zone-envelope';
 
 	let { data }: { data: PageData } = $props();
 
@@ -18,19 +22,21 @@
 	let upsellProducts = $state<Product[]>([]);
 	let upsellTitle = $state('Last chance — pair these with your order');
 	let isLoading = $state(true);
+	let assuranceZone = $state<RuntimeZoneEnvelopeView | null>(null);
+	let upsellZone = $state<RuntimeZoneEnvelopeView | null>(null);
 
 	const persona = data.personaHint ?? 'gatherer';
-	const brandId = data.brand?.id ?? 'bealls';
-
-	// Pre-seed with the static fallback so first paint isn't empty while we
-	// wait for the AI response. The cascade resolver returns the brand's
-	// default assurance strip; the AI override (if any) replaces it on load.
-	const fallbackPolicy = compileBrandCompositionPolicy(brandId as BeallsFamilyBrandId, 'checkout', 'checkout.assurance-strip');
-	const fallback = resolveZone({ zoneId: 'checkout.assurance-strip', brandId, policy: fallbackPolicy });
-	if (fallback.content && typeof fallback.content === 'object' && 'props' in fallback.content) {
+	const fallback = data.zoneExecution.decisions.find((decision) => decision.zoneId === 'checkout.assurance-strip')?.resolution;
+	if (fallback?.content && typeof fallback.content === 'object' && 'props' in fallback.content) {
 		const props = (fallback.content as { props: { items: AssuranceItem[]; variant: AssuranceVariant } }).props;
 		assuranceItems = props.items;
 		assuranceVariant = props.variant;
+		assuranceZone = {
+			zoneId: 'checkout.assurance-strip',
+			source: fallback.source,
+			terminal: `materialized-${fallback.source}`,
+			content: fallback.content as { component: string; props: Record<string, unknown> },
+		};
 	}
 
 	onMount(() => {
@@ -47,27 +53,40 @@
 			const res = await fetch('/api/layout', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ surface: 'checkout', categorySlug: 'checkout', persona }),
+				body: JSON.stringify({ categorySlug: 'checkout', persona }),
 			});
 			if (!res.ok) return;
 			const d = await res.json();
-			const sections = d?.layout?.sections ?? [];
+			const envelopeFor = (zoneId: string, component: string) => (Array.isArray(d?.envelopes) ? d.envelopes : [])
+				.map((raw: unknown) => runtimeZoneViewFromEnvelope(raw, {
+					organizationId: data.zoneExecution.organizationId,
+					brandId: data.zoneExecution.brandId,
+					routeId: '/checkout',
+					routePath: data.zoneExecution.routePath,
+					surface: 'checkout',
+					zoneId,
+					component,
+				}))
+				.find((candidate: RuntimeZoneEnvelopeView | null): candidate is RuntimeZoneEnvelopeView => candidate !== null) ?? null;
 
-			const assurance = sections.find((s: { component: string }) => s.component === 'assurance-strip-checkout');
+			const assurance = envelopeFor('checkout.assurance-strip', 'assurance-strip-checkout');
 			if (assurance) {
-				assuranceItems = assurance.props.items;
-				assuranceVariant = assurance.props.variant;
+				const props = assurance.content.props as { items: AssuranceItem[]; variant: AssuranceVariant };
+				assuranceItems = props.items;
+				assuranceVariant = props.variant;
+				assuranceZone = assurance;
 			}
 
-			const upsell = sections.find((s: { component: string }) => s.component === 'last-chance-upsell-row');
+			const upsell = envelopeFor('checkout.last-chance-upsell', 'last-chance-upsell-row');
 			if (upsell) {
-				upsellTitle = (upsell.props.title as string) ?? upsellTitle;
-				const refs: Array<{ productId: string }> = upsell.props.products ?? [];
+				upsellTitle = (upsell.content.props.title as string) ?? upsellTitle;
+				const refs: Array<{ productId: string }> = (upsell.content.props.products as Array<{ productId: string }>) ?? [];
 				const candidates: Product[] = d?.products ?? [];
 				upsellProducts = refs
 					.map((ref) => candidates.find((c) => c.id === ref.productId || String(c.entityId) === ref.productId))
 					.filter((p): p is Product => !!p)
 					.slice(0, 4);
+				if (upsellProducts.length > 0) upsellZone = upsell;
 			}
 		} catch {
 			// Continue with fallback assurance; upsell is optional.
@@ -83,11 +102,13 @@
 
 <div class="mx-auto max-w-3xl px-6 py-12">
 	{#if data.reason === 'empty'}
-		<h1 class="font-display text-2xl">Your cart is empty</h1>
-		<p class="mt-3 text-surface-muted-fg">Add some items before checking out.</p>
-		<a href="/" class="mt-6 inline-block text-sm font-medium text-primary hover:text-secondary">
-			Continue shopping
-		</a>
+		<div data-empty-state="empty-checkout">
+			<h1 class="font-display text-2xl">Your cart is empty</h1>
+			<p class="mt-3 text-surface-muted-fg">Add some items before checking out.</p>
+			<a href="/" class="mt-6 inline-block text-sm font-medium text-primary hover:text-secondary">
+				Continue shopping
+			</a>
+		</div>
 	{:else}
 		<div class="mb-8 flex items-center justify-between">
 			<h1 class="font-display text-2xl">Almost done</h1>
@@ -102,20 +123,22 @@
 			</div>
 		</div>
 
-		<!-- Engine: AI-composed assurance strip (variant by signal). -->
-		<div class="mt-8">
-			<AssuranceStripCheckout items={assuranceItems} variant={assuranceVariant} />
-		</div>
+		<!-- Policy-authorized assurance strip with exact envelope provenance. -->
+		{#if assuranceZone}
+			<RuntimeEnvelopeZone view={assuranceZone} className="mt-8">
+				<AssuranceStripCheckout items={assuranceItems} variant={assuranceVariant} />
+			</RuntimeEnvelopeZone>
+		{/if}
 
-		<!-- Engine: AI-composed last-chance upsell (optional). -->
+		<!-- Policy-authorized last-chance upsell (optional). -->
 		{#if isLoading}
 			<div class="mt-8 border-t border-surface-border pt-8">
 				<AILoadingInline label="Personalizing your checkout" />
 			</div>
-		{:else if upsellProducts.length > 0}
-			<div class="mt-8 border-t border-surface-border pt-8">
+		{:else if upsellZone && upsellProducts.length > 0}
+			<RuntimeEnvelopeZone view={upsellZone} className="mt-8 border-t border-surface-border pt-8">
 				<LastChanceUpsellRow title={upsellTitle} products={upsellProducts} />
-			</div>
+			</RuntimeEnvelopeZone>
 		{/if}
 
 		<!-- Foundation: BC Optimized Checkout handoff (FND-010). -->
@@ -150,3 +173,5 @@
 
 	{/if}
 </div>
+
+<ZoneExecutionEvidence executions={data.emptyZoneExecution ? [data.zoneExecution, data.emptyZoneExecution] : [data.zoneExecution]} />

@@ -44,20 +44,21 @@ for (const contract of contracts) {
 assert('three distinct Bealls-family contracts are declared', contracts.length === 3 && new Set(contracts.map((contract) => contract.brandId)).size === 3);
 assert('each contract is versioned and tied to one configured brand', contracts.every((contract) => /^\d+\.\d+\.\d+$/.test(contract.contractVersion) && getBrandById(contract.brandId)?.name === contract.brandName));
 assert('storefront brands inventory every shopper, locator, review, and rescue surface', ['bealls', 'beallsflorida'].every((brandId) => getBeallsFamilyRendererContract(brandId)?.supportedSurfaces.map((entry) => entry.surface).join(',') === 'home,plp,pdp,cart,checkout,search,account,compare,locator,style-guide,error-404,error-empty'));
-assert('Home Centric inventories content routes, style guide, locator, and universal rescues', getBeallsFamilyRendererContract('homecentric')?.supportedSurfaces.map((entry) => entry.surface).join(',') === 'home,category,locator,style-guide,error-404,error-empty');
-assert('404 and empty-rescue reason inventories match the mounted implementation', contracts.every((contract) => {
+assert('Home Centric inventories content routes, style guide, locator, and its actual 404 rescue', getBeallsFamilyRendererContract('homecentric')?.supportedSurfaces.map((entry) => entry.surface).join(',') === 'home,category,locator,style-guide,error-404');
+assert('404 and storefront empty-rescue reason inventories match actual page insertions', contracts.every((contract) => {
 	const error404 = contract.supportedSurfaces.find((entry) => entry.surface === 'error-404');
 	const empty = contract.supportedSurfaces.find((entry) => entry.surface === 'error-empty');
-	return error404?.rescueReasons.join(',') === 'not-found' && empty?.rescueReasons.join(',') === 'empty-cart,empty-search,empty-wishlist';
+	return error404?.rescueReasons.join(',') === 'not-found'
+		&& (contract.mode === 'content' ? !empty : empty?.rescueReasons.join(',') === 'empty-cart,empty-search');
 }));
-assert('locator is classified as fixed while rescue surfaces classify current model use', contracts.every((contract) => {
+assert('locator and applicable rescue surfaces are fixed because no current model producer publishes there', contracts.every((contract) => {
 	const surfaces = BEALLS_COMPOSITION_POLICY.brands[contract.brandId].surfaces;
 	return surfaces.locator?.preset === 'preserve'
 		&& surfaces.locator.decisionMode === 'fixed'
-		&& surfaces['error-404']?.preset === 'compose'
-		&& surfaces['error-404'].decisionMode === 'model'
-		&& surfaces['error-empty']?.preset === 'compose'
-		&& surfaces['error-empty'].decisionMode === 'model';
+		&& surfaces['error-404']?.preset === 'preserve'
+		&& surfaces['error-404'].decisionMode === 'fixed'
+		&& (contract.mode === 'content' || (surfaces['error-empty']?.preset === 'preserve'
+			&& surfaces['error-empty'].decisionMode === 'fixed'));
 }));
 assert('style guide is a fixed shared surface with no model capabilities', contracts.every((contract) => {
 	const surface = BEALLS_COMPOSITION_POLICY.brands[contract.brandId].surfaces['style-guide'];
@@ -79,16 +80,26 @@ assert('source snapshot records route, component, CSS, and runtime config owners
 	'src/lib/components/EmptyRescue.svelte',
 	'src/lib/brand/config.ts',
 	'src/lib/brand/bealls-family-runtime-contract.ts',
-	'src/lib/server/layout-runtime-contract.ts',
+	'src/lib/server/route-zone-runtime.ts',
+	'src/lib/server/zone-output-runtime.ts',
+	'src/lib/server/zone-decision-envelope.ts',
+	'src/lib/server/shopper-route-grant.ts',
+	'src/lib/foundation/RuntimeEnvelopeZone.svelte',
+	'src/lib/foundation/RuntimeZone.svelte',
+	'src/lib/foundation/runtime-zone-envelope.ts',
+	'src/lib/foundation/zone-decision-envelope-schema.ts',
+	'src/lib/foundation/ZoneExecutionEvidence.svelte',
+	'src/routes/observe/+page.server.ts',
+	'src/routes/test/+layout.server.ts',
 	'src/app.css',
 ].every((path) => BEALLS_FAMILY_RENDERER_SOURCE_FILES.includes(path as RendererSourceFile)));
 const discoveredRendererRoutes = discoverBeallsFamilyLayoutRendererRoutes(routeFiles, readRouteFile);
-assert('renderer route discovery covers current shopper surfaces and the development harness', discoveredRendererRoutes.join(',') === [
-	'src/routes/+page.svelte',
-	'src/routes/category/[slug]/+page.svelte',
+assert('LayoutRenderer remains only on gated review/development surfaces', discoveredRendererRoutes.join(',') === [
 	'src/routes/style-guide/+page.svelte',
 	'src/routes/test/components/+page.svelte',
 ].join(','));
+assert('Home Centric shopper category renders fixed sections without transitive whole-layout dispatch',
+	!readFileSync(resolve(repoRoot, 'src/lib/components/layouts/ContentCategorySurface.svelte'), 'utf8').includes('LayoutRenderer'));
 assert('style-guide route has explicit brand-surface evidence', BEALLS_FAMILY_LAYOUT_RENDERER_ROUTE_EVIDENCE.some((entry) => entry.file === 'src/routes/style-guide/+page.svelte'
 	&& entry.kind === 'brand-surface'
 	&& entry.surfaces.join(',') === 'style-guide'));

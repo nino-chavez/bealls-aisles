@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { getDb } from '$lib/server/db';
 import { outcomesSummary } from '$lib/server/outcomes';
 import learnedWeights from '$lib/signals/learned-weights.json';
+import { requireOperatorAccess } from '$lib/server/access-gates';
 
 /**
  * GET /api/observe/inference
@@ -15,7 +16,8 @@ import learnedWeights from '$lib/signals/learned-weights.json';
  * Tolerant of missing DATABASE_URL — returns a minimal response with an error
  * note so dev without a DB still renders something.
  */
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async ({ url, request }) => {
+	requireOperatorAccess(url, request);
 	const learnedActive =
 		(learnedWeights as { totalSessions?: number }).totalSessions !== undefined &&
 		(learnedWeights as { totalSessions: number }).totalSessions > 0;

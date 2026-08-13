@@ -1,7 +1,9 @@
 import type { PageServerLoad } from './$types';
 import { getBrand, getBrandMode } from '$lib/brand/config';
+import { requireMerchantReviewAccess } from '$lib/server/access-gates';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ url, request }) => {
+	requireMerchantReviewAccess(url, request);
 	const brand = getBrand();
 	const mode = getBrandMode(brand);
 

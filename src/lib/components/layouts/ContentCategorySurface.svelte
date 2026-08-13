@@ -1,6 +1,7 @@
 <script lang="ts">
-	import LayoutRenderer from './LayoutRenderer.svelte';
-	import type { Layout } from '$lib/schema/layout';
+	import EditorialHero from './sections/EditorialHero.svelte';
+	import PromoStrip from './sections/PromoStrip.svelte';
+	import CategoryTileGrid from './sections/CategoryTileGrid.svelte';
 
 	let {
 		category,
@@ -20,45 +21,30 @@
 		locatorBody: string;
 	} = $props();
 
-	const layout: Layout = $derived({
-		persona: 'gatherer',
-		reasoning: 'Content-mode category surface — drives in-store discovery, no transactional flow.',
-		productOrder: [],
-		sections: [
-			{
-				component: 'editorial-hero',
-				props: {
-					image: heroImage,
-					eyebrow: heroEyebrow,
-					headline: category.name,
-					body: heroBody,
-					ctaLabel: locatorCta,
-					ctaHref: '#locator',
-					textPosition: 'left',
-				},
-			},
-			{
-				component: 'promo-strip',
-				props: {
-					eyebrow: 'IN STORE',
-					headline: locatorBody,
-					ctaLabel: 'Find a Store',
-					ctaHref: '#locator',
-					urgency: 'soft',
-				},
-			},
-			{
-				component: 'category-tile-grid',
-				props: {
-					sectionLabel: 'More to explore in store',
-					columns: 4,
-					tiles: brandPillars,
-				},
-			},
-		],
-	});
 </script>
 
 <div class="mx-auto max-w-7xl px-6 py-8">
-	<LayoutRenderer {layout} products={[]} />
+	<div class="relative" data-fixed-section="content-category.hero">
+		<EditorialHero
+			image={heroImage}
+			eyebrow={heroEyebrow}
+			headline={category.name}
+			body={heroBody}
+			ctaLabel={locatorCta}
+			ctaHref="#locator"
+			textPosition="left"
+		/>
+	</div>
+	<div class="relative" data-fixed-section="content-category.store-message">
+		<PromoStrip
+			eyebrow="IN STORE"
+			headline={locatorBody}
+			ctaLabel="Find a Store"
+			ctaHref="#locator"
+			urgency="soft"
+		/>
+	</div>
+	<div class="relative" data-fixed-section="content-category.pillars">
+		<CategoryTileGrid sectionLabel="More to explore in store" columns={4} tiles={brandPillars} />
+	</div>
 </div>

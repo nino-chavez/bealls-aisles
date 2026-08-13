@@ -1,12 +1,14 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { loadCategoryProducts } from '$lib/server/catalog';
+import { requireOperatorAccess } from '$lib/server/access-gates';
 
 /**
  * GET /api/observe/enrichment?category={slug}&persona={persona}
  * Returns enriched products for a category, sorted by persona-fit.
  */
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, request }) => {
+	requireOperatorAccess(url, request);
 	const category = url.searchParams.get('category');
 	const persona = url.searchParams.get('persona') || 'gatherer';
 

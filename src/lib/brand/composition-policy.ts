@@ -14,15 +14,15 @@ const organization: OrganizationCompositionPolicy = {
 };
 
 const STORE_FRONT_SURFACES = {
-	home: { preset: 'compose', decisionMode: 'model', publicationMode: 'live' },
-	plp: { preset: 'compose', decisionMode: 'model', publicationMode: 'live' },
-	pdp: { preset: 'assist', decisionMode: 'model', publicationMode: 'live' },
+	home: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
+	plp: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
+	pdp: { preset: 'preserve', decisionMode: 'rules', publicationMode: 'live' },
 	cart: { preset: 'assist', decisionMode: 'model', publicationMode: 'live' },
 	checkout: { preset: 'assist', decisionMode: 'model', publicationMode: 'live' },
-	search: { preset: 'assist', decisionMode: 'model', publicationMode: 'live' },
-	account: { preset: 'preserve', decisionMode: 'rules', publicationMode: 'live' },
+	search: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
+	account: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
 	compare: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
-	picks: { preset: 'assist', decisionMode: 'model', publicationMode: 'live' },
+	picks: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
 } as const;
 
 const FIXED_ZONE = { capabilities: [], decisionMode: 'fixed' } as const;
@@ -62,7 +62,7 @@ const ZONE_OVERRIDES = {
 	},
 	cart: {
 		'cart.above-checkout-cta': {
-			capabilities: ['rank_products', 'select_products', 'select_component_variant'],
+			capabilities: ['rank_products', 'select_products', 'select_copy_variant', 'generate_bounded_copy', 'select_component_variant'],
 			decisionMode: 'model',
 		},
 		'cart.below-fold': FIXED_ZONE,
@@ -74,7 +74,7 @@ const ZONE_OVERRIDES = {
 			decisionMode: 'model',
 		},
 		'checkout.last-chance-upsell': {
-			capabilities: ['rank_products', 'select_products', 'select_component_variant'],
+			capabilities: ['rank_products', 'select_products', 'select_copy_variant', 'generate_bounded_copy', 'select_component_variant'],
 			decisionMode: 'model',
 		},
 	},
@@ -88,16 +88,10 @@ const ZONE_OVERRIDES = {
 	},
 	locator: { 'locator.editorial-intro': FIXED_ZONE },
 	'error-404': {
-		'error-404.rescue': {
-			capabilities: ['rank_products', 'select_products', 'select_copy_variant', 'generate_bounded_copy', 'select_component_variant'],
-			decisionMode: 'model',
-		},
+		'error-404.rescue': FIXED_ZONE,
 	},
 	'error-empty': {
-		'error-empty.rescue': {
-			capabilities: ['rank_products', 'select_products', 'select_copy_variant', 'generate_bounded_copy', 'select_component_variant'],
-			decisionMode: 'model',
-		},
+		'error-empty.rescue': FIXED_ZONE,
 	},
 } as const;
 
@@ -107,8 +101,8 @@ const ZONE_OVERRIDES = {
 const SHARED_SURFACES = {
 	locator: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live', zoneOverrides: ZONE_OVERRIDES.locator },
 	'style-guide': { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
-	'error-404': { preset: 'compose', decisionMode: 'model', publicationMode: 'live', zoneOverrides: ZONE_OVERRIDES['error-404'] },
-	'error-empty': { preset: 'compose', decisionMode: 'model', publicationMode: 'live', zoneOverrides: ZONE_OVERRIDES['error-empty'] },
+	'error-404': { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live', zoneOverrides: ZONE_OVERRIDES['error-404'] },
+	'error-empty': { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live', zoneOverrides: ZONE_OVERRIDES['error-empty'] },
 } as const;
 
 function observedStorefrontPolicy(brandId: 'bealls' | 'beallsflorida'): BrandCompositionPolicy {
@@ -139,9 +133,11 @@ const homecentric: BrandCompositionPolicy = {
 	maximum: { capabilities: AUTONOMY_CAPABILITIES, decisionMode: 'model', publicationMode: 'live' },
 	reference: { state: 'uncontracted' },
 	surfaces: {
-		home: { preset: 'compose', decisionMode: 'model', publicationMode: 'live', zoneOverrides: ZONE_OVERRIDES.home },
+		home: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live', zoneOverrides: ZONE_OVERRIDES.home },
 		category: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
-		...SHARED_SURFACES,
+		locator: SHARED_SURFACES.locator,
+		'style-guide': SHARED_SURFACES['style-guide'],
+		'error-404': SHARED_SURFACES['error-404'],
 	},
 };
 

@@ -5,8 +5,10 @@ import { infer } from '$lib/signals/inference';
 import { createStoreFromRequest } from '$lib/signals/request';
 import { searchProducts } from '$lib/server/search';
 import { requireBrandSurface } from '$lib/server/brand-surface-guard';
+import { executeShopperPageRoute, executeTrustedErrorZones } from '$lib/server/shopper-route-runtime';
 
 export const load: PageServerLoad = async ({ url, cookies, request, parent }) => {
+	const zoneExecution = await executeShopperPageRoute(url, '/search');
 	requireBrandSurface('search');
 	const query = url.searchParams.get('q') || '';
 	const { devMode } = await parent();
@@ -78,6 +80,8 @@ export const load: PageServerLoad = async ({ url, cookies, request, parent }) =>
 		storedPersona: inferenceContext.storedPersona,
 		suggestedCategory: categorySlug,
 		devMode,
+		zoneExecution,
+		emptyZoneExecution: matched.length === 0 ? await executeTrustedErrorZones(url, 'empty') : null,
 	};
 };
 

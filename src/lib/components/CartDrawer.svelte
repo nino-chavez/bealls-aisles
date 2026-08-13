@@ -4,11 +4,7 @@
 	import CartSummary from '$lib/components/layouts/sections/CartSummary.svelte';
 	import FreeShippingMeter from '$lib/components/layouts/sections/FreeShippingMeter.svelte';
 	import PromoCodeEntry from '$lib/components/layouts/sections/PromoCodeEntry.svelte';
-	import LastChanceUpsellRow from '$lib/components/layouts/sections/LastChanceUpsellRow.svelte';
-	import AILoadingInline from '$lib/components/AILoadingInline.svelte';
-	import DevZoneBadge from '$lib/components/dev/DevZoneBadge.svelte';
 	import type { CartLineItem } from '$lib/components/layouts/sections/CartLineItems.svelte';
-	import type { Product } from '$lib/types';
 	import { getBrand } from '$lib/brand/config';
 
 	let {
@@ -24,10 +20,7 @@
 	} = $props();
 
 	let items = $state<CartLineItem[]>([]);
-	let upsellProducts = $state<Product[]>([]);
-	let upsellTitle = $state('You might also like');
 	let isLoading = $state(false);
-	let upsellLoading = $state(false);
 	let subtotal = $derived(items.reduce((sum, item) => sum + item.salePrice.value * item.quantity, 0));
 	let itemCount = $derived(items.reduce((sum, item) => sum + item.quantity, 0));
 
@@ -52,59 +45,6 @@
 			items = [];
 		} finally {
 			isLoading = false;
-		}
-		// Foundation/engine separation: line items + summary + meter come from
-		// cart state. Upsell row comes from /api/layout?surface=cart through
-		// the engine. The schema today emits `last-chance-upsell-row` as the
-		// only AI-composable cart block (per CartLayoutSchema specialization).
-		if (items.length > 0) {
-			loadUpsells();
-		} else {
-			upsellProducts = [];
-		}
-	}
-
-	async function loadUpsells() {
-		upsellLoading = true;
-		try {
-			// PRD-ENG-019: pass the cart's line-item entityIds so the layout
-			// API can source upsell candidates from their tag-overlap
-			// neighborhood (rather than brand-wide popular products).
-			const cartItemEntityIds = items.map((i) => i.productEntityId).filter((n): n is number => Number.isFinite(n));
-			const res = await fetch('/api/layout', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					surface: 'cart',
-					categorySlug: 'cart',
-					persona,
-					cartItemEntityIds,
-				}),
-			});
-			if (!res.ok) {
-				upsellProducts = [];
-				return;
-			}
-			const data = await res.json();
-			const sections = data?.layout?.sections ?? [];
-			const upsellSection = sections.find((s: { component: string }) => s.component === 'last-chance-upsell-row');
-			if (!upsellSection) {
-				upsellProducts = [];
-				return;
-			}
-			upsellTitle = (upsellSection.props?.title as string) ?? upsellTitle;
-			const productRefs: Array<{ productId: string }> = upsellSection.props?.products ?? [];
-			const candidates: Product[] = data?.products ?? [];
-			// Dedupe against in-cart entityIds — don't pitch what's already there.
-			const inCart = new Set(items.map((i) => i.productEntityId));
-			upsellProducts = productRefs
-				.map((ref) => candidates.find((c) => c.id === ref.productId || String(c.entityId) === ref.productId))
-				.filter((p): p is Product => !!p && !inCart.has(p.entityId))
-				.slice(0, 3);
-		} catch {
-			upsellProducts = [];
-		} finally {
-			upsellLoading = false;
 		}
 	}
 </script>
@@ -150,7 +90,7 @@
 							Continue shopping
 						</button>
 					</div>
-					<!-- PRD-FND-012: AI rescue band beneath the standard empty copy. -->
+					<!-- Fixed rescue band beneath the standard empty copy. -->
 					<div class="mt-8 border-t border-surface-border pt-6">
 						<EmptyRescue
 							reason="empty-cart"
@@ -167,19 +107,6 @@
 						<div class="mt-6">
 							<FreeShippingMeter current={subtotal} threshold={freeShippingThreshold} />
 						</div>
-					{/if}
-
-					<!-- Engine: AI-composed upsell row above checkout CTA. -->
-					{#if upsellLoading}
-						<div class="mt-6 border-t border-surface-border pt-6">
-							<AILoadingInline label="Selecting pieces that pair with your cart" size="small" />
-						</div>
-					{:else if upsellProducts.length > 0}
-						<DevZoneBadge zoneId="cart.above-checkout-cta" source="engine" layer="engine" {persona}>
-							<div class="mt-6 border-t border-surface-border pt-6">
-								<LastChanceUpsellRow title={upsellTitle} products={upsellProducts} />
-							</div>
-						</DevZoneBadge>
 					{/if}
 
 					<!-- Foundation: promo-code-entry (cart state). -->
