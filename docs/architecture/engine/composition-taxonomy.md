@@ -1,8 +1,8 @@
 # Aisles AI Composition Taxonomy
 
-**The contract for what an autonomous AI agent should be able to compose on a standard ecommerce site.**
+**A design taxonomy for what a bounded composition system may eventually support on an ecommerce site.**
 
-Status: draft v1 — 2026-04-30
+Status: design taxonomy; executable runtime boundary updated 2026-08-13
 Authors: Nino Chavez + Claude (Opus 4.7)
 
 ---
@@ -13,7 +13,7 @@ We've been adding components reactively. Every demo iteration surfaced a gap, we
 
 That observation isn't "we forgot a few components" — it's that **we never defined the full surface area an autonomous ecommerce agent needs to operate over**. Without that contract, every new gap is a one-off addition and the schema drifts toward whatever the last demo demanded.
 
-This document defines that contract. It is the spec that all subsequent schema, prompt, and renderer work should derive from.
+This document defines the design vocabulary. It is not the shopper publication contract. The compiled brand policy, exact zone schema, and registered renderer are authoritative when this taxonomy and the running code differ.
 
 ## Scope boundary
 
@@ -25,20 +25,21 @@ External-reference onboarding requires a versioned reference contract, merchant-
 
 The taxonomy is broader than the renderer. Runtime authority comes from the compiled brand policy and the registered implementation, not from a block's presence in this document.
 
-- Bealls and Bealls Florida have separate executable policies for home, PLP, PDP, cart, checkout, search, account, compare, picks, locator, style guide, and rescue surfaces.
-- Home Centric has home, content-category, locator, style-guide, and rescue policies. Its content category is a distinct typed surface, not a PLP alias.
-- The named-zone catalog contains 28 IDs. The runtime contract records each ID as mounted, declared-only, or not applicable per brand.
-- Layout, refinement, and suggestion endpoints compile policy before model work. Published layout output is limited to registered components, candidate product IDs, configured brand assets, and internal destinations.
-- Every external-reference state remains `uncontracted`. Desktop/mobile checks are internal regression parity only.
+- Bealls and Bealls Florida have separate executable policies for home, PLP, PDP, cart, checkout, search, account, compare, Picks, locator, style guide, and rescue surfaces.
+- Home Centric has home, content-category, locator, style-guide, and 404-rescue policies. Its content category is a distinct typed surface, not a PLP alias, and it has no current empty-state insertion.
+- The named-zone catalog contains 28 families and 36 expanded instances. Every applicable instance is mounted and must terminate through named route execution. Exposure and materialization are separate fields; Hidden is a trusted terminal, not missing execution.
+- Current model publication is limited to one cart zone and two checkout zones. Three PDP recommendation zones accept only the `pdp-tag-overlap-v1` trusted rule. All other applicable zones are fixed.
+- `/api/layout` returns validated named-zone decision envelopes, never a whole layout. `/api/layout/stream` rejects whole-layout publication. Refinement and suggestion endpoints reject model work because their current zones are fixed.
+- Every external-reference state remains `uncontracted`. Checks at 390, 768, and 1280 pixels are internal regression evidence only.
 
-The executable sources are `src/lib/brand/composition-policy.ts`, `src/lib/brand/bealls-family-runtime-contract.ts`, and `src/lib/server/layout-runtime-contract.ts`. `npm run test:contracts` is the deterministic coverage gate.
+The executable sources are `src/lib/brand/composition-policy.ts`, `src/lib/brand/bealls-family-runtime-contract.ts`, `src/lib/server/route-zone-runtime.ts`, `src/lib/server/zone-output-runtime.ts`, and `src/lib/server/zone-decision-envelope.ts`. `npm run test:contracts` is the focused deterministic gate; `npm test` runs the full TypeScript test inventory.
 
 ### What this doc is
 
 - The block × surface taxonomy for autonomous ecommerce composition
 - The composition latitude rule (where AI composes vs inserts vs personalizes)
 - The mode/state matrix (how the same surface mutates by signal)
-- The implementation roadmap to close the gap from where we are (~12 blocks, mostly home/PLP) to a defensible vocabulary (~80–100 blocks, full surface coverage)
+- The original April 2026 implementation roadmap, retained as design history rather than current runtime inventory
 
 ### What this doc is NOT
 
@@ -64,11 +65,11 @@ An autonomous agent must be able to operate over **8 canonical surface types**. 
 | **Account** | Post-purchase relationship | 1 per shopper | Medium |
 | **Empty / 404 / Locator** | Rescue + brand engagement | Many | Medium |
 
-The current repository renders Home, PLP/content category, a fixed PDP scaffold, cart, checkout handoff, search, account, compare, locator, and rescue routes. Their autonomy differs. Some named zones remain declared-only even when the surrounding route is implemented. Consult the runtime contract instead of inferring authority from this taxonomy or a schema declaration.
+The current repository renders Home, PLP/content category, a fixed PDP scaffold, cart, checkout handoff, search, account, compare, locator, and rescue routes. Their autonomy differs. Every applicable zone executes, but a mounted zone can be hidden and produce no shopper DOM. Consult the runtime contract instead of inferring authority from this taxonomy or a schema declaration.
 
 ---
 
-## 2. The composition latitude principle
+## 2. The composition latitude principle (design target)
 
 **Not every surface should be 100% AI-composed.** Composition latitude is a function of surface variability and conversion-criticality.
 
@@ -81,9 +82,9 @@ The current repository renders Home, PLP/content category, a fixed PDP scaffold,
 
 This is the architectural insight that drove this doc: **we've been writing prompts and schemas as if every surface had homepage-level latitude.** That's why early PDP prompts produce free-form 8-section layouts when a PDP should be ~15 fixed zones with maybe 3 AI insertion points.
 
-### Implications for the schema
+### Implications for a future broader schema
 
-The current `LayoutSchema` is one discriminated union. The right shape is:
+The original taxonomy proposed separate layout schemas by surface:
 
 - `HomeLayoutSchema` — wide composition, ordered sections array
 - `PLPLayoutSchema` — scaffold + zones (`headerZone`, `bodyZones`, `insertions`)
@@ -92,7 +93,7 @@ The current `LayoutSchema` is one discriminated union. The right shape is:
 - `CheckoutLayoutSchema` — even more fixed; only `lastChanceUpsells[]`, `assuranceCopy`
 - `EmptyStateLayoutSchema` — wide composition for rescue surfaces
 
-Each schema constrains the AI to surface-appropriate latitude.
+Those broader layout schemas remain useful on gated style-guide and development surfaces. They are not shopper publication authority. The shopper runtime instead validates each named zone with `zone-schemas.ts`, then requires exact closure with `ZoneRenderer.svelte`. A valid legacy `LayoutSchema` value cannot be published to a shopper route.
 
 ---
 
@@ -493,7 +494,9 @@ Each rule above translates into prompt context the AI sees (we already have prob
 
 ---
 
-## 7. Where we are vs. where we need to be
+## 7. Historical April 2026 gap snapshot
+
+This section records the state that motivated the taxonomy. Its counts and “missing” labels are not a current component or runtime-authority inventory. Use the renderer and runtime contracts for current truth.
 
 ### Current state (12 blocks, mostly product display)
 
@@ -530,7 +533,9 @@ The full P0+P1 set across all 14 categories, structured by surface schema.
 
 ---
 
-## 8. Implementation roadmap
+## 8. Historical implementation roadmap
+
+This roadmap is retained as design history. It does not grant authority to a block, route, schema, or model endpoint.
 
 Concrete sequence to close the gap. Each phase is independently shippable and demonstrably improves a specific surface.
 
@@ -611,38 +616,38 @@ Migrate hand-coded PDP to scaffold-based. Define `PDPLayoutSchema` distinct from
 
 ---
 
-## 9. Schema impact summary
+## 9. Implemented shopper publication shape
 
-The current single `LayoutSchema` will become **6 surface-typed schemas**. The orchestrator (the API endpoint) routes by surface type:
+The shopper runtime publishes named zones, not surface-selected whole layouts:
 
 ```
-src/lib/schema/
-├── layout/
-│   ├── home.ts       — HomeLayoutSchema (wide latitude, ordered sections)
-│   ├── plp.ts        — PLPLayoutSchema (scaffold + zones)
-│   ├── pdp.ts        — PDPLayoutSchema (scaffold + named insertions)
-│   ├── cart.ts       — CartLayoutSchema (scaffold + upsells)
-│   ├── checkout.ts   — CheckoutLayoutSchema (very narrow)
-│   ├── empty.ts      — EmptyLayoutSchema (rescue: 404, empty cart, search empty)
-│   └── account.ts    — AccountLayoutSchema (medium latitude dashboard)
-└── blocks/           — shared block schemas referenced by all surface schemas
+server route pathname
+└── trusted brand + route context
+    └── compiled surface and expanded-zone policy
+        ├── trusted merchant pin / lock
+        ├── fixed, trusted-rule, or model candidate
+        ├── trusted authored content
+        └── brand fallback or Hidden
+            └── strict zone schema + exact renderer dispatch
 ```
 
-API endpoints become surface-aware: `/api/layout/home`, `/api/layout/plp/[slug]`, `/api/layout/pdp/[id]`, etc. A single `/api/layout` with a `surface` discriminator is acceptable but the surface-specific routes are cleaner.
+The client cannot provide a `surface` discriminator. Page loads derive the route from `event.url.pathname`. Cross-route model calls require a short-lived, signed, HttpOnly grant scoped to organization, brand, exact route, server-derived API surface, effective policy and reference state, catalog authority, synthetic provenance, expiry, and browser binding session. Origin and Referer are additional same-origin confusion checks, not the authority.
+
+Legacy whole-layout schemas remain available to `/style-guide` and `/test/components`. They are review/development fixtures and cannot be extracted or published by shopper APIs.
 
 ---
 
 ## 10. What this changes about how we build
 
 1. **No more reactive component additions.** Every new block must be motivated by a row in §3 (the catalog). If a block isn't in the catalog, we add it to the catalog first, justify its surfaces and personas, then build it.
-2. **Prompts are surface-typed.** No more "the AI prompt for layouts" — there's a homepage prompt, a PLP prompt, a PDP prompt, etc. Each has its own latitude rules.
-3. **Schemas are surface-typed.** A PDP layout cannot accidentally render a `category-header` because it's not in `PDPLayoutSchema`.
+2. **Prompts follow executable authority.** A prompt may target only the exact named zones its server-derived policy permits. Current model prompts exist only for cart and checkout zones.
+3. **Schemas and renderer dispatch close exactly.** A home zone cannot accept `cart-summary`, unsupported component IDs, extra props, or unbounded copy.
 4. **Demos are surface-walkthroughs, not feature lists.** "Watch the AI compose a homepage, then a PLP, then a PDP" — each demonstrates different latitude.
-5. **The block catalog is the contract.** Future engineering hires, designers, and stakeholders read §3 to understand what the system does.
+5. **The block catalog is design input.** Runtime authority is the compiled brand/route/zone policy plus the strict schema and registered renderer. Presence in §3 grants nothing.
 
 ---
 
-## 11. Open questions
+## 11. Historical open questions
 
 These need decisions before Phase 3 starts.
 
@@ -655,7 +660,7 @@ These need decisions before Phase 3 starts.
 
 ---
 
-## Appendix A — Quick reference: P0 missing blocks (ship first)
+## Appendix A — Original P0 backlog (historical)
 
 Marketing / capture / service:
 - event-countdown, brand-spotlight, trend-shop, email-capture-inline, bopis-strip, service-callouts-grid, locator-strip

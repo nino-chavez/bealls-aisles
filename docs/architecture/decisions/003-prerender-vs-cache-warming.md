@@ -1,7 +1,7 @@
 # Decision Record: Pre-render at Build Time vs Cache Warming
 
 **Date:** 2026-04-06
-**Status:** Cache warming chosen over prerendering
+**Status:** Superseded 2026-08-13 by route-bound named-zone decisions
 **Context:** Cold start performance optimization
 
 ## Question
@@ -14,14 +14,12 @@ Cache warming. Prerendering bakes a single layout into static HTML, but Aisles l
 
 Cache warming fills the Redis cache with layouts for each persona+category combination. The runtime serves the correct cached layout based on the detected persona.
 
-## Implementation
+## Current implementation boundary
 
-`scripts/cache/prewarm.ts` (with cell list at `scripts/cache/prewarm-cells.json`) hits `/api/layout` for each `(brand × surface × persona)` cell after each deploy. The cache TTL is 1 hour, after which layouts regenerate on demand. Wired as `npm run prewarm`.
+The whole-layout cache and its anonymous post-deploy warmer are retired. Shopper model output is limited to signed, route-bound cart and checkout zones. Cache entries contain a validated decision and provenance envelope keyed by the full organization, brand, route, surface, expanded-zone, policy, reference, viewport, catalog/content, synthetic-provenance, and approved-input context.
 
-Surface coverage is home + PLP only (28 cells across active brands). PDP, cart, checkout, empty, and HC-PLP are excluded — rationale documented in [`docs/audits/perf/cold-start-baseline-2026-05-01.md`](../../audits/perf/cold-start-baseline-2026-05-01.md) (Pre-warm scope section).
-
-**Superseded:** `scripts/warm-cache.ts` (the original deploy-time warmer) is left in place for now but has been superseded by `scripts/cache/prewarm.ts`. The new script reads its cell list as data (JSON), supports surface-typed pre-warming (per ADR-006), and has graceful per-cell error handling. Doc references and `npm` scripts have been migrated. Remove `scripts/warm-cache.ts` once any remaining external callers (CI hooks, deploy automations) are migrated.
+`scripts/warm-cache.ts` now fails without making network requests. `npm run prewarm` was removed because its referenced implementation did not exist and a route-less warmer cannot satisfy the signed grant. A future warmer needs a server-trusted route context and must cache the complete validated envelope; a client-supplied surface is not acceptable.
 
 ## When to revisit
 
-If we add ISR (Incremental Static Regeneration) support for SvelteKit on Vercel, we could prerender the default (gatherer) layout as the static fallback and serve persona-specific layouts from the cache. This would eliminate the static Svelte fallback components entirely.
+Revisit only if a warmer can mint the same scoped authority as a real consuming route without becoming a reusable cross-route capability. Static brand fallbacks remain required even if ISR is added.

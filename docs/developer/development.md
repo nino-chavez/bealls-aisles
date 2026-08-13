@@ -140,31 +140,9 @@ Done.
 
 ---
 
-## Cache Warming
+## Decision cache warming
 
-After deploying to Vercel, the Redis layout cache is empty. The first visitor per cell (brand × surface × persona) triggers a fresh generation (~10–13s on home/PLP). Cache warming pre-fills the cache so all first visitors get instant responses (sub-100ms cache hits per `docs/audits/perf/cold-start-baseline-2026-05-01.md`).
-
-```bash
-# Warm all cells defined in scripts/cache/prewarm-cells.json
-npm run prewarm
-```
-
-The cell list (active brands × home/PLP × all four personas) lives in `scripts/cache/prewarm-cells.json` — edit there, not in code. PDP, cart, checkout, empty, and HC-PLP surfaces are intentionally excluded from pre-warming; rationale is documented in the perf audit doc above.
-
-**Expected output (second run, fully cached)**:
-
-```
-=== bealls (https://aisles-demo-1.vercel.app) ===
-home / gatherer ... CACHED (87ms)
-home / hunter   ... CACHED (54ms)
-PLP:women / gatherer ... CACHED (62ms)
-...
-12 cells, 0 generated, 12 cached, 0 failed (0.5s total)
-```
-
-Run after every production deploy where product catalog or enrichment data has changed. Cache TTL is 1 hour — the cache self-refreshes on demand after expiry. Per-cell errors are reported but do not abort the run (graceful degradation).
-
-**Legacy:** `scripts/warm-cache.ts` is the original deploy-time warmer, superseded by `scripts/cache/prewarm.ts` (per [ADR-003](../architecture/decisions/003-prerender-vs-cache-warming.md)). The legacy script is still in the repo for any external callers; new pre-warm work should go through `npm run prewarm`.
+There is no supported anonymous cache warmer. Model-zone decisions require a short-lived signed grant for the exact consuming route, and the cache stores the complete validated decision/provenance envelope. `scripts/warm-cache.ts` is a retired fail-closed stub. See [ADR-003](../architecture/decisions/003-prerender-vs-cache-warming.md).
 
 ---
 
@@ -217,9 +195,8 @@ The project uses strict TypeScript. Run a type check before pushing if you've mo
 | `src/routes/api/cart/+server.ts` | GET/POST /api/cart |
 | `src/routes/api/observe/` | Observe dashboard API endpoints |
 | `src/routes/observe/+page.svelte` | Observe dashboard UI |
-| `src/routes/category/[slug]/` | Category page with AI layout |
-| `scripts/cache/prewarm.ts` | Cache pre-warm script (active). Cell list at `scripts/cache/prewarm-cells.json`. Wired as `npm run prewarm`. |
-| `scripts/warm-cache.ts` | Legacy warmer — superseded by `scripts/cache/prewarm.ts`. Kept for external callers; do not extend. |
+| `src/routes/category/[slug]/` | Policy-bound storefront PLP or fixed Home Centric content category |
+| `scripts/warm-cache.ts` | Retired fail-closed whole-layout warmer; makes no network requests. |
 | `tools/seed-channels/` | Product seeding scripts |
 | `brands/` | Brand identity JSON files |
 

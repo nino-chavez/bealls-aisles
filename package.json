@@ -12,8 +12,9 @@
     "test:renderer-contract": "tsx src/lib/brand/bealls-family-renderer-contract.test.ts",
     "test:runtime-contract": "tsx src/lib/brand/bealls-family-runtime-contract.test.ts",
     "test:contracts": "npm run test:runtime-contract && npm run test:renderer-contract",
+    "test:all": "for test_file in $(find src -name '*.test.ts' -type f | sort); do tsx \"$test_file\" || exit 1; done",
+    "test": "npm run test:all",
     "capture:runtime-parity": "node scripts/capture-runtime-parity.mjs",
-    "prewarm": "npx tsx scripts/cache/prewarm.ts",
     "warm-images": "npx tsx scripts/cache/warm-bc-images.ts"
   },
   "devDependencies": {

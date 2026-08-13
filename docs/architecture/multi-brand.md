@@ -1,6 +1,6 @@
 # Aisles — Multi-Brand Setup Guide
 
-**Version**: 0.3.0
+**Version**: 0.4.0
 **Last Updated**: 2026-08-13
 **Audience**: Developers, Platform Operators
 
@@ -10,7 +10,7 @@ A single Aisles codebase serves related brands for one example merchant organiza
 
 ## Scope limit
 
-Bealls, Bealls Florida, and Home Centric are separate brand configurations under the same `example-merchant` organization. Their shared code does not mean they share a visual identity, and it does not prove that an unrelated merchant can preserve an existing storefront through tokens, prompts, and configuration alone. Each current brand has a separate internal integrated-renderer contract in `src/lib/brand/bealls-family-renderer-contract.ts`. It records the surfaces that exist now, including the fixed style-guide and store-locator routes plus the 404 and empty-state rescue paths. The three records stay distinct even where they point to the same implementation.
+Bealls, Bealls Florida, and Home Centric are separate brand configurations under the same `example-merchant` organization. Their shared code does not mean they share a visual identity, and it does not prove that an unrelated merchant can preserve an existing storefront through tokens, prompts, and configuration alone. Each current brand has a separate internal integrated-renderer contract in `src/lib/brand/bealls-family-renderer-contract.ts`. It records the surfaces that exist now, including the fixed style-guide and store-locator routes plus each brand's actual rescue paths. Storefront brands have 404 and empty-state insertions. Home Centric has a 404 insertion but no current empty-state insertion. The three records stay distinct even where they point to the same implementation.
 
 The contract keeps mounted chrome separate from exposed chrome. The root layout mounts the brand strip, primary nav, footer, cart drawer, and picks tray for all three brands. Home Centric's content-mode nav does not expose the cart or picks controls, so its exposed list omits both. This describes the current implementation without presenting hidden controls as usable brand affordances.
 
@@ -18,27 +18,37 @@ The focused source gate is `npm run test:renderer-contract`. Before recomputing 
 
 That internal-family integration is independent of external-reference preservation. The contract does not preserve a third-party storefront, claim visual parity, or change `reference.state`. External-reference onboarding still needs a separately versioned reference contract, merchant-native components and page recipes, responsive behavior, and explicit autonomy policy. The canonical Aisles reference-contract/autonomy direction owns that work; this repository records only the current example-merchant implementation.
 
-`src/lib/brand/composition-policy.ts` and `src/lib/brand/bealls-family-runtime-contract.ts` make the current boundary executable. They assign the three brands separate child policies under `example-merchant`. Each child can narrow organization authority but cannot expand it. Route loads, named-zone resolution, layout generation, refinement, suggestions, and model-result caches compile those policies before accepting output.
+`src/lib/brand/composition-policy.ts` and `src/lib/brand/bealls-family-runtime-contract.ts` make the current boundary executable. They assign the three brands separate child policies under `example-merchant`. Each child can narrow organization authority but cannot expand it. Shopper page loads derive their route from `event.url.pathname`. The model API accepts no client-supplied route or surface; it requires a short-lived, server-signed, HttpOnly route grant and treats Origin and Referer only as confusion checks.
 
-The route contract inventories every executable endpoint under `src/routes`: 15 page routes, one SvelteKit error route, and 14 API endpoints. It records audience, chrome, commerce mode, component tree, policy surface, and per-brand availability. `/compare` is a storefront shopper utility. `/observe` is an operator surface. `/style-guide` is a merchant-review surface. `/test/*` routes are development harnesses and are excluded from shopper-preservation claims.
+The route contract inventories 30 executable endpoints under `src/routes`: 15 page routes, one SvelteKit error route, and 14 API endpoints. Multi-method APIs expand that inventory to 34 addressable page-plus-method handlers. These are metadata counts, not screenshot counts.
 
-The zone catalog contains 28 family IDs: home 5, PLP 6, PDP 5, cart 3, checkout 2, search 2, account 2, locator 1, 404 rescue 1, and other-empty rescue 1. Bealls and Bealls Florida make all 28 applicable; ten are mounted and exposed by current shopper renderers, while eighteen remain explicit declared-only, hidden insertion points. Home Centric makes eight applicable; `home.hero` and `locator.editorial-intro` are mounted, six are declared-only, and twenty storefront zones are not applicable. A declared zone is not treated as live merely because a schema and fallback exist.
-
-| Brand | Route policy | Zone coverage | Current model authority |
+| Audience | Routes | Runtime gate | Shopper regression claim |
 |---|---|---|---|
-| Bealls | storefront routes plus search, account, compare, locator, style guide, and rescues | 28 applicable; 10 mounted; 18 declared-only | Home and PLP layout; PDP suggestions; cart and checkout bounded blocks; search refinement; picks suggestions; rescue layouts |
-| Bealls Florida | separate policy with the same surface shape | 28 applicable; 10 mounted; 18 declared-only | Same authority shape, compiled against Bealls Florida identity and cache scope |
-| Home Centric | home, typed content category, locator, style guide, and rescues | 8 applicable; 2 mounted; 6 declared-only; 20 not applicable | Content-home and rescue layout only |
+| Shopper | `/`, account, cart, category, checkout, compare, product, search, locator, error | Exact brand availability and server route normalization | Included when the route is available for that brand |
+| Operator | `/observe` and `/api/observe/*` | `OBSERVE_ACCESS_TOKEN`; explicit development credential only in dev | Excluded |
+| Merchant review | `/style-guide` | Development-only open access or `MERCHANT_REVIEW_ACCESS_TOKEN` | Excluded |
+| Development | `/test/*` | Development build only | Excluded |
+| Runtime API | `/api/*` | Endpoint-specific brand, route, and policy gates | Not a page-preservation surface |
 
-Home Centric's `/category/[slug]` route normalizes to the policy-only `category` surface. It is not silently aliased to PLP. Direct storefront-only account, cart, checkout, compare, PDP, search, cart API, refinement, or suggestion access fails before catalog, cart, or model work begins.
+`/compare` remains shopper-facing because the Picks tray links to it. Home Centric's `/category/[slug]` route normalizes to the distinct `category` surface, never PLP. Its storefront-only account, cart, checkout, compare, PDP, search, cart, refinement, suggestion, and model-zone paths fail before protected work begins.
 
-Model layout output must pass its surface Zod schema and a second runtime gate. The gate accepts registered component IDs, catalog candidate IDs, configured brand assets, and registered internal destinations only. Runtime CSS keys and external or invented destinations are rejected. Invalid, approval-gated, holdout, or over-authority output is not published; the existing brand-specific fallback remains in control. Cache keys include organization, brand, effective policy version, normalized surface, and responsive viewport class.
+The zone catalog contains 28 family IDs: home 5, PLP 6, PDP 5, cart 3, checkout 2, search 2, account 2, locator 1, 404 rescue 1, and other-empty rescue 1. Array multiplicity expands that taxonomy to 36 concrete instances. Bealls and Bealls Florida make all 28 families and 36 instances applicable and mounted. Ten families are exposed by current shopper renderers; the other applicable zones terminate through a trusted Hidden result unless validated content exists. Home Centric makes 7 families and 12 instances applicable and mounted, exposes `home.hero` and `locator.editorial-intro`, and marks the remaining 21 families not applicable. It does not claim the taxonomy's `error-empty` family because no current Home Centric route renders that state. “Mounted,” “exposed,” and “materialized” are separate states.
 
-Run `npm run test:contracts` for the internal regression contract. It covers 30 route endpoints, 84 brand-zone records, and the 168 brand-zone-viewport cells produced by three brands × 28 zones × desktop/mobile. This is deterministic regression parity against repository-owned contracts. It is not visual preservation against an external reference.
+| Brand | Fixed | Trusted rules | Model | Holdout / approval-required |
+|---|---|---|---|---|
+| Bealls | Home, PLP, search, account, locator, rescue, compare, Picks, two PDP zones, two cart zones | `pdp.related`, `pdp.cross-sell`, `pdp.recently-viewed` via `pdp-tag-overlap-v1` | `cart.above-checkout-cta` on `/cart`; `checkout.assurance-strip` and `checkout.last-chance-upsell` on `/checkout` | None configured |
+| Bealls Florida | Same zone shape under its own brand policy and cache identity | Same three PDP rule zones under Bealls Florida identity | Same three bounded cart/checkout zones under Bealls Florida identity | None configured |
+| Home Centric | All 7 applicable families; content category is a fixed non-zone surface | None | None | None configured |
 
-For browser evidence, run one local server per brand and execute `npm run capture:runtime-parity` with `PARITY_BRAND` and `PARITY_BASE_URL`; storefront runs also require a real `PARITY_PRODUCT_SLUG`. The capture covers every page, error, operator, review, and development route at 1440×900 and 390×844. It blocks layout, refinement, and suggestion requests, records expected route status, and writes an ignored manifest under `validation/runtime-parity`. The manifest labels itself internal regression parity and leaves the external reference state uncontracted.
+All current applicable policies publish in `live` mode. That does not authorize arbitrary output. A zone accepts only its exact strict schema and only components its renderer can dispatch. Model product IDs, assets, and destinations must come from the approved input set. Runtime CSS, HTML, extra props, unsupported components, and invented URLs are rejected. Invalid or over-authority output preserves the trusted brand fallback or Hidden terminal. The global cart drawer is fixed and makes no model-zone request; cart model authority belongs only to the exact `/cart` page grant.
 
-The internal renderer inventory links to those policy versions only to state its autonomy ceiling. Every brand still has `reference.state: uncontracted`. No pinned external source, reference hash, or reviewed external visual gate exists in this repository.
+The resolver supports a trusted merchant record only when it is bound to the same organization, brand, exact route path, surface, expanded zone, effective policy version, and reference state/version. `pin` and `lock` win before engine output; `authored` content is considered after valid engine output. That precedence is mechanically tested through server-injected records. Runtime merchant storage is not enabled by this repository: it contains no compatible schema migration or write path. Database reads stay off unless an operator separately provisions the route-bound columns and sets `AISLES_ZONE_CONTENT_SCHEMA_VERSION=route-bound-v1`; legacy, unavailable, or ordinary unbound admin data cannot become authority.
+
+The decision cache stores the validated content and provenance envelope, not a raw layout. Its key and hit validation cover organization and brand policy versions, route ID and path, surface, expanded zone, effective policy, preset, decision and publication modes, capabilities, reference state/ID/version, viewport class, catalog and content versions, synthetic provenance, and approved-input hash. A mismatch is a miss; a hit returns the stored provenance unchanged.
+
+Run `npm test` for all TypeScript tests, or `npm run test:contracts` for the focused policy and renderer gates. Run `npm run capture:runtime-parity` for browser evidence. The harness checks out pinned main `71e8750f9070fb788816f0464355f46ab63fb272`, adds a recorded test-only adapter for the same deterministic catalog data used by the candidate, and captures 10 shopper/error routes × 3 brands × 3 viewports (390×844, 768×1024, 1280×900). It records screenshots, unmasked pixel diffs, explicit DOM/component/token comparisons, commerce metadata, active brand, and actual zone terminals. The baseline remains the pinned main production implementation apart from that disclosed fixture adapter. Operator, merchant-review, and development routes are excluded because their audience contracts are not shopper claims.
+
+The browser result is an internal regression comparison, not external preservation. Any pixel delta remains a human-review gate; the harness has no masks or self-approval threshold. Every brand still has `reference.state: uncontracted`. No pinned external source, reference hash, or reviewed external visual gate exists in this repository.
 
 The three brands in this fork demonstrate the breadth of the system, including the storefront vs. content mode split:
 
@@ -55,17 +65,18 @@ The three brands in this fork demonstrate the breadth of the system, including t
 At runtime, `getBrand()` in `src/lib/brand/config.ts` reads the environment:
 
 ```typescript
-const brandId =
+const configuredBrandId =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_BRAND_ID) ||
-  (typeof process !== 'undefined' && process.env?.BRAND_ID) ||
-  'bealls';
+  (typeof process !== 'undefined' ? process.env?.BRAND_ID : undefined);
+
+return resolveBrandId(configuredBrandId);
 ```
 
 - **Vercel Functions (server-side)**: reads `BRAND_ID`
 - **Vite/client-side**: reads `VITE_BRAND_ID` (must be prefixed for Vite to expose it)
 - **Node scripts** (enrichment, seeding): reads `BRAND_ID` from `process.env`
 
-Unrecognized brand IDs fall back to `bealls`.
+Only a missing or empty brand configuration defaults to `bealls`. Any non-empty unknown or prototype-derived ID throws `UnknownBrandConfigurationError`; it never inherits Bealls identity.
 
 ---
 
@@ -124,7 +135,7 @@ interface BrandConfig {
 
 The `theme` object is injected as CSS custom properties on `:root` at page load, so shared components can consume the current brand's colors and fonts. Tokens do not represent a complete design contract and do not remove the need for merchant-native component or recipe work when integrating an unrelated storefront.
 
-The `prompt` fields are injected into every AI call — layout generation, refinement, and enrichment — so the AI produces brand-appropriate copy and persona definitions that match the product domain.
+The `prompt` fields supply brand context to model-backed paths that explicitly consume them. They do not grant model authority. The compiled route and zone policy remains the publication boundary.
 
 The `mode` field selects between transactional storefront mode and content/locator mode, which drive different component vocabularies.
 
@@ -133,6 +144,8 @@ The `mode` field selects between transactional storefront mode and content/locat
 ## How to Add a Related Brand
 
 Use this setup for a brand that belongs to the same organization and can use the approved shared implementation. Do not use it as an external-merchant preservation recipe; follow the canonical Aisles reference-contract/autonomy direction when that work begins.
+
+The runtime is currently closed to `bealls`, `beallsflorida`, and `homecentric`. Adding `BrandConfig` alone intentionally fails closed. A related brand is executable only after it receives its own policy, route availability, renderer contract, and parity coverage.
 
 ### Step 1: Create the BigCommerce Channel (storefront mode only)
 
@@ -226,7 +239,13 @@ const BRANDS: Record<string, BrandConfig> = {
 
 **Voice guidance matters equally.** This is the single line that most shapes AI copy quality. Be prescriptive about what to lead with and what to avoid.
 
-### Step 4: Run the Enrichment Pipeline (storefront mode only)
+### Step 4: Add executable policy and renderer contracts
+
+Add the exact brand ID to the closed family registry, then add a separate child policy under `example-merchant`. Declare route availability, every applicable zone override, mounted/exposed state, the renderer contract, source fingerprint, and brand-specific fixture expectations. A child policy may narrow organization authority but cannot expand it. Keep `reference.state: uncontracted` unless a real external reference and reviewed visual gate exist.
+
+Run `npm test`, `npm run check`, and `npm run capture:runtime-parity`. Do not configure or deploy the brand until its routes, all applicable expanded zones, active-brand marker, cache identity, and Hidden/fallback terminals pass.
+
+### Step 5: Run the Enrichment Pipeline (storefront mode only)
 
 Content-mode brands use hand-authored persona-fit values per ADR-005 and skip this step.
 
@@ -245,7 +264,7 @@ npx tsx src/lib/server/enrichment/enrich.ts
 
 This scores all products in the channel for persona-fit and generates semantic tags. Layout generation will work without enrichment, but products will appear in default BigCommerce order and receive no persona-aware sorting.
 
-### Step 5: Create a Vercel Project
+### Step 6: Create a Vercel Project
 
 1. In the Vercel dashboard, create a new project connected to the same Git repository
 2. Set the root directory to the repository root (not a subdirectory — this is a single-app repo)
@@ -264,6 +283,8 @@ This scores all products in the channel for persona-fit and generates semantic t
 | `KV_REST_API_TOKEN` | Upstash Redis REST token |
 | `DATABASE_URL` | Neon Postgres connection string |
 | `POSTGRES_URL` | Same as DATABASE_URL (alternative env name) |
+| `AISLES_ROUTE_BINDING_SECRET` | At least 32 random characters; required for signed model-zone route grants |
+| `AISLES_ZONE_CONTENT_SCHEMA_VERSION` | Optional explicit attestation for a separately provisioned `route-bound-v1` merchant-zone read schema; absent by default |
 
 **For AI generation** (via Vercel AI Gateway — set automatically if using the Vercel AI Gateway integration):
 
@@ -272,17 +293,9 @@ This scores all products in the channel for persona-fit and generates semantic t
 | `AI_GATEWAY_URL` | Vercel AI Gateway endpoint |
 | `AI_GATEWAY_TOKEN` | Vercel AI Gateway token |
 
-4. Deploy. The first deploy will warm the cache on demand (first visitor per persona+category triggers generation).
+4. Deployment remains a separate operator authorization after the local contract and human visual gates pass. This guide does not authorize a deploy.
 
-5. Optionally run cache pre-warming after deploy:
-
-```bash
-npm run prewarm
-```
-
-This requires adding your brand entry (URL + categories) to `scripts/cache/prewarm-cells.json`. The cell list is data, not code — no script edit needed. Pre-warm covers home + PLP cells × all four personas. PDP, cart, checkout, empty, and content-mode brands are intentionally excluded; see [`docs/audits/perf/cold-start-baseline-2026-05-01.md`](../audits/perf/cold-start-baseline-2026-05-01.md) for rationale.
-
-The legacy `scripts/warm-cache.ts` is superseded — do not extend it for new brands.
+The legacy whole-layout warmers are not compatible with signed, route-bound zone decisions. Do not use them as a way around the page-issued route grant. A future warmer must mint server-trusted route context and cache complete validated decision envelopes.
 
 ---
 
@@ -340,12 +353,6 @@ For dark-background or high-contrast brands, ensure surface tokens provide suffi
 
 ## Shared Infrastructure
 
-All brands share the same Upstash Redis instance and Neon Postgres database. Cache keys are namespaced:
+Brands may share Upstash Redis and Neon Postgres infrastructure, but decision authority cannot share an unscoped key. Zone decisions use `aisles:zone-decision:v1:{organization}:{brand}:{expanded-zone}:{full-context-digest}` and revalidate the complete context on every hit. Session keys remain session-scoped. Enrichment records and other legacy data paths have their own schemas and are not evidence of a reusable cross-brand decision.
 
-- Layout cache: `aisles:layout:{persona}:{categorySlug}`
-- Session store: `aisles:session:{sessionId}`
-- Enrichment data: `enriched_products` table, keyed by `bc_entity_id`
-
-Because category slugs and product entity IDs are global across brands (not namespaced by brand), there is a theoretical collision risk if two brands use the same category slug. In practice this is avoided by using brand-prefixed BC category names.
-
-If you need strict isolation, use separate Upstash and Neon instances per brand and set the connection environment variables per Vercel project.
+Separate infrastructure remains an operational option, not a substitute for runtime brand and policy binding.
