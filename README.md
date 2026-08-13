@@ -26,7 +26,9 @@ The three storefronts above — **Bealls**, **Bealls Florida**, and **Home Centr
 
 This is not evidence that configuration alone can preserve an unrelated merchant's existing storefront. External-reference onboarding needs a versioned reference contract, merchant-native recipes and components, and explicit autonomy policy. That direction is owned by the canonical Aisles work and is not implemented in this repository.
 
-The local policy foundation now records Bealls, Bealls Florida, and Home Centric as three separate brands under the `example-merchant` organization. Those records classify observed behavior and are explicitly `uncontracted`; they do not change live routes or constitute design contracts.
+The local policy foundation records Bealls, Bealls Florida, and Home Centric as three separate brands under the `example-merchant` organization. Those records classify observed behavior and are explicitly `uncontracted`.
+
+Separately, [`src/lib/brand/bealls-family-renderer-contract.ts`](src/lib/brand/bealls-family-renderer-contract.ts) inventories the current internal renderer integration for each brand: mode, surfaces, shared chrome and components, token source, responsive behavior, and policy linkage. It is a versioned inventory of this repository's implementation, not an external-reference contract. It does not claim visual parity or preservation, and it does not change route behavior.
 
 It's built as an **"art of the possible" prototype** — an artifact to react to and pull capabilities from, not a product being sold.
 

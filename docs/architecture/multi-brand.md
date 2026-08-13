@@ -10,11 +10,13 @@ A single Aisles codebase serves related brands for one example merchant organiza
 
 ## Scope limit
 
-Bealls, Bealls Florida, and Home Centric are separate brand configurations under the same `example-merchant` organization. Their shared code does not mean they share a visual identity, and it does not prove that an unrelated merchant can preserve an existing storefront through tokens, prompts, and configuration alone. Each brand configuration will become an explicit design contract during the later preserve-mode adoption.
+Bealls, Bealls Florida, and Home Centric are separate brand configurations under the same `example-merchant` organization. Their shared code does not mean they share a visual identity, and it does not prove that an unrelated merchant can preserve an existing storefront through tokens, prompts, and configuration alone. Each current brand has a separate internal integrated-renderer contract in `src/lib/brand/bealls-family-renderer-contract.ts`. It names the renderer implementation this repository actually integrates: supported surfaces, shared chrome/components, token source, responsive strategy, and autonomy-policy linkage. The three records stay distinct even where they point to the same shared implementation.
 
-External-reference onboarding needs a versioned reference contract, merchant-native components and page recipes, responsive behavior, and an explicit autonomy policy. The canonical Aisles reference-contract/autonomy direction owns that work; this repository records only the current example-merchant implementation.
+That internal-family integration is independent of external-reference preservation. The contract does not preserve a third-party storefront, claim visual parity, or change `reference.state`. External-reference onboarding still needs a separately versioned reference contract, merchant-native components and page recipes, responsive behavior, and explicit autonomy policy. The canonical Aisles reference-contract/autonomy direction owns that work; this repository records only the current example-merchant implementation.
 
 `src/lib/brand/composition-policy.ts` now makes that current boundary machine-readable. It assigns the three brands separate policy records under `example-merchant` and labels every reference state `uncontracted`. This is an observed legacy classification only. It is not wired into route resolution and does not satisfy preserve-mode adoption.
+
+The internal renderer inventory links to those policy versions only to state its autonomy ceiling. A successful internal-contract validation must still leave the policy provenance `uncontracted`; the two axes are intentionally separate.
 
 The three brands in this fork demonstrate the breadth of the system, including the storefront vs. content mode split:
 
