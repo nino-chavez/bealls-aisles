@@ -15,6 +15,7 @@ The AI composition layer — what the engine can compose, and how it infers inte
 The storefront that exists with or without AI.
 
 - [architecture/multi-brand.md](./architecture/multi-brand.md) — organization-scoped multi-brand setup (storefront and content modes)
+- [deployment/cloudflare-current-main-preview.md](./deployment/cloudflare-current-main-preview.md) — bounded current-main Workers preview, no-paid fixture, promotion gates, and stale legacy Worker warning
 
 ## Decisions
 

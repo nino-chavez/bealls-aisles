@@ -144,4 +144,25 @@ The operator's view lives at `/observe` and requires `OBSERVE_ACCESS_TOKEN` in d
 
 An active R&D prototype (`v0.0.1`). The composition engine, the four-persona inference, the typed-layout invariant with fallback, the full commerce foundation, multi-brand configuration, and the Observe dashboard are implemented and deployed as the three brands above. The `aisles-admin` control plane lives in a separate repo.
 
+### Legacy Cloudflare Workers are historical prototypes
+
+The live-account inventory recorded on 2026-08-13 found the following Workers. They are **not deployments of current `main` and must not be used in a prospect demo or as evidence of current Aisles capability**:
+
+| Legacy Worker URL | Historical role | Current-use decision |
+|---|---|---|
+| `aisles-bealls.biq.workers.dev` | Bealls broad-layout prototype | Historical evidence only |
+| `aisles-beallsflorida.biq.workers.dev` | Bealls Florida broad-layout prototype | Historical evidence only; a current-main promotion is blocked until its catalog is valid |
+| `aisles-homecentric.biq.workers.dev` | Home Centric broad-layout prototype | Historical evidence only |
+| `aisles-sleepcountry.biq.workers.dev` | Sleep Country broad-layout prototype | Historical evidence only; Sleep Country is not a current Aisles brand |
+
+Those Workers were built from a historical Cloudflare branch with shopper-triggered layout, streaming, refinement, and suggestion paths. They also retain legacy AI-provider, database, and cache bindings. Their continued reachability does not make their behavior current or approved.
+
+Current `main` has no shopper model zones. It permits only the deterministic `pdp-tag-overlap-v1` rule in `pdp.related`, `pdp.cross-sell`, and `pdp.recently-viewed`; all other shopper zones are fixed, merchant-bound, fallback, or Hidden. No current-main Cloudflare preview was live at the time of that inventory. New preview URLs become demo-safe only after the exact-source deployment and smoke record at `docs/deployment/cloudflare-current-main-preview.md` says so.
+
+The earlier broad-layout deployment log remains inspectable without presenting it as current documentation:
+
+```bash
+git show origin/worktree-spike-cloudflare-portkey:docs/operations/deployment-log.md
+```
+
 No open-source license is currently set; all rights reserved by the author. Bealls, Bealls Florida, and Home Centric are trademarks of their respective owner and are used here only to illustrate a prototype.
