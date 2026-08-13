@@ -37,6 +37,7 @@
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
+					sourceSurface: 'picks',
 					picks: items.map((p) => ({ id: p.id, name: p.name, price: p.price, category: p.category, specs: p.specs })),
 				}),
 			});

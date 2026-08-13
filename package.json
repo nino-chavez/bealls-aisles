@@ -10,6 +10,9 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "test:renderer-contract": "tsx src/lib/brand/bealls-family-renderer-contract.test.ts",
+    "test:runtime-contract": "tsx src/lib/brand/bealls-family-runtime-contract.test.ts",
+    "test:contracts": "npm run test:runtime-contract && npm run test:renderer-contract",
+    "capture:runtime-parity": "node scripts/capture-runtime-parity.mjs",
     "prewarm": "npx tsx scripts/cache/prewarm.ts",
     "warm-images": "npx tsx scripts/cache/warm-bc-images.ts"
   },

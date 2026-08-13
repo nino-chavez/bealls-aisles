@@ -6,6 +6,7 @@ import { loadCategoryProducts, CATEGORY_MAP } from '$lib/server/catalog';
 import { getBrand } from '$lib/brand/config';
 import { cacheSuggestions, getCachedSuggestions, hashPicks, type SuggestionEntry } from '$lib/server/cache';
 import { shouldBypassCache } from '$lib/server/cache-flags';
+import { buildRuntimeCacheScope, compileBrandCompositionPolicy, type BeallsFamilyBrandId } from '$lib/brand/bealls-family-runtime-contract';
 
 const SuggestionSchema = z.object({
 	suggestions: z.array(z.object({
@@ -24,13 +25,23 @@ const SuggestionSchema = z.object({
 export const POST: RequestHandler = async ({ request, url, cookies }) => {
 	const bypassCache = shouldBypassCache({ url, cookies });
 	try {
-		const { picks } = await request.json();
-
-		if (!Array.isArray(picks) || picks.length === 0) {
-			return json({ suggestions: [] });
-		}
+		const { picks, sourceSurface: rawSourceSurface } = await request.json();
 
 		const brand = getBrand();
+		const sourceSurface = rawSourceSurface === 'pdp' || rawSourceSurface === 'picks' ? rawSourceSurface : null;
+		if (!sourceSurface) return json({ error: 'Missing or invalid suggestion surface' }, { status: 400 });
+		let policy;
+		try {
+			policy = compileBrandCompositionPolicy(brand.id as BeallsFamilyBrandId, sourceSurface);
+		} catch {
+			return json({ error: 'Suggestions are not authorized for this brand surface' }, { status: 403 });
+		}
+		if (policy.decisionMode !== 'model' || policy.publicationMode !== 'live') {
+			return json({ error: 'Suggestions are not authorized for publication' }, { status: 403 });
+		}
+		if (!Array.isArray(picks) || picks.length === 0) {
+			return json({ suggestions: [], meta: { contract: policy.provenance } });
+		}
 
 		// Suggestions are deterministic per (brand × picks set). Build a
 		// canonical hash of picks ids (sorted) and serve from cache when
@@ -41,10 +52,13 @@ export const POST: RequestHandler = async ({ request, url, cookies }) => {
 			.filter(Boolean)
 			.sort()
 			.join(',');
-		const picksHash = hashPicks(picksKey);
+		const cacheScope = buildRuntimeCacheScope({
+			brandId: brand.id as BeallsFamilyBrandId, surface: sourceSurface, viewport: 'responsive',
+		});
+		const picksHash = hashPicks(`${cacheScope}:${picksKey}`);
 		if (picksHash && !bypassCache) {
 			const cached = await getCachedSuggestions(brand.id, picksHash);
-			if (cached) return json({ suggestions: cached, cacheHit: true });
+			if (cached) return json({ suggestions: cached, cacheHit: true, meta: { contract: policy.provenance } });
 		}
 
 		// Load products from all categories
@@ -144,7 +158,7 @@ IMPORTANT:
 			cacheSuggestions(brand.id, picksHash, suggestions).catch(() => {});
 		}
 
-		return json({ suggestions, cacheHit: false });
+		return json({ suggestions, cacheHit: false, meta: { contract: policy.provenance } });
 	} catch (err) {
 		console.error('Suggestion generation failed:', err);
 		return json({ suggestions: [] });

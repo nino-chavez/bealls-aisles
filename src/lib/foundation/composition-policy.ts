@@ -1,7 +1,7 @@
 import { ZONES, type Surface, type ZoneId } from './zones';
 
 /** Policy-only surfaces may sit outside the generated-layout schema. */
-export type PolicySurface = Surface | 'category' | 'style-guide';
+export type PolicySurface = Surface | 'category' | 'compare' | 'picks' | 'style-guide';
 
 export const AUTONOMY_CAPABILITIES = [
 	'rank_products',
@@ -204,7 +204,7 @@ export function composeEffectivePolicyVersion(organizationVersion: string, brand
 }
 
 const POLICY_SURFACES = new Set<PolicySurface>([
-	'home', 'plp', 'pdp', 'cart', 'checkout', 'search', 'account', 'locator', 'error-404', 'error-empty', 'category', 'style-guide',
+	'home', 'plp', 'pdp', 'cart', 'checkout', 'search', 'account', 'locator', 'error-404', 'error-empty', 'category', 'compare', 'picks', 'style-guide',
 ]);
 const CAPABILITIES = new Set<string>(AUTONOMY_CAPABILITIES);
 const DECISION_AUTHORITY: Record<DecisionMode, number> = { fixed: 0, rules: 1, model: 2 };

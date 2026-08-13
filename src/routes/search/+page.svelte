@@ -102,6 +102,7 @@
 		persona={data.persona}
 		categorySlug={data.suggestedCategory || 'living-room'}
 		currentLayout={refinedLayout}
+		sourceSurface="search"
 		onLayoutUpdate={(newLayout) => { refinedLayout = newLayout; }}
 	/>
 {/if}

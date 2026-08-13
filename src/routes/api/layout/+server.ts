@@ -5,8 +5,7 @@ import {
 	getLayoutSchemaForSurface,
 	inferSurfaceFromCategorySlug,
 	EmptyReason,
-	type Layout,
-	type Surface,
+		type Surface,
 	type EmptyReason as EmptyReasonType,
 } from '$lib/schema/layout';
 import { buildLayoutPrompt } from '$lib/server/layout-prompt';
@@ -41,6 +40,9 @@ import { layoutModel, gatewayProviderOptions } from '$lib/server/ai-model';
 import { getBrand, getBrandMode } from '$lib/brand/config';
 import { getBrandVoiceOverride } from '$lib/server/admin-overrides';
 import { shouldBypassCache } from '$lib/server/cache-flags';
+import { Surface as LayoutSurfaceSchema } from '$lib/schema/layout';
+import { scopedLayoutCacheSlug, requireModelLayoutPolicy, validateRuntimeLayout } from '$lib/server/layout-runtime-contract';
+import type { BeallsFamilyBrandId } from '$lib/brand/bealls-family-runtime-contract';
 
 export const POST: RequestHandler = async ({ request, cookies, url }) => {
 	const startTime = Date.now();
@@ -82,7 +84,9 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 		const brandId = brand.id;
 		const mode = getBrandMode(brand);
 		// Per ADR-006: prefer explicit surface from request; fall back to category-slug inference
-		const surface: Surface = explicitSurface ?? inferSurfaceFromCategorySlug(categorySlug);
+		const surfaceResult = explicitSurface === undefined ? null : LayoutSurfaceSchema.safeParse(explicitSurface);
+		if (surfaceResult && !surfaceResult.success) return json({ error: 'Invalid layout surface' }, { status: 400 });
+		const surface: Surface = surfaceResult?.data ?? inferSurfaceFromCategorySlug(categorySlug);
 		const layoutSchema = getLayoutSchemaForSurface(surface, mode);
 
 		// PRD-FND-012: empty/rescue surfaces require a reason discriminator so
@@ -94,7 +98,15 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 		if (surface === 'empty' && !reason) {
 			return json({ error: "Missing/invalid 'reason' for empty surface (must be one of: not-found, empty-cart, empty-search, empty-wishlist)" }, { status: 400 });
 		}
-		const cacheSlug = surface === 'empty' ? `empty:${reason}` : categorySlug;
+		let policy;
+		try {
+			policy = requireModelLayoutPolicy({ brandId, surface, reason });
+		} catch {
+			return json({ error: 'Layout generation is not authorized for this brand surface' }, { status: 403 });
+		}
+		const cacheSlug = scopedLayoutCacheSlug({
+			brandId: brandId as BeallsFamilyBrandId, surface, reason, categorySlug,
+		});
 
 		// ─── Cache check ───────────────────────────────────────────
 		// `picksContext`, `tagIntents`, and `cartItemEntityIds` are all
@@ -146,6 +158,7 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 					productCount: cachedProducts.length,
 					generationTimeMs: elapsed,
 					cacheHit: true,
+					contract: policy.provenance,
 				},
 			});
 		}
@@ -206,12 +219,16 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 			prompt,
 			providerOptions: gatewayProviderOptions(persona, categorySlug),
 		});
-		// `aiResult.output` is loosely typed because `getLayoutSchemaForSurface`
-		// returns `ZodTypeAny` (the schema shape varies by surface). Cast to
-		// the concrete `Layout` type for downstream consumers (cache, return
-		// value). The runtime validation in the AI SDK enforces correctness;
-		// the cast is purely a TypeScript convenience.
-		const layout = aiResult.output as Layout;
+		// The AI SDK applies the surface Zod schema. The runtime contract then
+		// binds the parsed object to registered components, products, assets,
+		// destinations, and policy provenance before it can enter the cache.
+		const layout = validateRuntimeLayout({
+			brandId: brandId as BeallsFamilyBrandId,
+			surface,
+			layout: aiResult.output,
+			candidateProductIds: products.flatMap((product) => [String(product.id), String(product.entityId)]),
+			candidateAssetUrls: products.map((product) => product.image).filter((value): value is string => !!value),
+		});
 		const usage = aiResult.usage;
 		const model = 'anthropic/claude-haiku-4.5';
 
@@ -249,6 +266,7 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 				productCount: products.length,
 				generationTimeMs: elapsed,
 				cacheHit: false,
+				contract: policy.provenance,
 			},
 		});
 	} catch (err) {

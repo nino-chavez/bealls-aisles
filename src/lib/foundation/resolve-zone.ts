@@ -17,6 +17,7 @@
 import { ZoneSchemas } from './zone-schemas';
 import { ZONES, parseZoneInstance, type ZoneId, type ZoneInstanceId, type ZoneMetadata } from './zones';
 import { getFallback } from './fallbacks';
+import type { AutonomyCapability, DecisionMode, EffectiveCompositionPolicy } from './composition-policy';
 
 export type ZoneSource = 'engine' | 'admin' | 'fallback';
 
@@ -45,6 +46,12 @@ export interface ResolveZoneOpts {
 	 * falls through to the static fallback.
 	 */
 	adminContent?: { zones?: Record<ZoneInstanceId, unknown> };
+	/** Effective trusted policy for this brand/surface/zone. Server callers supply this automatically. */
+	policy?: EffectiveCompositionPolicy;
+	/** Authority used to produce engineOutput. Required when policy is supplied. */
+	engineDecisionMode?: DecisionMode;
+	/** Capabilities exercised by engineOutput. They must be granted by policy. */
+	engineCapabilities?: readonly AutonomyCapability[];
 }
 
 /**
@@ -68,7 +75,7 @@ export function resolveZone(opts: ResolveZoneOpts): ZoneResolution {
 
 	// 1. Engine
 	const engineRaw = opts.engineOutput?.zones?.[opts.zoneId];
-	if (engineRaw !== undefined && meta.engineComposable) {
+	if (engineRaw !== undefined && meta.engineComposable && permitsEngineOutput(opts, family)) {
 		const validated = validateForZone(family, engineRaw, schema, meta);
 		if (validated.ok) {
 			return { zoneId: opts.zoneId, family, index, source: 'engine', content: validated.content };
@@ -77,7 +84,7 @@ export function resolveZone(opts: ResolveZoneOpts): ZoneResolution {
 
 	// 2. Admin
 	const adminRaw = opts.adminContent?.zones?.[opts.zoneId];
-	if (adminRaw !== undefined && meta.adminAuthorable) {
+	if (adminRaw !== undefined && meta.adminAuthorable && permitsAdminOutput(opts, family)) {
 		const validated = validateForZone(family, adminRaw, schema, meta);
 		if (validated.ok) {
 			return { zoneId: opts.zoneId, family, index, source: 'admin', content: validated.content };
@@ -87,6 +94,31 @@ export function resolveZone(opts: ResolveZoneOpts): ZoneResolution {
 	// 3. Static fallback
 	const content = getFallback(family, opts.brandId);
 	return { zoneId: opts.zoneId, family, index, source: 'fallback', content };
+}
+
+const DECISION_AUTHORITY: Record<DecisionMode, number> = { fixed: 0, rules: 1, model: 2 };
+
+function permitsEngineOutput(opts: ResolveZoneOpts, family: ZoneId): boolean {
+	if (!opts.policy) return true; // backwards compatibility for isolated foundation callers
+	const { provenance, publicationMode, decisionMode, capabilities } = opts.policy;
+	if (publicationMode !== 'live') return false;
+	if (provenance.brandId !== opts.brandId || provenance.zoneId !== family || provenance.surface !== ZONES[family].surface) {
+		return false;
+	}
+	if (!opts.engineDecisionMode || DECISION_AUTHORITY[opts.engineDecisionMode] > DECISION_AUTHORITY[decisionMode]) {
+		return false;
+	}
+	if (!opts.engineCapabilities) return false;
+	return opts.engineCapabilities.every((capability) => capabilities.includes(capability));
+}
+
+function permitsAdminOutput(opts: ResolveZoneOpts, family: ZoneId): boolean {
+	if (!opts.policy) return true;
+	const { provenance, publicationMode } = opts.policy;
+	return publicationMode === 'live'
+		&& provenance.brandId === opts.brandId
+		&& provenance.zoneId === family
+		&& provenance.surface === ZONES[family].surface;
 }
 
 /**

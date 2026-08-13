@@ -2,6 +2,7 @@ import type { PageServerLoad } from './$types';
 import { getCachedCart, getSessionCookie } from '$lib/server/cart-store';
 import { getCart } from '$lib/server/bigcommerce';
 import { getBrand } from '$lib/brand/config';
+import { requireBrandSurface } from '$lib/server/brand-surface-guard';
 
 /**
  * /cart — full cart page (companion to the cart drawer).
@@ -16,6 +17,7 @@ import { getBrand } from '$lib/brand/config';
  * replay; the cache is the source of truth — see cart-store.ts).
  */
 export const load: PageServerLoad = async ({ cookies }) => {
+	requireBrandSurface('cart');
 	const cartId = cookies.get('bc_cart_id');
 	const brand = getBrand();
 	const freeShippingThresholdMinor = brand.incentives?.freeShippingThresholdMinor ?? null;

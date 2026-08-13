@@ -1,7 +1,7 @@
 # Aisles — Multi-Brand Setup Guide
 
-**Version**: 0.2.2
-**Last Updated**: 2026-08-12
+**Version**: 0.3.0
+**Last Updated**: 2026-08-13
 **Audience**: Developers, Platform Operators
 
 ## Overview
@@ -18,9 +18,27 @@ The focused source gate is `npm run test:renderer-contract`. Before recomputing 
 
 That internal-family integration is independent of external-reference preservation. The contract does not preserve a third-party storefront, claim visual parity, or change `reference.state`. External-reference onboarding still needs a separately versioned reference contract, merchant-native components and page recipes, responsive behavior, and explicit autonomy policy. The canonical Aisles reference-contract/autonomy direction owns that work; this repository records only the current example-merchant implementation.
 
-`src/lib/brand/composition-policy.ts` makes that current boundary machine-readable. It assigns the three brands separate policy records under `example-merchant` and labels every reference state `uncontracted`. It classifies the locator and style guide as fixed because neither route requests model output. It classifies 404 and empty-state rescues as model-composed because `EmptyRescue` calls the layout API and falls back to static content on failure. Home Centric has no checkout policy, so the footer omits that link and the checkout load rejects direct access before reading cart state. This narrow access guard does not make policy the general route resolver. These remain observed legacy classifications and do not satisfy preserve-mode adoption.
+`src/lib/brand/composition-policy.ts` and `src/lib/brand/bealls-family-runtime-contract.ts` make the current boundary executable. They assign the three brands separate child policies under `example-merchant`. Each child can narrow organization authority but cannot expand it. Route loads, named-zone resolution, layout generation, refinement, suggestions, and model-result caches compile those policies before accepting output.
 
-The internal renderer inventory links to those policy versions only to state its autonomy ceiling. A successful internal-contract validation must still leave the policy provenance `uncontracted`; the two axes are intentionally separate.
+The route contract inventories every executable endpoint under `src/routes`: 15 page routes, one SvelteKit error route, and 14 API endpoints. It records audience, chrome, commerce mode, component tree, policy surface, and per-brand availability. `/compare` is a storefront shopper utility. `/observe` is an operator surface. `/style-guide` is a merchant-review surface. `/test/*` routes are development harnesses and are excluded from shopper-preservation claims.
+
+The zone catalog contains 28 family IDs: home 5, PLP 6, PDP 5, cart 3, checkout 2, search 2, account 2, locator 1, 404 rescue 1, and other-empty rescue 1. Bealls and Bealls Florida make all 28 applicable; ten are mounted and exposed by current shopper renderers, while eighteen remain explicit declared-only, hidden insertion points. Home Centric makes eight applicable; `home.hero` and `locator.editorial-intro` are mounted, six are declared-only, and twenty storefront zones are not applicable. A declared zone is not treated as live merely because a schema and fallback exist.
+
+| Brand | Route policy | Zone coverage | Current model authority |
+|---|---|---|---|
+| Bealls | storefront routes plus search, account, compare, locator, style guide, and rescues | 28 applicable; 10 mounted; 18 declared-only | Home and PLP layout; PDP suggestions; cart and checkout bounded blocks; search refinement; picks suggestions; rescue layouts |
+| Bealls Florida | separate policy with the same surface shape | 28 applicable; 10 mounted; 18 declared-only | Same authority shape, compiled against Bealls Florida identity and cache scope |
+| Home Centric | home, typed content category, locator, style guide, and rescues | 8 applicable; 2 mounted; 6 declared-only; 20 not applicable | Content-home and rescue layout only |
+
+Home Centric's `/category/[slug]` route normalizes to the policy-only `category` surface. It is not silently aliased to PLP. Direct storefront-only account, cart, checkout, compare, PDP, search, cart API, refinement, or suggestion access fails before catalog, cart, or model work begins.
+
+Model layout output must pass its surface Zod schema and a second runtime gate. The gate accepts registered component IDs, catalog candidate IDs, configured brand assets, and registered internal destinations only. Runtime CSS keys and external or invented destinations are rejected. Invalid, approval-gated, holdout, or over-authority output is not published; the existing brand-specific fallback remains in control. Cache keys include organization, brand, effective policy version, normalized surface, and responsive viewport class.
+
+Run `npm run test:contracts` for the internal regression contract. It covers 30 route endpoints, 84 brand-zone records, and the 168 brand-zone-viewport cells produced by three brands × 28 zones × desktop/mobile. This is deterministic regression parity against repository-owned contracts. It is not visual preservation against an external reference.
+
+For browser evidence, run one local server per brand and execute `npm run capture:runtime-parity` with `PARITY_BRAND` and `PARITY_BASE_URL`; storefront runs also require a real `PARITY_PRODUCT_SLUG`. The capture covers every page, error, operator, review, and development route at 1440×900 and 390×844. It blocks layout, refinement, and suggestion requests, records expected route status, and writes an ignored manifest under `validation/runtime-parity`. The manifest labels itself internal regression parity and leaves the external reference state uncontracted.
+
+The internal renderer inventory links to those policy versions only to state its autonomy ceiling. Every brand still has `reference.state: uncontracted`. No pinned external source, reference hash, or reviewed external visual gate exists in this repository.
 
 The three brands in this fork demonstrate the breadth of the system, including the storefront vs. content mode split:
 

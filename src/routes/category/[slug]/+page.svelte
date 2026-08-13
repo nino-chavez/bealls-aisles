@@ -483,6 +483,7 @@
 		persona={currentPersona}
 		categorySlug={data.category.slug}
 		currentLayout={aiLayout}
+		sourceSurface="plp"
 		onLayoutUpdate={(newLayout) => { aiLayout = newLayout; }}
 		onTagIntentsUpdate={(next) => { tagIntents = next; }}
 	/>

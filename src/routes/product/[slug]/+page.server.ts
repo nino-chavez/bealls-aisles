@@ -7,8 +7,10 @@ import { loadProductsByTagOverlap, type TagOverlapProduct } from '$lib/server/ca
 import { logZoneRetrieval } from '$lib/server/zone-retrieval-log';
 import { getStoresForBrand } from '$lib/server/locator/stores';
 import { getBOPISContext } from '$lib/server/locator/proximity';
+import { requireBrandSurface } from '$lib/server/brand-surface-guard';
 
 export const load: PageServerLoad = async ({ params, url, parent, cookies }) => {
+	requireBrandSurface('pdp');
 	const slug = params.slug;
 	const { devMode } = await parent();
 	const persona = url.searchParams.get('intent') || 'gatherer';
@@ -162,11 +164,11 @@ export const load: PageServerLoad = async ({ params, url, parent, cookies }) => 
 		: null;
 
 	const [belowDescriptionZone, relatedZone, crossSellZone, recentlyViewedZone, belowRecsBase] = await Promise.all([
-		resolveZoneAsync({ zoneId: 'pdp.below-description', brandId: brand.id, engineOutput }),
-		resolveZoneAsync({ zoneId: 'pdp.related', brandId: brand.id, engineOutput }),
-		resolveZoneAsync({ zoneId: 'pdp.cross-sell', brandId: brand.id, engineOutput }),
-		resolveZoneAsync({ zoneId: 'pdp.recently-viewed', brandId: brand.id, engineOutput }),
-		resolveZoneAsync({ zoneId: 'pdp.below-recs', brandId: brand.id, engineOutput }),
+		resolveZoneAsync({ zoneId: 'pdp.below-description', brandId: brand.id, engineOutput, engineDecisionMode: 'rules' }),
+		resolveZoneAsync({ zoneId: 'pdp.related', brandId: brand.id, engineOutput, engineDecisionMode: 'rules', engineCapabilities: ['rank_products', 'select_products'] }),
+		resolveZoneAsync({ zoneId: 'pdp.cross-sell', brandId: brand.id, engineOutput, engineDecisionMode: 'rules', engineCapabilities: ['rank_products', 'select_products'] }),
+		resolveZoneAsync({ zoneId: 'pdp.recently-viewed', brandId: brand.id, engineOutput, engineDecisionMode: 'rules', engineCapabilities: ['rank_products', 'select_products'] }),
+		resolveZoneAsync({ zoneId: 'pdp.below-recs', brandId: brand.id, engineOutput, engineDecisionMode: 'rules' }),
 	]);
 	const belowRecsZone = (() => {
 		const base = belowRecsBase;

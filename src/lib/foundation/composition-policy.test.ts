@@ -22,7 +22,13 @@ const beallsHome = () => compileCompositionPolicy({ organizationId: 'example-mer
 const home = beallsHome();
 assert('Bealls home records live model composition', home.decisionMode === 'model' && home.publicationMode === 'live' && home.provenance.preset === 'compose');
 const pdp = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'pdp', registry });
-assert('Bealls PDP is bounded to assist/rules/live', pdp.decisionMode === 'rules' && pdp.publicationMode === 'live' && pdp.provenance.preset === 'assist');
+const pdpRelated = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'pdp', zoneId: 'pdp.related', registry });
+const pdpBelowDescription = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'pdp', zoneId: 'pdp.below-description', registry });
+assert('Bealls PDP records the existing model suggestion path while named zones narrow to rules or fixed', pdp.decisionMode === 'model'
+	&& pdp.publicationMode === 'live'
+	&& pdp.provenance.preset === 'assist'
+	&& pdpRelated.decisionMode === 'rules'
+	&& pdpBelowDescription.decisionMode === 'fixed');
 const florida = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'beallsflorida', surface: 'plp', registry });
 assert('Bealls Florida remains a separate brand policy', florida.provenance.brandId === 'beallsflorida' && florida.policyVersion !== home.policyVersion);
 const category = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'homecentric', surface: 'category', registry });

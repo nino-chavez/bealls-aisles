@@ -6,6 +6,7 @@
 	import AILoadingInline from '$lib/components/AILoadingInline.svelte';
 	import type { Product } from '$lib/types';
 	import { resolveZone } from '$lib/foundation/resolve-zone';
+	import { compileBrandCompositionPolicy, type BeallsFamilyBrandId } from '$lib/brand/bealls-family-runtime-contract';
 
 	let { data }: { data: PageData } = $props();
 
@@ -24,7 +25,8 @@
 	// Pre-seed with the static fallback so first paint isn't empty while we
 	// wait for the AI response. The cascade resolver returns the brand's
 	// default assurance strip; the AI override (if any) replaces it on load.
-	const fallback = resolveZone({ zoneId: 'checkout.assurance-strip', brandId });
+	const fallbackPolicy = compileBrandCompositionPolicy(brandId as BeallsFamilyBrandId, 'checkout', 'checkout.assurance-strip');
+	const fallback = resolveZone({ zoneId: 'checkout.assurance-strip', brandId, policy: fallbackPolicy });
 	if (fallback.content && typeof fallback.content === 'object' && 'props' in fallback.content) {
 		const props = (fallback.content as { props: { items: AssuranceItem[]; variant: AssuranceVariant } }).props;
 		assuranceItems = props.items;

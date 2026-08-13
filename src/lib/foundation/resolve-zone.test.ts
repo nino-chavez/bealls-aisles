@@ -89,8 +89,8 @@ console.log('\nCascade precedence: engine > admin > fallback');
 {
 	// Zones without a registered fallback resolve to null (Hidden) — sanity
 	// check that the cascade still produces "fallback" + null when nothing
-	// is registered. home.editorial-strip is intentionally left Hidden.
-	const r = resolveZone({ zoneId: 'home.editorial-strip', brandId: 'bealls' });
+	// is registered. home.featured-row is intentionally left Hidden.
+	const r = resolveZone({ zoneId: 'home.featured-row', brandId: 'bealls' });
 	assert('zones with no registered fallback resolve to source=fallback, content=null',
 		r.source === 'fallback' && r.content === null);
 }

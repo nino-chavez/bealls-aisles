@@ -8,6 +8,7 @@
 		currentLayout,
 		onLayoutUpdate,
 		onTagIntentsUpdate,
+		sourceSurface = 'plp',
 	}: {
 		persona: string;
 		categorySlug: string;
@@ -18,6 +19,7 @@
 		// Optional — pages that don't recompose on persona/category change
 		// can ignore it.
 		onTagIntentsUpdate?: (tagIntents: string[]) => void;
+		sourceSurface?: 'plp' | 'search';
 	} = $props();
 
 	let isOpen = $state(false);
@@ -68,6 +70,7 @@
 					persona,
 					categorySlug,
 					constraints,
+					sourceSurface,
 				}),
 			});
 

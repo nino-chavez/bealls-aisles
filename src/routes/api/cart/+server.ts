@@ -8,9 +8,11 @@ import {
 	deleteCartLineItem,
 } from '$lib/server/bigcommerce';
 import { cacheCart, getCachedCart, getSessionCookie, evictCart } from '$lib/server/cart-store';
+import { requireBrandSurface } from '$lib/server/brand-surface-guard';
 
 /** POST /api/cart — Add item to cart (foundation primitive). */
 export const POST: RequestHandler = async ({ request, cookies }) => {
+	requireBrandSurface('cart');
 	try {
 		const { productEntityId, quantity = 1 } = await request.json();
 
@@ -60,6 +62,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 /** PATCH /api/cart — Update line item quantity (qty = 0 → remove). */
 export const PATCH: RequestHandler = async ({ request, cookies }) => {
+	requireBrandSurface('cart');
 	try {
 		const { lineItemEntityId, productEntityId, quantity } = await request.json();
 
@@ -111,6 +114,7 @@ export const PATCH: RequestHandler = async ({ request, cookies }) => {
 
 /** GET /api/cart — Get current cart (foundation primitive). */
 export const GET: RequestHandler = async ({ cookies }) => {
+	requireBrandSurface('cart');
 	const cartId = cookies.get('bc_cart_id');
 
 	if (!cartId) {

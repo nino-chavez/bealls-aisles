@@ -4,6 +4,7 @@ import { infer } from '$lib/signals/inference';
 import { createStoreFromRequest } from '$lib/signals/request';
 import { loadCategoryProducts, CATEGORY_MAP } from '$lib/server/catalog';
 import { getBrand, getBrandMode } from '$lib/brand/config';
+import { requireBrandSurface } from '$lib/server/brand-surface-guard';
 
 export const load: PageServerLoad = async ({ params, url, cookies, request, parent }) => {
 	const slug = params.slug;
@@ -19,6 +20,7 @@ export const load: PageServerLoad = async ({ params, url, cookies, request, pare
 	// touching BC, the AI layout API, or persona inference.
 	const brand = getBrand();
 	const mode = getBrandMode(brand);
+	requireBrandSurface(mode === 'content' ? 'category' : 'plp');
 	if (mode === 'content') {
 		const categoryDisplayName = brand.categories[slug]?.displayName ?? slug;
 		const otherCategories = Object.entries(brand.categories)

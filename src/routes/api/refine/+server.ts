@@ -8,16 +8,31 @@ import { getBrand } from '$lib/brand/config';
 import { getActiveRules, rulesToPromptContext } from '$lib/server/rules';
 import { getBrandTagVocabulary } from '$lib/server/enrichment/query';
 import { filterToVocabulary, formatTagVocabularyForPrompt } from '$lib/server/tag-intent';
+import { compileBrandCompositionPolicy, type BeallsFamilyBrandId } from '$lib/brand/bealls-family-runtime-contract';
+import { validateRuntimeLayout } from '$lib/server/layout-runtime-contract';
+import { z } from 'zod';
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	const startTime = Date.now();
 	const sessionId = cookies.get('aisles_session') || undefined;
 
 	try {
-		const { message, currentLayout, persona, categorySlug, constraints } = await request.json();
+		const { message, currentLayout, persona, categorySlug, constraints, sourceSurface: rawSourceSurface } = await request.json();
 
 		if (!message || !categorySlug) {
 			return json({ error: 'Missing required fields: message, categorySlug' }, { status: 400 });
+		}
+		const sourceSurfaceResult = z.enum(['plp', 'search']).safeParse(rawSourceSurface ?? 'plp');
+		if (!sourceSurfaceResult.success) return json({ error: 'Invalid refinement surface' }, { status: 400 });
+		const brand = getBrand();
+		let policy;
+		try {
+			policy = compileBrandCompositionPolicy(brand.id as BeallsFamilyBrandId, sourceSurfaceResult.data);
+		} catch {
+			return json({ error: 'Refinement is not authorized for this brand surface' }, { status: 403 });
+		}
+		if (policy.decisionMode !== 'model' || policy.publicationMode !== 'live') {
+			return json({ error: 'Refinement is not authorized for publication' }, { status: 403 });
 		}
 
 		// Server owns data assembly — check for cross-category intent
@@ -55,7 +70,6 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 			return `- ID: "${p.id}" | ${p.name} | ${price} | ${specs}${fit}`;
 		}).join('\n');
 
-		const brand = getBrand();
 		const rules = await getActiveRules(persona, categorySlug);
 		const rulesContext = rulesToPromptContext(rules);
 		const availableCategories = Object.values(brand.categories).map((c) => c.displayName).join(', ');
@@ -121,6 +135,13 @@ Generate a refined layout with a conversational response.`;
 			},
 		});
 		const output = aiResult.output;
+		const validatedLayout = validateRuntimeLayout({
+			brandId: brand.id as BeallsFamilyBrandId,
+			surface: 'plp',
+			layout: output?.layout,
+			candidateProductIds: products.flatMap((product) => [String(product.id), String(product.entityId)]),
+			candidateAssetUrls: products.map((product) => product.image).filter((value): value is string => !!value),
+		});
 		const usage = aiResult.usage;
 		const model = 'anthropic/claude-haiku-4.5';
 
@@ -146,7 +167,7 @@ Generate a refined layout with a conversational response.`;
 		const tagIntents = filterToVocabulary(output?.tagIntents, tagVocabulary);
 
 		return json({
-			layout: output?.layout,
+			layout: validatedLayout,
 			chatResponse: output?.chatResponse || 'Layout updated.',
 			newConstraint: output?.constraintApplied || message.trim(),
 			constraintConflict: output?.constraintConflict || false,
@@ -165,6 +186,7 @@ Generate a refined layout with a conversational response.`;
 				constraintCount: (constraints?.length || 0) + 1,
 				tagIntentCount: tagIntents.length,
 				tagVocabularySize: tagVocabulary.length,
+				contract: policy.provenance,
 			},
 		});
 	} catch (err) {

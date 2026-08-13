@@ -5,8 +5,7 @@ import {
 	getLayoutSchemaForSurface,
 	inferSurfaceFromCategorySlug,
 	EmptyReason,
-	type Layout,
-	type Surface,
+		type Surface,
 	type EmptyReason as EmptyReasonType,
 } from '$lib/schema/layout';
 import { buildLayoutPrompt } from '$lib/server/layout-prompt';
@@ -29,13 +28,16 @@ import { logGeneration } from '$lib/server/generation-log';
 import { getActiveRules, rulesToPromptContext } from '$lib/server/rules';
 import { layoutModel, gatewayProviderOptions } from '$lib/server/ai-model';
 import { getBrand, getBrandMode } from '$lib/brand/config';
+import { Surface as LayoutSurfaceSchema } from '$lib/schema/layout';
+import { scopedLayoutCacheSlug, requireModelLayoutPolicy, validateRuntimeLayout } from '$lib/server/layout-runtime-contract';
+import type { BeallsFamilyBrandId } from '$lib/brand/bealls-family-runtime-contract';
 
 /**
  * POST /api/layout/stream
  *
- * Streams a layout object as SSE. Cache hits return a complete JSON
- * response immediately. Cache misses stream partial objects as sections
- * are generated, then send a final __done event with the validated layout.
+ * Delivers a layout over SSE. Cache hits return a complete JSON response.
+ * Cache misses publish only a final __done event after contract validation;
+ * partial model objects never become shopper-visible runtime output.
  */
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	const startTime = Date.now();
@@ -64,7 +66,9 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		const brandId = brand.id;
 		const mode = getBrandMode(brand);
 		// Per ADR-006: prefer explicit surface from request; fall back to category-slug inference
-		const surface: Surface = explicitSurface ?? inferSurfaceFromCategorySlug(categorySlug);
+		const surfaceResult = explicitSurface === undefined ? null : LayoutSurfaceSchema.safeParse(explicitSurface);
+		if (surfaceResult && !surfaceResult.success) return json({ error: 'Invalid layout surface' }, { status: 400 });
+		const surface: Surface = surfaceResult?.data ?? inferSurfaceFromCategorySlug(categorySlug);
 		const layoutSchema = getLayoutSchemaForSurface(surface, mode);
 
 		// PRD-FND-012: empty/rescue reason discriminator (see /api/layout for rationale).
@@ -73,7 +77,15 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		if (surface === 'empty' && !reason) {
 			return json({ error: "Missing/invalid 'reason' for empty surface" }, { status: 400 });
 		}
-		const cacheSlug = surface === 'empty' ? `empty:${reason}` : categorySlug;
+		let policy;
+		try {
+			policy = requireModelLayoutPolicy({ brandId, surface, reason });
+		} catch {
+			return json({ error: 'Layout generation is not authorized for this brand surface' }, { status: 403 });
+		}
+		const cacheSlug = scopedLayoutCacheSlug({
+			brandId: brandId as BeallsFamilyBrandId, surface, reason, categorySlug,
+		});
 
 		// ─── Cache check — return instantly ────────────────────────
 		const ph = composeCacheDiscriminator(picksContext, tagIntents);
@@ -92,7 +104,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 			return json({
 				layout: cached,
-				meta: { persona, categoryName: cacheSlug, productCount: 0, generationTimeMs: elapsed, cacheHit: true },
+				meta: { persona, categoryName: cacheSlug, productCount: 0, generationTimeMs: elapsed, cacheHit: true, contract: policy.provenance },
 			});
 		}
 
@@ -125,14 +137,15 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		const readable = new ReadableStream({
 			async start(controller) {
 				try {
-					for await (const partial of stream.partialOutputStream) {
-						controller.enqueue(
-							encoder.encode(`data: ${JSON.stringify(partial)}\n\n`)
-						);
-					}
-
-					// Await final validated object and usage
-					const layout = await stream.output as Layout;
+					// Only publish the final contract-validated object. Partial model
+					// objects are not shopper-safe runtime output.
+					const layout = validateRuntimeLayout({
+						brandId: brandId as BeallsFamilyBrandId,
+						surface,
+						layout: await stream.output,
+						candidateProductIds: products.flatMap((product) => [String(product.id), String(product.entityId)]),
+						candidateAssetUrls: products.map((product) => product.image).filter((value): value is string => !!value),
+					});
 					const usage = await stream.usage;
 					const elapsed = Date.now() - startTime;
 
@@ -157,7 +170,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 						encoder.encode(`data: ${JSON.stringify({
 							__done: true,
 							layout,
-							meta: { persona, categoryName, productCount: products.length, generationTimeMs: elapsed, cacheHit: false },
+							meta: { persona, categoryName, productCount: products.length, generationTimeMs: elapsed, cacheHit: false, contract: policy.provenance },
 						})}\n\n`)
 					);
 

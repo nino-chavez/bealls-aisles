@@ -2,6 +2,7 @@ import type { PageServerLoad } from './$types';
 import type { Product } from '$lib/types';
 import { getBrand } from '$lib/brand/config';
 import { loadHomeProducts } from '$lib/server/catalog';
+import { requireBrandSurface } from '$lib/server/brand-surface-guard';
 
 /**
  * FND-009 — Account dashboard scaffold (Phase 1 closeout).
@@ -37,6 +38,7 @@ const FOR_YOU_STUB: Product[] = [
 ];
 
 export const load: PageServerLoad = async ({ cookies }) => {
+	requireBrandSurface('account');
 	const brand = getBrand();
 	const persona = (cookies.get('aisles_persona') as
 		| 'gatherer'

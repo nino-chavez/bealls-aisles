@@ -43,7 +43,7 @@ for (const contract of contracts) {
 
 assert('three distinct Bealls-family contracts are declared', contracts.length === 3 && new Set(contracts.map((contract) => contract.brandId)).size === 3);
 assert('each contract is versioned and tied to one configured brand', contracts.every((contract) => /^\d+\.\d+\.\d+$/.test(contract.contractVersion) && getBrandById(contract.brandId)?.name === contract.brandName));
-assert('storefront brands inventory locator, style guide, and universal rescue surfaces', ['bealls', 'beallsflorida'].every((brandId) => getBeallsFamilyRendererContract(brandId)?.supportedSurfaces.map((entry) => entry.surface).join(',') === 'home,plp,pdp,cart,checkout,locator,style-guide,error-404,error-empty'));
+assert('storefront brands inventory every shopper, locator, review, and rescue surface', ['bealls', 'beallsflorida'].every((brandId) => getBeallsFamilyRendererContract(brandId)?.supportedSurfaces.map((entry) => entry.surface).join(',') === 'home,plp,pdp,cart,checkout,search,account,compare,locator,style-guide,error-404,error-empty'));
 assert('Home Centric inventories content routes, style guide, locator, and universal rescues', getBeallsFamilyRendererContract('homecentric')?.supportedSurfaces.map((entry) => entry.surface).join(',') === 'home,category,locator,style-guide,error-404,error-empty');
 assert('404 and empty-rescue reason inventories match the mounted implementation', contracts.every((contract) => {
 	const error404 = contract.supportedSurfaces.find((entry) => entry.surface === 'error-404');
@@ -78,6 +78,8 @@ assert('source snapshot records route, component, CSS, and runtime config owners
 	'src/routes/test/components/+page.svelte',
 	'src/lib/components/EmptyRescue.svelte',
 	'src/lib/brand/config.ts',
+	'src/lib/brand/bealls-family-runtime-contract.ts',
+	'src/lib/server/layout-runtime-contract.ts',
 	'src/app.css',
 ].every((path) => BEALLS_FAMILY_RENDERER_SOURCE_FILES.includes(path as RendererSourceFile)));
 const discoveredRendererRoutes = discoverBeallsFamilyLayoutRendererRoutes(routeFiles, readRouteFile);
@@ -103,9 +105,9 @@ assert('Home Centric has no checkout surface while storefront brands retain chec
 const footerSource = readFileSync(resolve(repoRoot, 'src/lib/components/Footer.svelte'), 'utf8');
 const checkoutRouteSource = readFileSync(resolve(repoRoot, 'src/routes/checkout/+page.server.ts'), 'utf8');
 const checkoutPolicyCall = "supportsBrandCompositionSurface(brand.id, 'checkout')";
-assert('footer exposure and direct checkout access both use the fail-closed policy guard', footerSource.includes(checkoutPolicyCall)
+assert('footer exposure and direct checkout access both use a fail-closed policy guard', footerSource.includes(checkoutPolicyCall)
 	&& footerSource.includes('{#if checkoutSupported}')
-	&& checkoutRouteSource.includes(`if (!${checkoutPolicyCall})`));
+	&& checkoutRouteSource.includes("requireBrandSurface('checkout')"));
 assert('storefront chrome exposes the mounted cart and picks controls', ['bealls', 'beallsflorida'].every((brandId) => {
 	const contract = getBeallsFamilyRendererContract(brandId);
 	return contract?.exposedChromeIds.includes('cart-drawer') && contract.exposedChromeIds.includes('picks-tray');

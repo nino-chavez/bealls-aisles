@@ -1,7 +1,5 @@
-import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { getBrand } from '$lib/brand/config';
-import { supportsBrandCompositionSurface } from '$lib/brand/composition-policy';
+import { requireBrandSurface } from '$lib/server/brand-surface-guard';
 import { getCheckoutRedirectUrl } from '$lib/server/bigcommerce';
 import { getCachedCart, getSessionCookie } from '$lib/server/cart-store';
 
@@ -20,10 +18,7 @@ import { getCachedCart, getSessionCookie } from '$lib/server/cart-store';
  * still fall back to the demo-splash CTA.
  */
 export const load: PageServerLoad = async ({ cookies }) => {
-	const brand = getBrand();
-	if (!supportsBrandCompositionSurface(brand.id, 'checkout')) {
-		throw error(404, 'Checkout is not available for this brand');
-	}
+	requireBrandSurface('checkout');
 
 	const cartId = cookies.get('bc_cart_id');
 

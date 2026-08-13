@@ -13,14 +13,26 @@
  */
 
 import { resolveZone, type ResolveZoneOpts, type ZoneResolution } from '$lib/foundation/resolve-zone';
-import type { ZoneInstanceId } from '$lib/foundation/zones';
+import { parseZoneInstance, ZONES, type ZoneInstanceId } from '$lib/foundation/zones';
+import { compileCompositionPolicy } from '$lib/foundation/composition-policy';
+import { BEALLS_COMPOSITION_POLICY } from '$lib/brand/composition-policy';
 import { getZoneContent } from './admin-overrides';
 
 export async function resolveZoneAsync(opts: ResolveZoneOpts): Promise<ZoneResolution> {
+	const parsed = parseZoneInstance(opts.zoneId);
+	if (!parsed) throw new Error(`resolveZoneAsync: unknown zone instance "${opts.zoneId}"`);
+	const policy = opts.policy ?? compileCompositionPolicy({
+		organizationId: 'example-merchant',
+		brandId: opts.brandId,
+		surface: ZONES[parsed.family].surface,
+		zoneId: parsed.family,
+		registry: BEALLS_COMPOSITION_POLICY,
+	});
+	const policyOpts = { ...opts, policy };
 	if (opts.adminContent !== undefined) {
 		// Caller already supplied admin content (e.g., bulk pre-fetched).
 		// Don't re-fetch; honor the explicit value.
-		return resolveZone(opts);
+		return resolveZone(policyOpts);
 	}
 
 	let admin: { zones: Record<ZoneInstanceId, unknown> } | undefined;
@@ -33,5 +45,5 @@ export async function resolveZoneAsync(opts: ResolveZoneOpts): Promise<ZoneResol
 		// Fail open — admin lookup failure should not break the page.
 	}
 
-	return resolveZone({ ...opts, adminContent: admin });
+	return resolveZone({ ...policyOpts, adminContent: admin });
 }

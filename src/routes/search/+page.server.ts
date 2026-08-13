@@ -4,8 +4,10 @@ import { redirect } from '@sveltejs/kit';
 import { infer } from '$lib/signals/inference';
 import { createStoreFromRequest } from '$lib/signals/request';
 import { searchProducts } from '$lib/server/search';
+import { requireBrandSurface } from '$lib/server/brand-surface-guard';
 
 export const load: PageServerLoad = async ({ url, cookies, request, parent }) => {
+	requireBrandSurface('search');
 	const query = url.searchParams.get('q') || '';
 	const { devMode } = await parent();
 

@@ -21,6 +21,18 @@ This taxonomy describes the shared composition vocabulary used by the example me
 
 External-reference onboarding requires a versioned reference contract, merchant-native recipes and components, and explicit autonomy limits. That future direction is owned by the canonical Aisles work and is not implemented by this taxonomy.
 
+### Implemented runtime boundary
+
+The taxonomy is broader than the renderer. Runtime authority comes from the compiled brand policy and the registered implementation, not from a block's presence in this document.
+
+- Bealls and Bealls Florida have separate executable policies for home, PLP, PDP, cart, checkout, search, account, compare, picks, locator, style guide, and rescue surfaces.
+- Home Centric has home, content-category, locator, style-guide, and rescue policies. Its content category is a distinct typed surface, not a PLP alias.
+- The named-zone catalog contains 28 IDs. The runtime contract records each ID as mounted, declared-only, or not applicable per brand.
+- Layout, refinement, and suggestion endpoints compile policy before model work. Published layout output is limited to registered components, candidate product IDs, configured brand assets, and internal destinations.
+- Every external-reference state remains `uncontracted`. Desktop/mobile checks are internal regression parity only.
+
+The executable sources are `src/lib/brand/composition-policy.ts`, `src/lib/brand/bealls-family-runtime-contract.ts`, and `src/lib/server/layout-runtime-contract.ts`. `npm run test:contracts` is the deterministic coverage gate.
+
 ### What this doc is
 
 - The block × surface taxonomy for autonomous ecommerce composition
@@ -52,7 +64,7 @@ An autonomous agent must be able to operate over **8 canonical surface types**. 
 | **Account** | Post-purchase relationship | 1 per shopper | Medium |
 | **Empty / 404 / Locator** | Rescue + brand engagement | Many | Medium |
 
-We currently have working implementations for: Home, PLP, PDP (basic). We have stubs for: Cart, Checkout, Account. We have nothing for: Search, Empty/404, Locator.
+The current repository renders Home, PLP/content category, a fixed PDP scaffold, cart, checkout handoff, search, account, compare, locator, and rescue routes. Their autonomy differs. Some named zones remain declared-only even when the surrounding route is implemented. Consult the runtime contract instead of inferring authority from this taxonomy or a schema declaration.
 
 ---
 
