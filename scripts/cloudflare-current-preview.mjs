@@ -58,8 +58,8 @@ const strippedApplicationSecrets = [
 	'BEALLSFLORIDA_STOREFRONT_TOKEN',
 	'STOREFRONT_TOKEN',
 	'VERCEL_OIDC_TOKEN',
-	'AISLES_OBSERVER_KEY',
-	'AISLES_REVIEW_TOKEN',
+	'OBSERVE_ACCESS_TOKEN',
+	'MERCHANT_REVIEW_ACCESS_TOKEN',
 ];
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
