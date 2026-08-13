@@ -8,6 +8,7 @@ import {
 	type BeallsFamilyBrandId,
 } from '$lib/brand/bealls-family-runtime-contract';
 import { ZoneSchemas } from '$lib/foundation/zone-schemas';
+import { projectShopperProducts } from '$lib/foundation/shopper-product';
 import { loadHomeProducts, loadProductsByTagOverlapAggregate } from '$lib/server/catalog';
 import { cacheZoneDecision, getCachedZoneDecision } from '$lib/server/cache';
 import { shouldBypassCache } from '$lib/server/cache-flags';
@@ -93,6 +94,7 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 	const products = route.surface === 'cart'
 		? await loadProductsByTagOverlapAggregate(cartSeeds, { minOverlap: 2, limit: 12 })
 		: (await loadHomeProducts(input.persona, 16, input.tagIntents)).products;
+	const shopperProducts = projectShopperProducts(products);
 	const approvedHash = approvedInputHash({
 		route: { routeId: route.routeId, routePath: route.routePath, surface: route.surface, brandId },
 		input,
@@ -137,7 +139,7 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 	if (cached.every((value): value is ZoneDecisionEnvelope => value !== null)) {
 		return json({
 			envelopes: cached,
-			products,
+			products: shopperProducts,
 			meta: { cacheHit: !pinned.every(Boolean), generationTimeMs: Date.now() - startedAt, modelCalled: false },
 		});
 	}
@@ -189,7 +191,7 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 
 	return json({
 		envelopes,
-		products,
+		products: shopperProducts,
 		meta: { cacheHit: false, generationTimeMs: Date.now() - startedAt, modelCalled: remaining },
 	});
 };

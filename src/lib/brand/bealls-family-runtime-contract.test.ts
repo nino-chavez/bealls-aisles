@@ -23,6 +23,7 @@ import { enumerateZoneInstances, parseZoneInstance, ZONE_IDS, ZONES } from '../f
 import { RENDERABLE_ZONE_COMPONENT_IDS } from '../foundation/zone-schemas';
 import { issueShopperRouteGrant, verifyShopperRouteGrant, type ShopperRouteGrantScope } from '../foundation/shopper-route-grant';
 import { runtimeZoneDomAttributes, runtimeZoneViewFromEnvelope } from '../foundation/runtime-zone-envelope';
+import { projectShopperProducts, SHOPPER_PRODUCT_KEYS } from '../foundation/shopper-product';
 import { applyTrustedEmptyRouteState, assertCompleteRouteZoneExecution, executeRouteZones } from '../server/route-zone-runtime';
 import {
 	approvedInputHash,
@@ -221,6 +222,20 @@ assert('route grants and browser bindings are HttpOnly, same-site, and Secure ou
 	&& !listFiles(routeRoot).filter((file) => file.endsWith('.svelte')).some((file) => readFileSync(resolve(routeRoot, file), 'utf8').includes('shopper-route-grant')));
 assert('cart/checkout model API publishes decision envelopes, never whole layouts', modelApiSource.includes('envelopes')
 	&& !modelApiSource.includes('validateRuntimeLayout') && !modelApiSource.includes('LayoutSchema'));
+const shopperProduct = projectShopperProducts([{
+	id: 'safe-product', entityId: 42, name: 'Safe Product', price: 24, salePrice: 19,
+	image: '/safe.jpg', imageAlt: 'Safe Product', description: 'server catalog copy', specs: {}, tags: [], category: 'Women',
+	personaFit: { gatherer: 0.8, hunter: 0.2, researcher: 0.4, gifter: 0.1 },
+	semanticTags: ['internal-semantic-tag'], overlapScore: 0.75, sharedTags: ['internal-shared-tag'],
+}])[0] as Record<string, unknown>;
+assert('layout responses project an exact shopper-safe catalog DTO',
+	JSON.stringify(Object.keys(shopperProduct)) === JSON.stringify(SHOPPER_PRODUCT_KEYS)
+	&& shopperProduct.id === 'safe-product' && shopperProduct.entityId === 42
+	&& shopperProduct.name === 'Safe Product' && shopperProduct.price === 24
+	&& shopperProduct.image === '/safe.jpg' && shopperProduct.category === 'Women'
+	&& !['personaFit', 'semanticTags', 'overlapScore', 'sharedTags'].some((key) => key in shopperProduct)
+	&& (modelApiSource.match(/products: shopperProducts/g)?.length ?? 0) === 2
+	&& !/^\s*products,\s*$/m.test(modelApiSource));
 assert('fixed refine/suggest surfaces return the existing static route behavior', refineApiSource.includes('zones are fixed')
 	&& suggestApiSource.includes('model suggestions are not authorized'));
 

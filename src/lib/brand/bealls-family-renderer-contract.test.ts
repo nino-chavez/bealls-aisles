@@ -84,6 +84,7 @@ assert('source snapshot records route, component, CSS, and runtime config owners
 	'src/lib/server/zone-output-runtime.ts',
 	'src/lib/server/zone-decision-envelope.ts',
 	'src/lib/server/shopper-route-grant.ts',
+	'src/lib/foundation/shopper-product.ts',
 	'src/lib/server/zone-content-store-gate.ts',
 	'src/lib/foundation/RuntimeEnvelopeZone.svelte',
 	'src/lib/foundation/RuntimeZone.svelte',

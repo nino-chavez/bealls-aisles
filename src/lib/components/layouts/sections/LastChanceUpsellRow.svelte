@@ -10,14 +10,14 @@
 	 * (PRD-ENG-019, ADR-008 Phase B) swaps to tag-overlap when the
 	 * neighborhood query lands.
 	 */
-	import type { Product } from '$lib/types';
+	import type { ShopperProduct } from '$lib/foundation/shopper-product';
 
 	let {
 		title,
 		products,
 	}: {
 		title: string;
-		products: Product[];
+		products: ShopperProduct[];
 	} = $props();
 
 	const fmt = (n: number) =>

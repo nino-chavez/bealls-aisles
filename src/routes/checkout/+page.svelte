@@ -4,7 +4,7 @@
 	import AssuranceStripCheckout from '$lib/components/layouts/sections/AssuranceStripCheckout.svelte';
 	import LastChanceUpsellRow from '$lib/components/layouts/sections/LastChanceUpsellRow.svelte';
 	import AILoadingInline from '$lib/components/AILoadingInline.svelte';
-	import type { Product } from '$lib/types';
+	import type { ShopperProduct } from '$lib/foundation/shopper-product';
 	import ZoneExecutionEvidence from '$lib/foundation/ZoneExecutionEvidence.svelte';
 	import RuntimeEnvelopeZone from '$lib/foundation/RuntimeEnvelopeZone.svelte';
 	import {
@@ -19,7 +19,7 @@
 
 	let assuranceItems = $state<AssuranceItem[]>([]);
 	let assuranceVariant = $state<AssuranceVariant>('first-time');
-	let upsellProducts = $state<Product[]>([]);
+	let upsellProducts = $state<ShopperProduct[]>([]);
 	let upsellTitle = $state('Last chance — pair these with your order');
 	let isLoading = $state(true);
 	let assuranceZone = $state<RuntimeZoneEnvelopeView | null>(null);
@@ -81,10 +81,10 @@
 			if (upsell) {
 				upsellTitle = (upsell.content.props.title as string) ?? upsellTitle;
 				const refs: Array<{ productId: string }> = (upsell.content.props.products as Array<{ productId: string }>) ?? [];
-				const candidates: Product[] = d?.products ?? [];
+				const candidates: ShopperProduct[] = d?.products ?? [];
 				upsellProducts = refs
 					.map((ref) => candidates.find((c) => c.id === ref.productId || String(c.entityId) === ref.productId))
-					.filter((p): p is Product => !!p)
+					.filter((p): p is ShopperProduct => !!p)
 					.slice(0, 4);
 				if (upsellProducts.length > 0) upsellZone = upsell;
 			}

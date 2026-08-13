@@ -9,7 +9,7 @@
 	import AILoadingInline from '$lib/components/AILoadingInline.svelte';
 	import EmptyRescue from '$lib/components/EmptyRescue.svelte';
 	import type { CartLineItem } from '$lib/components/layouts/sections/CartLineItems.svelte';
-	import type { Product } from '$lib/types';
+	import type { ShopperProduct } from '$lib/foundation/shopper-product';
 	import { getBrand } from '$lib/brand/config';
 	import ZoneExecutionEvidence from '$lib/foundation/ZoneExecutionEvidence.svelte';
 	import RuntimeEnvelopeZone from '$lib/foundation/RuntimeEnvelopeZone.svelte';
@@ -22,7 +22,7 @@
 
 	// Local mirror so qty mutations re-render without a full server round-trip.
 	let items = $state<CartLineItem[]>(data.cart?.lineItems.physicalItems ?? []);
-	let upsellProducts = $state<Product[]>([]);
+	let upsellProducts = $state<ShopperProduct[]>([]);
 	let upsellTitle = $state('Last chance — pair these with your order');
 	let upsellLoading = $state(false);
 	let upsellZone = $state<RuntimeZoneEnvelopeView | null>(null);
@@ -83,11 +83,11 @@
 			const upsell = zone.content;
 			upsellTitle = (upsell.props?.title as string) ?? upsellTitle;
 			const refs: Array<{ productId: string }> = upsell.props?.products ?? [];
-			const candidates: Product[] = d?.products ?? [];
+			const candidates: ShopperProduct[] = d?.products ?? [];
 			const inCart = new Set(items.map((i) => i.productEntityId));
 			upsellProducts = refs
 				.map((ref) => candidates.find((c) => c.id === ref.productId || String(c.entityId) === ref.productId))
-				.filter((p): p is Product => !!p && !inCart.has(p.entityId))
+				.filter((p): p is ShopperProduct => !!p && !inCart.has(p.entityId))
 				.slice(0, 4);
 			if (upsellProducts.length > 0) upsellZone = zone;
 		} catch {
