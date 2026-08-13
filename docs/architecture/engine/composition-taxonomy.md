@@ -28,8 +28,9 @@ The taxonomy is broader than the renderer. Runtime authority comes from the comp
 - Bealls and Bealls Florida have separate executable policies for home, PLP, PDP, cart, checkout, search, account, compare, Picks, locator, style guide, and rescue surfaces.
 - Home Centric has home, content-category, locator, style-guide, and 404-rescue policies. Its content category is a distinct typed surface, not a PLP alias, and it has no current empty-state insertion.
 - The named-zone catalog contains 28 families and 36 expanded instances. Every applicable instance is mounted and must terminate through named route execution. Exposure and materialization are separate fields; Hidden is a trusted terminal, not missing execution.
-- Current model publication is limited to one cart zone and two checkout zones. Three PDP recommendation zones accept only the `pdp-tag-overlap-v1` trusted rule. All other applicable zones are fixed.
-- `/api/layout` returns validated named-zone decision envelopes, never a whole layout. `/api/layout/stream` rejects whole-layout publication. Refinement and suggestion endpoints reject model work because their current zones are fixed.
+- Current shopper model publication is empty. Three PDP recommendation zones accept only the `pdp-tag-overlap-v1` trusted rule. All other applicable zones are fixed.
+- `/api/layout` rejects without reading input, consulting caches, or loading a provider. `/api/layout/stream` rejects whole-layout publication. Refinement and suggestion endpoints also reject model work.
+- Merchant locks, trusted rules, and fallbacks all pass the same exact schema plus server-derived catalog, asset, and destination closure.
 - Every external-reference state remains `uncontracted`. Checks at 390, 768, and 1280 pixels are internal regression evidence only.
 
 The executable sources are `src/lib/brand/composition-policy.ts`, `src/lib/brand/bealls-family-runtime-contract.ts`, `src/lib/server/route-zone-runtime.ts`, `src/lib/server/zone-output-runtime.ts`, and `src/lib/server/zone-decision-envelope.ts`. `npm run test:contracts` is the focused deterministic gate; `npm test` runs the full TypeScript test inventory.
@@ -625,13 +626,13 @@ server route pathname
 └── trusted brand + route context
     └── compiled surface and expanded-zone policy
         ├── trusted merchant pin / lock
-        ├── fixed, trusted-rule, or model candidate
+        ├── fixed or trusted-rule candidate
         ├── trusted authored content
         └── brand fallback or Hidden
             └── strict zone schema + exact renderer dispatch
 ```
 
-The client cannot provide a `surface` discriminator. Page loads derive the route from `event.url.pathname`. Cross-route model calls require a short-lived, signed, HttpOnly grant scoped to organization, brand, exact route, server-derived API surface, effective policy and reference state, catalog authority, synthetic provenance, expiry, and browser binding session. Origin and Referer are additional same-origin confusion checks, not the authority.
+The client cannot provide a `surface` discriminator or invoke a model producer. Page loads derive the route from `event.url.pathname`. Shopper URLs, bodies, cookies, Origin, and Referer cannot grant paid execution or cache bypass. Any future model producer requires a separately authenticated merchant operation with server-owned inputs and explicit rate, cost, and concurrency limits.
 
 Legacy whole-layout schemas remain available to `/style-guide` and `/test/components`. They are review/development fixtures and cannot be extracted or published by shopper APIs.
 
@@ -640,7 +641,7 @@ Legacy whole-layout schemas remain available to `/style-guide` and `/test/compon
 ## 10. What this changes about how we build
 
 1. **No more reactive component additions.** Every new block must be motivated by a row in §3 (the catalog). If a block isn't in the catalog, we add it to the catalog first, justify its surfaces and personas, then build it.
-2. **Prompts follow executable authority.** A prompt may target only the exact named zones its server-derived policy permits. Current model prompts exist only for cart and checkout zones.
+2. **Prompts follow executable authority.** A prompt may target only the exact named zones its server-derived policy permits. No current shopper route has prompt or model authority.
 3. **Schemas and renderer dispatch close exactly.** A home zone cannot accept `cart-summary`, unsupported component IDs, extra props, or unbounded copy.
 4. **Demos are surface-walkthroughs, not feature lists.** "Watch the AI compose a homepage, then a PLP, then a PDP" — each demonstrates different latitude.
 5. **The block catalog is design input.** Runtime authority is the compiled brand/route/zone policy plus the strict schema and registered renderer. Presence in §3 grants nothing.

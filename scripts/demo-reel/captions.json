@@ -33,12 +33,12 @@
 		},
 		{
 			"images": [
-				"extracted/03a-cached.png",
-				"extracted/03b-mid-loading.png",
-				"extracted/03c-regenerated.png"
+				"extracted/03a-fixed-first.png",
+				"extracted/03b-fixed-second.png",
+				"extracted/03c-fixed-third.png"
 			],
-			"title": "Bypass the cache, watch it regenerate",
-			"caption": "Add a second flag to force a live regeneration. The next request misses cache, hits the AI Gateway, and regenerates. The dev panel logs the new trace. Around five seconds for a cold composition through Vercel AI Gateway. The faster model runs first, the stronger model handles the hard cases. Sections stream in as they validate, so the editorial header shows up before the page is fully assembled. Slightly wrong layout in a hundred milliseconds beats perfect layout in eight seconds."
+			"title": "The fixed category contract repeats",
+			"caption": "Three clean reloads exercise the same fixed category policy. Shopper URLs cannot bypass caches or trigger a paid model call. This evidence checks repeatability; it does not claim external-reference visual preservation."
 		},
 		{
 			"image": "bealls-05-observe.png",

@@ -1,12 +1,16 @@
 # Decision Record: Streaming Layout Generation
 
 **Date:** 2026-04-06
-**Status:** Implemented
+**Status:** Superseded 2026-08-13 — shopper streaming and paid model execution retired
 **Context:** Cold start performance optimization
 
 ## Question
 
 Should layout generation stream tokens to the client for progressive rendering?
+
+## Current decision
+
+No shopper route may stream or request generated layout content. `POST /api/layout/stream` returns `410`, and `POST /api/layout` returns `403`; both reject without calling a model. The implementation below is retained only as decision history.
 
 ## Original Decision (deferred)
 
@@ -16,7 +20,7 @@ No. The combination of static fallback + Haiku model made streaming unnecessary:
 2. Haiku generates in 2-4 seconds
 3. AI SDK v6 structured output returns a complete, Zod-validated object
 
-## Revised Decision (2026-04-06)
+## Historical revised decision (2026-04-06; no longer implemented)
 
 Yes. Streaming is now implemented via `/api/layout/stream`. The motivation changed:
 
@@ -24,7 +28,7 @@ Yes. Streaming is now implemented via `/api/layout/stream`. The motivation chang
 2. **Progressive section rendering** — sections stream in as they're generated (editorial header appears ~1s before the product grid), giving the shopper visible progress
 3. **AI SDK v6 supports it cleanly** — `streamText` with `Output.object()` provides a `partialOutputStream` that emits increasingly-complete objects as tokens arrive
 
-## Implementation
+## Historical implementation
 
 **Server** (`/api/layout/stream`):
 - Cache hits return `application/json` instantly (same as before)

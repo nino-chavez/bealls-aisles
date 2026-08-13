@@ -102,8 +102,8 @@ async function scene01_homeClean(context) {
 // real category layout AND the floating dev panel pinned in the corner.
 //
 // Approach: render at deviceScaleFactor=2 (so the page is drawn at 2x
-// pixel density — 2880x1800 native), force a fresh AI generation so AI
-// zones are present (badges have something to label), then crop a 1440x900
+// pixel density — 2880x1800 native), render the fixed category contract,
+// then crop a 1440x900
 // region from the upper portion that catches the editorial/grid badges,
 // AND a crop of the toolbar from the bottom-right. Composite them
 // side-by-side at native 2x detail so both are crisp and legible.
@@ -117,8 +117,7 @@ async function scene02_devInstrumentation(context) {
 	});
 	const page = await hiDpiContext.newPage();
 
-	// Force a fresh AI generation so badges exist on AI zones
-	await page.goto(`${BASE_URL}/category/women?dev=1&fresh=1`, { waitUntil: 'networkidle' });
+	await page.goto(`${BASE_URL}/category/women?dev=1`, { waitUntil: 'networkidle' });
 	await page.waitForTimeout(7500);
 
 	// Native 2x capture (2880x1800)
@@ -178,17 +177,15 @@ async function scene02_devInstrumentation(context) {
 	}
 }
 
-// ─── Scene 04: ?fresh=1 forces regeneration; capture toolbar showing latency ──
-async function scene04_freshRegen(context) {
+// ─── Scene 04: fixed category revisit; no shopper cache-bypass authority ──
+async function scene04_fixedCategory(context) {
 	const page = await newPage(context);
 	// First, prime ?dev=1 in localStorage
 	await page.goto(`${BASE_URL}/?dev=1`, { waitUntil: 'networkidle' });
 	await page.waitForTimeout(1000);
-	// Now hit a different category with ?fresh=1 to bust cache + regenerate
-	await page.goto(`${BASE_URL}/category/women?dev=1&fresh=1`, { waitUntil: 'networkidle' });
-	// Allow the regen to finish so the toolbar entry shows real latency
-	await page.waitForTimeout(6500);
-	await shot(page, 'bealls-04-fresh-regen.png');
+	await page.goto(`${BASE_URL}/category/women?dev=1`, { waitUntil: 'networkidle' });
+	await page.waitForTimeout(1500);
+	await shot(page, 'bealls-04-fixed-category.png');
 	await page.close();
 }
 
@@ -773,7 +770,7 @@ function buildTakeawaySlideHtml() {
 const SCENES = [
 	[1, 'Home (clean)', scene01_homeClean],
 	[2, 'Dev instrumentation (category, zoomed)', scene02_devInstrumentation],
-	[3, 'Cache bypass / live regeneration', scene04_freshRegen],
+	[3, 'Fixed category contract', scene04_fixedCategory],
 	[4, 'Operator dashboard', scene05_observe],
 	[5, 'Refinement chat', scene06_refinementChat],
 	[6, 'Cross-session continuity', scene07_returnContinuity],

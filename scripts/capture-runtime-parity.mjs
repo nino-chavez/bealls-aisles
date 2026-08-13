@@ -17,7 +17,6 @@ import { chromium } from 'playwright';
 
 const PINNED_PRISTINE_MAIN = '71e8750f9070fb788816f0464355f46ab63fb272';
 const FIXTURE_VERSION = 'bealls-family-catalog-v1';
-const LOCAL_ROUTE_SECRET = 'local-parity-only-route-secret-0000000000000000000000000000000000';
 const candidateRoot = runGit(['rev-parse', '--show-toplevel'], process.cwd());
 const commonGitDir = path.resolve(candidateRoot, runGit(['rev-parse', '--git-common-dir']));
 const canonicalRoot = path.dirname(commonGitDir);
@@ -405,7 +404,7 @@ async function startServer(side, root, brandId, port) {
 		cwd: root,
 			env: {
 			...process.env,
-			BRAND_ID: brandId, VITE_BRAND_ID: brandId, AISLES_PARITY_FIXTURE: 'v1', AISLES_ROUTE_BINDING_SECRET: LOCAL_ROUTE_SECRET,
+			BRAND_ID: brandId, VITE_BRAND_ID: brandId, AISLES_PARITY_FIXTURE: 'v1',
 			AISLES_NO_CACHE: '1', AISLES_ZONE_CONTENT_SCHEMA_VERSION: '',
 			BIGCOMMERCE_STORE_HASH: '', BIGCOMMERCE_STOREFRONT_TOKEN: '', STOREFRONT_TOKEN: '',
 			BEALLS_STOREFRONT_TOKEN: '', BEALLSFLORIDA_STOREFRONT_TOKEN: '',

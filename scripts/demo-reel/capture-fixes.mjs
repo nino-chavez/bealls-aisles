@@ -38,33 +38,26 @@ async function shot(page, file, opts = {}) {
 	return out;
 }
 
-// ─── Scene 04: cache HIT vs MISS vs regenerated ─────────────────
-// Use a fresh category we don't pre-warm anywhere else so cache state is clear.
+// ─── Scene 04: repeated fixed-policy renders ─────────────────────
 async function scene04(browser) {
-	console.log('\n[04] Bypass cache — 3 visually distinct states');
+	console.log('\n[04] Fixed category — repeatability evidence');
 	const ctx = await browser.newContext({ viewport: VIEWPORT });
 	const page = await ctx.newPage();
 
-	// Warm cache: visit /category/men?dev=1 once and let it generate
-	await page.goto(`${BASE}/category/men?dev=1&fresh=1`, { waitUntil: 'networkidle' });
-	await page.waitForTimeout(8000); // let regen finish
-
-	// 03a — cache HIT: revisit without ?fresh=1, capture the warm state
 	await page.goto(`${BASE}/category/men?dev=1`, { waitUntil: 'networkidle' });
-	await page.waitForTimeout(2500);
-	await shot(page, 'extracted/03a-cached.png');
-
-	// 03b — mid-loading: visit ?fresh=1 and screenshot DURING regen.
-	// `domcontentloaded` (not networkidle) so we catch the page mid-regen
-	// when the AI gateway call is still in flight.
-	await page.goto(`${BASE}/category/men?dev=1&fresh=1`, { waitUntil: 'domcontentloaded' });
 	await page.waitForTimeout(1500);
-	await shot(page, 'extracted/03b-mid-loading.png');
 
-	// 03c — regenerated: wait for regen to complete, capture new layout
-	await page.waitForLoadState('networkidle').catch(() => {});
-	await page.waitForTimeout(7000);
-	await shot(page, 'extracted/03c-regenerated.png');
+	await page.goto(`${BASE}/category/men?dev=1`, { waitUntil: 'networkidle' });
+	await page.waitForTimeout(1000);
+	await shot(page, 'extracted/03a-fixed-first.png');
+
+	await page.reload({ waitUntil: 'networkidle' });
+	await page.waitForTimeout(1000);
+	await shot(page, 'extracted/03b-fixed-second.png');
+
+	await page.reload({ waitUntil: 'networkidle' });
+	await page.waitForTimeout(1000);
+	await shot(page, 'extracted/03c-fixed-third.png');
 
 	await page.close();
 	await ctx.close();

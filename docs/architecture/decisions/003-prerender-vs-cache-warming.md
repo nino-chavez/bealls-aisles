@@ -16,10 +16,10 @@ Cache warming fills the Redis cache with layouts for each persona+category combi
 
 ## Current implementation boundary
 
-The whole-layout cache and its anonymous post-deploy warmer are retired. Shopper model output is limited to signed, route-bound cart and checkout zones. Cache entries contain a validated decision and provenance envelope keyed by the full organization, brand, route, surface, expanded-zone, policy, reference, viewport, catalog/content, synthetic-provenance, and approved-input context.
+The whole-layout cache and its anonymous post-deploy warmer are retired. Shopper model execution is also retired. `/api/layout` rejects before input, cache, catalog, or provider work. The decision-envelope cache infrastructure remains fail-closed: any future authorized producer must store and revalidate the complete decision and provenance envelope, including organization, brand, route, surface, expanded zone, policy, reference, viewport, catalog/content, synthetic provenance, and approved input.
 
-`scripts/warm-cache.ts` now fails without making network requests. `npm run prewarm` was removed because its referenced implementation did not exist and a route-less warmer cannot satisfy the signed grant. A future warmer needs a server-trusted route context and must cache the complete validated envelope; a client-supplied surface is not acceptable.
+`scripts/warm-cache.ts` now fails without making network requests. `npm run prewarm` was removed because its referenced implementation did not exist. A future warmer needs a separately authenticated merchant authority and must cache the complete validated envelope; shopper URLs or client-supplied surfaces are not acceptable.
 
 ## When to revisit
 
-Revisit only if a warmer can mint the same scoped authority as a real consuming route without becoming a reusable cross-route capability. Static brand fallbacks remain required even if ISR is added.
+Revisit only with an authenticated merchant operation, server-owned inputs, and explicit cost and concurrency limits. Static brand fallbacks remain required even if ISR is added.

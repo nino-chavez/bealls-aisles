@@ -1,12 +1,12 @@
 # Aisles — Multi-Brand Setup Guide
 
-**Version**: 0.4.0
+**Version**: 0.5.0
 **Last Updated**: 2026-08-13
 **Audience**: Developers, Platform Operators
 
 ## Overview
 
-A single Aisles codebase serves related brands for one example merchant organization. Brand selection is controlled by the `BRAND_ID` environment variable. Each brand gets its own Vercel project, BigCommerce channel (storefront mode) or content set (content mode), and visual identity, but shares approved application code, AI logic, and infrastructure patterns.
+A single Aisles codebase serves related brands for one example merchant organization. Brand selection is controlled by the `BRAND_ID` environment variable. Each brand gets its own Vercel project, BigCommerce channel (storefront mode) or content set (content mode), and visual identity, but shares approved application code, inference rules, and infrastructure patterns.
 
 ## Scope limit
 
@@ -18,7 +18,7 @@ The focused source gate is `npm run test:renderer-contract`. Before recomputing 
 
 That internal-family integration is independent of external-reference preservation. The contract does not preserve a third-party storefront, claim visual parity, or change `reference.state`. External-reference onboarding still needs a separately versioned reference contract, merchant-native components and page recipes, responsive behavior, and explicit autonomy policy. The canonical Aisles reference-contract/autonomy direction owns that work; this repository records only the current example-merchant implementation.
 
-`src/lib/brand/composition-policy.ts` and `src/lib/brand/bealls-family-runtime-contract.ts` make the current boundary executable. They assign the three brands separate child policies under `example-merchant`. Each child can narrow organization authority but cannot expand it. Shopper page loads derive their route from `event.url.pathname`. The model API accepts no client-supplied route or surface; it requires a short-lived, server-signed, HttpOnly route grant and treats Origin and Referer only as confusion checks.
+`src/lib/brand/composition-policy.ts` and `src/lib/brand/bealls-family-runtime-contract.ts` make the current boundary executable. They assign the three brands separate child policies under `example-merchant`. Each child can narrow organization authority but cannot expand it. Shopper page loads derive their route from `event.url.pathname`. No shopper route has paid-model authority: `POST /api/layout` rejects before reading input or loading a provider, and the streaming endpoint remains retired.
 
 The route contract inventories 30 executable endpoints under `src/routes`: 15 page routes, one SvelteKit error route, and 14 API endpoints. Multi-method APIs expand that inventory to 34 addressable page-plus-method handlers. These are metadata counts, not screenshot counts.
 
@@ -28,21 +28,21 @@ The route contract inventories 30 executable endpoints under `src/routes`: 15 pa
 | Operator | `/observe` and `/api/observe/*` | `OBSERVE_ACCESS_TOKEN`; explicit development credential only in dev | Excluded |
 | Merchant review | `/style-guide` | Development-only open access or `MERCHANT_REVIEW_ACCESS_TOKEN` | Excluded |
 | Development | `/test/*` | Development build only | Excluded |
-| Runtime API | `/api/*` | Endpoint-specific brand, route, and policy gates | Not a page-preservation surface |
+| Runtime API | `/api/*` | Endpoint-specific gates; layout model endpoints have no brand authority | Not a page-preservation surface |
 
-`/compare` remains shopper-facing because the Picks tray links to it. Home Centric's `/category/[slug]` route normalizes to the distinct `category` surface, never PLP. Its storefront-only account, cart, checkout, compare, PDP, search, cart, refinement, suggestion, and model-zone paths fail before protected work begins.
+`/compare` remains shopper-facing because the Picks tray links to it. Home Centric's `/category/[slug]` route normalizes to the distinct `category` surface, never PLP. Its storefront-only account, cart, checkout, compare, PDP, search, refinement, and suggestion paths fail before protected work begins. Layout model endpoints reject for all three brands.
 
 The zone catalog contains 28 family IDs: home 5, PLP 6, PDP 5, cart 3, checkout 2, search 2, account 2, locator 1, 404 rescue 1, and other-empty rescue 1. Array multiplicity expands that taxonomy to 36 concrete instances. Bealls and Bealls Florida make all 28 families and 36 instances applicable and mounted. Ten families are exposed by current shopper renderers; the other applicable zones terminate through a trusted Hidden result unless validated content exists. Home Centric makes 7 families and 12 instances applicable and mounted, exposes `home.hero` and `locator.editorial-intro`, and marks the remaining 21 families not applicable. It does not claim the taxonomy's `error-empty` family because no current Home Centric route renders that state. “Mounted,” “exposed,” and “materialized” are separate states.
 
 | Brand | Fixed | Trusted rules | Model | Holdout / approval-required |
 |---|---|---|---|---|
-| Bealls | Home, PLP, search, account, locator, rescue, compare, Picks, two PDP zones, two cart zones | `pdp.related`, `pdp.cross-sell`, `pdp.recently-viewed` via `pdp-tag-overlap-v1` | `cart.above-checkout-cta` on `/cart`; `checkout.assurance-strip` and `checkout.last-chance-upsell` on `/checkout` | None configured |
-| Bealls Florida | Same zone shape under its own brand policy and cache identity | Same three PDP rule zones under Bealls Florida identity | Same three bounded cart/checkout zones under Bealls Florida identity | None configured |
+| Bealls | Home, PLP, search, account, locator, rescue, compare, Picks, two PDP zones, all cart and checkout zones | `pdp.related`, `pdp.cross-sell`, `pdp.recently-viewed` via `pdp-tag-overlap-v1` | None | None configured |
+| Bealls Florida | Same fixed zone shape under its own brand policy and cache identity | Same three PDP rule zones under Bealls Florida identity | None | None configured |
 | Home Centric | All 7 applicable families; content category is a fixed non-zone surface | None | None | None configured |
 
-All current applicable policies publish in `live` mode. That does not authorize arbitrary output. A zone accepts only its exact strict schema and only components its renderer can dispatch. Model product IDs, assets, and destinations must come from the approved input set. Runtime CSS, HTML, extra props, unsupported components, and invented URLs are rejected. Invalid or over-authority output preserves the trusted brand fallback or Hidden terminal. The global cart drawer is fixed and makes no model-zone request; cart model authority belongs only to the exact `/cart` page grant. Model-zone responses project product candidates to the public card fields needed by cart and checkout. Persona scores, semantic tags, overlap scores, and shared tags remain server/operator data.
+All current applicable policies publish in `live` mode. That does not authorize arbitrary output. Every source—merchant lock or pin, trusted rule, and fallback—must pass the same exact zone schema plus catalog, asset, and destination closure. Runtime CSS, HTML, extra props, unsupported components, external assets, and invented URLs are rejected. Invalid or over-authority output preserves the trusted brand fallback or Hidden terminal. The global cart drawer, cart page, and checkout page make no model-zone request. Every shopper SSR product boundary projects the public product fields explicitly; persona scores, semantic tags, relevance or overlap scores, and shared tags remain server/operator data.
 
-The resolver supports a trusted merchant record only when it is bound to the same organization, brand, exact route path, surface, expanded zone, effective policy version, and reference state/version. `pin` and `lock` win before engine output; `authored` content is considered after valid engine output. That precedence is mechanically tested through server-injected records. Runtime merchant storage is not enabled by this repository: it contains no compatible schema migration or write path. Database reads stay off unless an operator separately provisions the route-bound columns and sets `AISLES_ZONE_CONTENT_SCHEMA_VERSION=route-bound-v1`; legacy, unavailable, or ordinary unbound admin data cannot become authority.
+The resolver supports a trusted merchant record only when it is bound to the same organization, brand, exact route path, surface, expanded zone, effective policy version, and reference state/version. `pin` and `lock` win before engine output; `authored` content is considered after valid engine output. Binding never bypasses publication closure. That precedence is mechanically tested through server-injected records. Runtime merchant storage is not enabled by this repository: it contains no compatible schema migration or write path. Database reads stay off unless an operator separately provisions the route-bound columns and sets `AISLES_ZONE_CONTENT_SCHEMA_VERSION=route-bound-v1`; legacy, unavailable, or ordinary unbound admin data cannot become authority. When explicitly enabled, one route execution performs one batched read. Concurrent reads share that request, and transient failures enter a bounded cooldown instead of retrying once per zone.
 
 The decision cache stores the validated content and provenance envelope, not a raw layout. Its key and hit validation cover organization and brand policy versions, route ID and path, surface, expanded zone, effective policy, preset, decision and publication modes, capabilities, reference state/ID/version, viewport class, catalog and content versions, synthetic provenance, and approved-input hash. A mismatch is a miss; a hit returns the stored provenance unchanged.
 
@@ -135,7 +135,7 @@ interface BrandConfig {
 
 The `theme` object is injected as CSS custom properties on `:root` at page load, so shared components can consume the current brand's colors and fonts. Tokens do not represent a complete design contract and do not remove the need for merchant-native component or recipe work when integrating an unrelated storefront.
 
-The `prompt` fields supply brand context to model-backed paths that explicitly consume them. They do not grant model authority. The compiled route and zone policy remains the publication boundary.
+The `prompt` fields are retained as brand context for explicit offline/operator tooling. No shopper route consumes them or gains model authority. The compiled route and zone policy remains the publication boundary.
 
 The `mode` field selects between transactional storefront mode and content/locator mode, which drive different component vocabularies.
 
@@ -283,10 +283,9 @@ This scores all products in the channel for persona-fit and generates semantic t
 | `KV_REST_API_TOKEN` | Upstash Redis REST token |
 | `DATABASE_URL` | Neon Postgres connection string |
 | `POSTGRES_URL` | Same as DATABASE_URL (alternative env name) |
-| `AISLES_ROUTE_BINDING_SECRET` | At least 32 random characters; required for signed model-zone route grants |
 | `AISLES_ZONE_CONTENT_SCHEMA_VERSION` | Optional explicit attestation for a separately provisioned `route-bound-v1` merchant-zone read schema; absent by default |
 
-**For AI generation** (via Vercel AI Gateway — set automatically if using the Vercel AI Gateway integration):
+**For explicit offline enrichment tooling only** (shopper routes do not invoke these):
 
 | Variable | Value |
 |---|---|
@@ -295,7 +294,7 @@ This scores all products in the channel for persona-fit and generates semantic t
 
 4. Deployment remains a separate operator authorization after the local contract and human visual gates pass. This guide does not authorize a deploy.
 
-The legacy whole-layout warmers are not compatible with signed, route-bound zone decisions. Do not use them as a way around the page-issued route grant. A future warmer must mint server-trusted route context and cache complete validated decision envelopes.
+The legacy whole-layout warmers are retired. A future authenticated merchant producer would need a new server-owned authority and cost contract; shopper URLs cannot opt into generation or cache bypass.
 
 ---
 

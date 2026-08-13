@@ -1,7 +1,7 @@
 # Aisles — API Reference
 
 **Version**: 0.1.0
-**Last Updated**: 2026-04-06
+**Last Updated**: 2026-08-13
 **Audience**: Developers
 
 ## Overview
@@ -16,6 +16,16 @@ Base URL varies by brand:
 ---
 
 ## Layout Endpoints
+
+Shopper-paid layout generation is retired. These endpoints parse no shopper composition input and make no model calls.
+
+- `POST /api/layout` returns `403` with `{ "error": "Shopper model-zone execution is not authorized", "meta": { "modelCalled": false } }`.
+- `POST /api/layout/stream` returns `410`; partial and whole-layout streaming cannot publish.
+- Shopper URLs and cookies cannot request freshness or alter a cache key.
+
+## Historical layout protocol (non-executable)
+
+The remainder of this section records the April 2026 prototype protocol. It is not the current API contract.
 
 ### POST /api/layout
 
