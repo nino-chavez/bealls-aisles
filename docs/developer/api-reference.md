@@ -23,13 +23,13 @@ Shopper-paid layout generation is retired. These endpoints parse no shopper comp
 - `POST /api/layout/stream` returns `410`; partial and whole-layout streaming cannot publish.
 - Shopper URLs and cookies cannot request freshness or alter a cache key.
 
-## Historical layout protocol (non-executable)
+## Archived April 2026 layout protocol (non-executable)
 
-The remainder of this section records the April 2026 prototype protocol. It is not the current API contract.
+The remainder of this section is retained only to interpret archived screenshots and logs. None of its request, cache, model, or SSE behavior is callable in the current runtime.
 
-### POST /api/layout
+### Retired protocol: POST /api/layout
 
-Generate an AI layout for a persona + category combination. Returns a cached layout instantly if available; otherwise generates via Claude and caches the result.
+The retired prototype accepted a persona and category, then returned a cached or newly generated whole layout. The current endpoint ignores this body and returns `403`.
 
 **Request body**
 
@@ -115,13 +115,13 @@ Generate an AI layout for a persona + category combination. Returns a cached lay
 | 404 | Category not found in brand config |
 | 500 | AI generation failed |
 
-**Model selection**: Tries Claude Haiku 4.5 first (2–4s). Falls back to Claude Sonnet 4.6 (8–15s) if Haiku returns an invalid structured output.
+**Historical model selection**: the retired implementation tried Claude Haiku, then Claude Sonnet. This is not a current shopper execution path.
 
 ---
 
-### POST /api/layout/stream
+### Retired protocol: POST /api/layout/stream
 
-Streaming variant of layout generation using Server-Sent Events. Cache hits return `application/json` immediately (same shape as `/api/layout`). Cache misses return `text/event-stream` with partial layout objects as sections generate.
+The retired prototype streamed partial whole-layout objects over Server-Sent Events. The current endpoint returns `410`; partial output cannot publish.
 
 **Request body**: same as `POST /api/layout`
 
@@ -191,51 +191,28 @@ if (res.headers.get('Content-Type')?.includes('application/json')) {
 
 ---
 
-## Refinement Endpoint
+## Fixed refinement and suggestion endpoints
 
 ### POST /api/refine
 
-Conversational layout refinement. The shopper sends a natural-language constraint ("show me options under $300" or "I need something for a small space") and the server generates a new layout honoring all accumulated constraints plus the new message.
-
-**Request body**
+PLP and search zones are fixed. The endpoint parses no shopper layout input and returns `403`:
 
 ```json
 {
-  "message": "show me options under $300",
-  "currentLayout": { ... },
-  "persona": "hunter",
-  "categorySlug": "office",
-  "constraints": ["under $300"]
+  "error": "All PLP and search zones are fixed; the existing route remains in control"
 }
 ```
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `message` | string | Yes | The shopper's latest refinement message |
-| `categorySlug` | string | Yes | Current category |
-| `currentLayout` | Layout | No | The layout currently shown (used for context) |
-| `persona` | string | No | Current persona label |
-| `constraints` | string[] | No | Accumulated constraints from this refinement session |
+### POST /api/suggest
 
-**Response**
+PDP recommendations are rules-driven and Picks has no registered model zone. The endpoint parses no shopper suggestion input and returns `403` with an empty list:
 
 ```json
 {
-  "layout": { ... },
-  "newConstraint": "show me options under $300",
-  "meta": {
-    "generationTimeMs": 1850,
-    "persona": "hunter",
-    "constraintCount": 2
-  }
+  "error": "PDP recommendations are rules-driven; model suggestions are not authorized",
+  "suggestions": []
 }
 ```
-
-**Notes**:
-- Refinement results are not cached (constraints are session-specific).
-- The server re-fetches products from BigCommerce on every call — it does not trust the client-sent layout's product list.
-- Refinement calls are logged to `generation_logs` with `type: "refine"`.
-- Model selection: Haiku first, Sonnet fallback (same as layout generation).
 
 ---
 
@@ -484,7 +461,7 @@ Returns the full state of a specific session: all signal events, the current per
 
 ### GET /api/observe/logs
 
-Returns recent generation log entries from Neon Postgres. Each entry represents one layout or refinement call.
+Returns legacy or offline generation log entries from Neon Postgres when that separately provisioned table exists. Current shopper routes do not create layout or refinement records.
 
 **Query parameters**
 
@@ -519,7 +496,7 @@ Returns recent generation log entries from Neon Postgres. Each entry represents 
 }
 ```
 
-**Cost calculation**: `estimatedCost` is computed at insert time using per-model pricing (Haiku: $0.80/M input, $4.00/M output; Sonnet: $3.00/M input, $15.00/M output).
+**Historical cost field**: `estimatedCost` was computed when a legacy or offline record was inserted. It is not evidence of a current shopper model call.
 
 ---
 

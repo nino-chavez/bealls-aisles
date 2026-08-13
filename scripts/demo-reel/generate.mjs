@@ -24,6 +24,10 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
+const captions = JSON.parse(fs.readFileSync(path.join(ROOT, 'captions.json'), 'utf-8'));
+if (captions.status !== 'current') {
+	throw new Error('Demo reel is a legacy archive and cannot be regenerated or published');
+}
 const SCREENSHOTS_DIR = path.join(ROOT, 'screenshots');
 const AUDIO_DIR = path.join(ROOT, 'audio');
 const FRAMES_DIR = path.join(ROOT, 'frames');
@@ -62,7 +66,6 @@ if (!ELEVENLABS_API_KEY && !OPENAI_API_KEY) {
 }
 
 // ─── config ────────────────────────────────────────────────────────
-const captions = JSON.parse(fs.readFileSync(path.join(ROOT, 'captions.json'), 'utf-8'));
 const VOICE = process.env.TTS_VOICE || captions.voice || 'coral';
 const TTS_MODEL = process.env.TTS_MODEL || captions.model || 'eleven_multilingual_v2';
 const TTS_INSTRUCTIONS = captions.instructions || null;

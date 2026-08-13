@@ -1,12 +1,12 @@
 # Aisles — Development Guide
 
 **Version**: 0.1.0
-**Last Updated**: 2026-04-06
+**Last Updated**: 2026-08-13
 **Audience**: Developers
 
 ## Prerequisites
 
-- Node.js 20+ (the project uses native `fetch`, ES modules, and `tsx` for scripts)
+- Node.js 22 (the verified build runtime)
 - npm (not pnpm or yarn)
 - Access to the project's environment variables (ask the team for a `.env.local` file)
 
@@ -24,7 +24,7 @@ npm install
 Create a `.env.local` file in the project root with the following variables:
 
 ```bash
-# Brand selection (defaults to "bealls" if not set)
+# Brand selection (required; unknown or missing IDs fail closed)
 BRAND_ID=bealls
 VITE_BRAND_ID=bealls
 
@@ -33,22 +33,22 @@ BIGCOMMERCE_STORE_HASH=your_store_hash
 STOREFRONT_TOKEN=your_storefront_token
 BIGCOMMERCE_CHANNEL_ID=1
 
-# Upstash Redis (layout cache + session store)
+# Upstash Redis (session store; validated decision cache is dormant for shoppers)
 KV_REST_API_URL=https://your-instance.upstash.io
 KV_REST_API_TOKEN=your_upstash_token
 
-# Neon Postgres (enrichment data + generation logs)
+# Neon Postgres (optional enrichment and operator data)
 DATABASE_URL=postgresql://user:pass@host/db?sslmode=require
 POSTGRES_URL=postgresql://user:pass@host/db?sslmode=require
 
-# AI (for layout generation — set these OR use Vercel AI Gateway)
+# Offline enrichment only; shopper routes never use this key
 ANTHROPIC_API_KEY=sk-ant-...
 
 # For enrichment pipeline only
 OPENROUTER_API_KEY=sk-or-...
 ```
 
-**Local development without Redis**: The application runs without Redis — sessions are stored in-memory, and layouts are regenerated on every request (no caching). This is fine for development but means cold-start times are always 2–15 seconds.
+**Local development without Redis**: The application runs without Redis and uses the in-memory session fallback. Shopper layouts remain fixed; missing Redis does not activate model generation.
 
 **Local development without Neon**: The application runs without Postgres — enrichment data is unavailable, and generation logs are silently skipped. Products will appear in default BigCommerce order without persona-fit sorting.
 
@@ -76,7 +76,7 @@ Note that switching brands locally requires matching `STOREFRONT_TOKEN` and `BIG
 
 Dev mode enables additional UI overlays for development and debugging:
 
-- **Layout reasoning panel**: shows the AI's `reasoning` field explaining why the current layout was chosen
+- **Zone provenance**: shows the policy-authorized source and terminal for named zones
 - **Persona badge**: shows the detected persona and confidence score in the page header
 - **Signal debug**: shows the current inference context in the console
 
@@ -136,13 +136,13 @@ Done.
 
 **Cost**: enrichment runs Claude Sonnet per product. For 24 products, expect $0.03–0.05. Run it once per channel, then only re-run when products change significantly.
 
-**Re-running**: the script uses `ON CONFLICT (bc_entity_id) DO UPDATE` — re-running overwrites existing enrichment data. Safe to run again after product updates.
+**Re-running**: the script uses `ON CONFLICT (bc_entity_id) DO UPDATE`, so it overwrites existing enrichment data and incurs paid calls. Run it only under a separate data-write and cost authorization.
 
 ---
 
 ## Decision cache warming
 
-There is no supported anonymous cache warmer. Model-zone decisions require a short-lived signed grant for the exact consuming route, and the cache stores the complete validated decision/provenance envelope. `scripts/warm-cache.ts` is a retired fail-closed stub. See [ADR-003](../architecture/decisions/003-prerender-vs-cache-warming.md).
+There is no supported anonymous cache warmer and no authorized shopper model decision to warm. The decision-envelope cache is retained for a future authenticated non-shopper operation; every read must revalidate the exact route, policy, provenance, catalog, asset, and destination closure. `scripts/warm-cache.ts` is a retired fail-closed stub. See [ADR-003](../architecture/decisions/003-prerender-vs-cache-warming.md).
 
 ---
 
@@ -179,18 +179,18 @@ The project uses strict TypeScript. Run a type check before pushing if you've mo
 | File | Purpose |
 |---|---|
 | `src/lib/brand/config.ts` | All brand configuration — the only file to edit when adding a brand |
-| `src/lib/schema/layout.ts` | Layout schema (Zod) — the contract between AI and renderer |
+| `src/lib/schema/layout.ts` | Legacy whole-layout schema; not a shopper publication contract |
 | `src/lib/signals/types.ts` | Signal and inference type definitions |
 | `src/lib/signals/inference.ts` | Inference engine — rule-based persona probability computation |
 | `src/lib/signals/session.ts` | Session store — Redis + in-memory hybrid |
-| `src/lib/server/cache.ts` | Layout cache — Redis with 1-hour TTL |
+| `src/lib/server/cache.ts` | Validated named-zone decision envelope cache; no current shopper writer |
 | `src/lib/server/catalog.ts` | Product loading — BC catalog + enrichment merge |
 | `src/lib/server/generation-log.ts` | Generation logging to Neon Postgres |
-| `src/lib/server/layout-prompt.ts` | Layout prompt builder |
+| `src/lib/server/layout-prompt.ts` | Legacy/offline prompt builder; not called by shopper routes |
 | `src/lib/server/enrichment/enrich.ts` | Offline enrichment pipeline |
-| `src/routes/api/layout/+server.ts` | POST /api/layout |
-| `src/routes/api/layout/stream/+server.ts` | POST /api/layout/stream |
-| `src/routes/api/refine/+server.ts` | POST /api/refine |
+| `src/routes/api/layout/+server.ts` | Retired shopper model endpoint; always `403` |
+| `src/routes/api/layout/stream/+server.ts` | Retired whole-layout stream; always `410` |
+| `src/routes/api/refine/+server.ts` | Fixed refinement boundary; always `403` |
 | `src/routes/api/signals/+server.ts` | POST /api/signals |
 | `src/routes/api/cart/+server.ts` | GET/POST /api/cart |
 | `src/routes/api/observe/` | Observe dashboard API endpoints |
@@ -206,7 +206,7 @@ The project uses strict TypeScript. Run a type check before pushing if you've mo
 
 | Variable | Required | Context | Description |
 |---|---|---|---|
-| `BRAND_ID` | No | Server, scripts | Active brand ID. Defaults to `bealls`. |
+| `BRAND_ID` | Yes | Server, scripts | Active brand ID. Missing, unknown, and prototype values fail closed. |
 | `VITE_BRAND_ID` | No | Client (Vite) | Same as BRAND_ID — must be prefixed for Vite to expose it to the browser. |
 | `BIGCOMMERCE_STORE_HASH` | Yes | Server, scripts | BC store hash (from store URL) |
 | `STOREFRONT_TOKEN` | Yes | Server, scripts | BC Storefront API token (channel-specific) |
@@ -218,16 +218,16 @@ The project uses strict TypeScript. Run a type check before pushing if you've mo
 | `POSTGRES_URL` | No | Server, scripts | Alias for `DATABASE_URL` |
 | `ANTHROPIC_API_KEY` | Yes (enrichment) | Scripts | Anthropic API key for enrichment pipeline |
 | `OPENROUTER_API_KEY` | Yes (enrichment) | Scripts | OpenRouter key for embedding generation |
-| `AI_GATEWAY_URL` | Vercel only | Server | Set automatically by Vercel AI Gateway integration |
-| `AI_GATEWAY_TOKEN` | Vercel only | Server | Set automatically by Vercel AI Gateway integration |
+| `AI_GATEWAY_URL` | No | Offline/operator only | Not consumed by shopper routes |
+| `AI_GATEWAY_TOKEN` | No | Offline/operator only | Not consumed by shopper routes |
 
-For local development, `ANTHROPIC_API_KEY` is also used for layout generation if the Vercel AI Gateway is not configured. The `gateway()` function from `@ai-sdk/gateway` falls back to direct Anthropic API access when the gateway is unavailable.
+No model credential authorizes shopper generation. The enrichment command is a separate paid, data-writing operation and must never run with `AISLES_PARITY_FIXTURE=v1`; fixture mode fails before provider or database construction.
 
 ---
 
 ## Inference Debugging
 
-The inference engine is the core of Aisles' personalization logic. When the wrong layout is generated, the issue is almost always in the inference pipeline. This section describes how to trace and debug inference behavior.
+The inference engine explains persona signals, but it does not grant composition authority. Use this section to trace inference behavior; use route-zone evidence to debug what the shopper page actually published.
 
 ### Using Dev Mode Signal Breakdown
 
@@ -362,5 +362,5 @@ See `docs/architecture/engine/signals-and-inference.md` for the complete list of
 See `docs/architecture/decisions/` for records of significant decisions:
 
 - `001-enrichment-vs-feedonomics.md` — why a custom enrichment pipeline rather than Feedonomics
-- `002-streaming-layout-generation.md` — why streaming was added (and how it works)
+- `002-streaming-layout-generation.md` — historical rationale; whole-layout streaming is now retired
 - `003-prerender-vs-cache-warming.md` — why cache warming beats static prerendering for persona-dependent pages

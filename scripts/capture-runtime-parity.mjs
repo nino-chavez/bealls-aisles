@@ -239,17 +239,27 @@ async function captureSide(browserInstance, side, baseUrl, brandId, brand, route
 }
 
 async function settlePage(page) {
-	await page.evaluate(async () => {
-		await document.fonts.ready;
-		await Promise.race([
-			Promise.all([...document.images].map((image) => image.complete ? Promise.resolve() : new Promise((resolve) => {
-				image.addEventListener('load', resolve, { once: true });
-				image.addEventListener('error', resolve, { once: true });
-			}))),
-			new Promise((resolve) => setTimeout(resolve, 2_000)),
-		]);
-	});
-	await page.waitForTimeout(400);
+	for (let attempt = 0; attempt < 3; attempt++) {
+		try {
+			await page.waitForLoadState('domcontentloaded');
+			await page.evaluate(async () => {
+				await document.fonts.ready;
+				await Promise.race([
+					Promise.all([...document.images].map((image) => image.complete ? Promise.resolve() : new Promise((resolve) => {
+						image.addEventListener('load', resolve, { once: true });
+						image.addEventListener('error', resolve, { once: true });
+					}))),
+					new Promise((resolve) => setTimeout(resolve, 2_000)),
+				]);
+			});
+			await page.waitForTimeout(400);
+			return;
+		} catch (error) {
+			const navigationRace = error instanceof Error
+				&& /Execution context was destroyed|because of a navigation/.test(error.message);
+			if (!navigationRace || attempt === 2) throw error;
+		}
+	}
 }
 
 async function collectMetrics(page, expectedBrandName) {

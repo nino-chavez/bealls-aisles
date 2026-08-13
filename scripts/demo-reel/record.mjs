@@ -35,6 +35,10 @@ import { chromium } from 'playwright';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
+const captions = JSON.parse(fs.readFileSync(path.join(ROOT, 'captions.json'), 'utf-8'));
+if (captions.status !== 'current') {
+	throw new Error('Demo reel is a legacy archive and cannot be recorded or published');
+}
 const AUDIO_DIR = path.join(ROOT, 'audio');
 const RECORDINGS_DIR = path.join(ROOT, 'recordings');
 const TMP_DIR = path.join(ROOT, '.tmp-record');
@@ -42,7 +46,6 @@ const TMP_DIR = path.join(ROOT, '.tmp-record');
 fs.mkdirSync(RECORDINGS_DIR, { recursive: true });
 fs.mkdirSync(TMP_DIR, { recursive: true });
 
-const captions = JSON.parse(fs.readFileSync(path.join(ROOT, 'captions.json'), 'utf-8'));
 const DEFAULT_HOLD_S = captions.defaultHoldSeconds ?? 0.5;
 
 const VIEWPORT_W = 1440;
