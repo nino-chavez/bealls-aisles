@@ -66,7 +66,7 @@ Every shopper page executes the same authority boundary after signal inference.
 
 **Signals.** Request-time (search, referrer, UTM, device, time, return visit) and behavioral (category and product views, dwell, scroll, cart adds and removals, refinement chat).
 
-**Inference.** `src/lib/signals/inference.ts` runs 28 weighted rules over the accumulated context and normalizes to a probability across four personas — **gatherer** (browsing to discover), **hunter** (buying with intent), **researcher** (comparing specs), **gifter** (shopping for someone else). The primary persona drives composition; the dashboard reports every rule that fired.
+**Inference.** `src/lib/signals/inference.ts` runs weighted rules over the accumulated context and normalizes to a probability across four personas — **gatherer** (browsing to discover), **hunter** (buying with intent), **researcher** (comparing specs), **gifter** (shopping for someone else). The result supports deterministic catalog ranking and operator evidence. It does not grant shopper composition authority; the dashboard reports every rule that fired.
 
 **Composition — with a correctness guarantee.** Zone output is not a whole shopper layout and is not free-form. Each authorized zone output must be a member of that zone's finite, typed set:
 

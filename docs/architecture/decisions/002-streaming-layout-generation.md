@@ -42,9 +42,9 @@ Yes. Streaming is now implemented via `/api/layout/stream`. The motivation chang
 - `LayoutRenderer` re-renders as sections array grows — editorial header appears first, then hero product, then grid
 - Final `__done` event sets the validated layout and meta
 
-## What we kept
+## Superseded prototype artifacts
 
-- Edge caching in Redis (1hr TTL) — most requests never stream
-- Cache warming script for post-deploy
-- Haiku-first model selection (2-4s typical)
-- Generation logging with model, tokens, cost, session attribution
+- The whole-layout Redis cache and post-deploy warmer are retired.
+- Haiku-first shopper model selection is retired.
+- Shopper generation logging is inactive because shopper model execution is retired.
+- The named-zone decision cache remains dormant for shoppers. Any future producer needs separate authenticated merchant authority and exact envelope revalidation.

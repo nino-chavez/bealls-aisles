@@ -1,7 +1,7 @@
 # Decision Record: Enrichment Pipeline vs Feedonomics
 
 **Date:** 2026-04-06
-**Status:** Open — future integration point
+**Status:** Open — offline/operator integration point; not shopper model authority
 **Context:** Phase 3 enrichment pipeline discussion
 
 ## Question
@@ -10,13 +10,13 @@ The LLM enrichment script (`enrich.ts`) extracts attributes and scores persona-f
 
 ## Current Approach
 
-The enrichment script reads products from BigCommerce and calls Claude to produce:
+When separately authorized for paid calls and data writes, the offline enrichment script reads products from BigCommerce and calls Claude to produce:
 
 1. **Extracted attributes** — material, style, use case, dimensions, price tier
 2. **Persona-fit scores** (0.0–1.0 per persona) — how well does this product appeal to a Gatherer, Hunter, Researcher, or Gifter?
 3. **Semantic tags** — intent-based discovery labels ("compact", "dorm-friendly", "statement piece", "easy-care")
 
-This data is stored in Neon Postgres and consumed by layout generation to sort/filter products by persona relevance.
+This data is stored in Neon Postgres. Current shopper code may read it for deterministic product ranking and search; it does not authorize or drive model layout generation.
 
 ## What Feedonomics Does
 
@@ -35,7 +35,7 @@ Attribute extraction (material, style, dimensions) is common ground. If a mercha
 
 Feedonomics does **not** produce:
 - **Persona-fit scores** — this is Aisles-specific intelligence. "How well does this $79 planter appeal to a Gatherer vs a Hunter?" is not a standard commerce data attribute.
-- **Semantic tags for intent-based discovery** — Feedonomics optimizes for channel feeds (Google Shopping categories), not for persona-driven layout generation.
+- **Semantic tags for intent-based discovery** — Feedonomics optimizes for channel feeds (Google Shopping categories), not for Aisles' deterministic intent-aware retrieval and ranking.
 - **Shopper-intent-aware product ordering** — Feedonomics doesn't know about the Gatherer/Hunter/Researcher/Gifter model.
 
 ## Recommended Future Architecture
@@ -52,7 +52,7 @@ Raw BC data                   Clean attributes from Feedonomics
 
 **Feedonomics provides the clean input. Aisles enrichment adds the persona intelligence layer on top.**
 
-If Feedonomics is available, the enrichment script skips attribute extraction (material, style, etc. are already clean) and focuses only on persona-fit scoring and semantic tags — which is cheaper and faster.
+If this future integration is authorized and Feedonomics is available, the enrichment job could skip attribute extraction and focus on persona-fit scoring and semantic tags. That is a proposed offline workflow, not current shopper behavior.
 
 ## Action Items
 
