@@ -9,6 +9,7 @@ import {
 	assertAttestableSourceStatus,
 	assertRemoteWorkerInventory,
 	deriveBuildIdentity,
+	isWorkerNotFoundOutput,
 } from './cloudflare-preview-release-gates';
 
 const root = resolve(fileURLToPath(new URL('../../../', import.meta.url)));
@@ -105,6 +106,9 @@ assert('deploy account and remote inventory are fail-closed before mutation',
 	&& wrapper.includes("['secret', 'list'")
 	&& wrapper.includes("['versions', 'view'")
 	&& releaseGates.includes('undeclared binding'));
+assert('absent-Worker sentinel initializes before the executable entry point',
+	wrapper.indexOf("const workerNotFound = Symbol('worker-not-found')")
+	< wrapper.indexOf('if (isMain) await main(process.argv.slice(2))'));
 assert('deploy uses strict binding replacement after remote fail-closed inventory',
 	wrapper.includes("['wrangler', 'deploy', '--strict'"));
 assert('live smoke binds fresh receipt identity and proves bounded policy modes',
@@ -166,6 +170,10 @@ rejects('dirty tracked or untracked source cannot be attested',
 assertAttestableSourceStatus('');
 
 const remoteBrand = { environment: 'bealls', worker: 'aisles-bealls-current-preview' };
+assert('Cloudflare 10007 output parses as an absent Worker without remote mutation',
+	isWorkerNotFoundOutput('This Worker does not exist on your account. [code: 10007]')
+	&& isWorkerNotFoundOutput('{"errors":[{"code":10007}]}')
+	&& !isWorkerNotFoundOutput('authentication failed [code: 10000]'));
 assertRemoteWorkerInventory({ state: 'absent', secrets: [], versions: [] }, 'bealls', remoteBrand);
 rejects('stale remote secrets block deployment inventory', () => assertRemoteWorkerInventory({
 	state: 'present', secrets: [{ name: 'ANTHROPIC_API_KEY', type: 'secret_text' }], versions: [{ id: 'v1', bindings: [] }],

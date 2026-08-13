@@ -73,6 +73,10 @@ export function assertAttestableSourceStatus(status: string): void {
 	assert(status === '', `Refusing to attest dirty source; commit or remove these changes first:\n${status}`);
 }
 
+export function isWorkerNotFoundOutput(output: string): boolean {
+	return /(?:\[code:\s*10007\]|"code"\s*:\s*10007)/.test(output);
+}
+
 export function assertRemoteWorkerInventory(
 	inventory: RemoteWorkerInventory,
 	brandId: string,

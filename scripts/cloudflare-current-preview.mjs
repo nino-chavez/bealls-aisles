@@ -12,6 +12,7 @@ import {
 	assertAttestableSourceStatus,
 	assertRemoteWorkerInventory,
 	deriveBuildIdentity,
+	isWorkerNotFoundOutput,
 } from '../src/lib/server/cloudflare-preview-release-gates.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -61,6 +62,7 @@ const strippedApplicationSecrets = [
 	'OBSERVE_ACCESS_TOKEN',
 	'MERCHANT_REVIEW_ACCESS_TOKEN',
 ];
+const workerNotFound = Symbol('worker-not-found');
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) await main(process.argv.slice(2));
@@ -399,8 +401,6 @@ function assertTargetAccount() {
 		`CLOUDFLARE_ACCOUNT_ID ${ambient} does not match intended account ${intendedCloudflareAccountId}`);
 }
 
-const workerNotFound = Symbol('worker-not-found');
-
 function runWranglerJson(args, { allowWorkerNotFound = false } = {}) {
 	const result = spawnSync('npx', ['wrangler', ...args], {
 		cwd: root,
@@ -411,7 +411,7 @@ function runWranglerJson(args, { allowWorkerNotFound = false } = {}) {
 	if (result.error) throw result.error;
 	if (result.status !== 0) {
 		const output = `${result.stderr || ''}\n${result.stdout || ''}`;
-		if (allowWorkerNotFound && /(?:\[code:\s*10007\]|"code"\s*:\s*10007)/.test(output)) return workerNotFound;
+		if (allowWorkerNotFound && isWorkerNotFoundOutput(output)) return workerNotFound;
 		throw new Error(`Read-only Wrangler inventory command failed for ${args.join(' ')}: ${output.trim() || `exit ${result.status}`}`);
 	}
 	try {
