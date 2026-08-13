@@ -363,4 +363,4 @@ See `docs/architecture/decisions/` for records of significant decisions:
 
 - `001-enrichment-vs-feedonomics.md` — why a custom enrichment pipeline rather than Feedonomics
 - `002-streaming-layout-generation.md` — historical rationale; whole-layout streaming is now retired
-- `003-prerender-vs-cache-warming.md` — why cache warming beats static prerendering for persona-dependent pages
+- `003-prerender-vs-cache-warming.md` — superseded history of the retired whole-layout cache-warmer decision

@@ -231,13 +231,13 @@ const BRANDS: Record<string, BrandConfig> = {
 };
 ```
 
-**Persona definitions matter.** The AI uses these verbatim when building layout prompts. Write them as behavior descriptions, not character sketches. Reference the existing brands for calibration:
+**Persona definitions are offline context.** Retained prompt tooling may use them verbatim, but shopper routes do not build model prompts. Write them as behavior descriptions, not character sketches. Reference the existing brands for calibration:
 
 - bealls hunter: focused on comparable-value pricing, clear sale grammar, fast scan of price-rail merchandising
 - Bealls Florida gatherer: coastal lifestyle, vacation-imagery-driven, "Florida is a feeling" aspirational tone
 - Home Centric gifter: editorial home-decor inspiration, store-locator-led intent (no online checkout)
 
-**Voice guidance matters equally.** This is the single line that most shapes AI copy quality. Be prescriptive about what to lead with and what to avoid.
+**Voice guidance is also offline context.** It shapes explicitly authorized offline/operator copy work. It does not grant shopper model authority or bypass named-zone schemas.
 
 ### Step 4: Add executable policy and renderer contracts
 
@@ -262,7 +262,7 @@ OPENROUTER_API_KEY=your_key \
 npx tsx src/lib/server/enrichment/enrich.ts
 ```
 
-This scores all products in the channel for persona-fit and generates semantic tags. Layout generation will work without enrichment, but products will appear in default BigCommerce order and receive no persona-aware sorting.
+This authorized offline job scores products for persona fit and generates semantic tags. Current shopper routes may consume those stored records for deterministic product ranking and search. The job does not activate model layout generation or expand any named-zone policy.
 
 ### Step 6: Create a Vercel Project
 

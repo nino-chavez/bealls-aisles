@@ -10,9 +10,9 @@ Should we prerender category pages at build time via SvelteKit's prerendering, o
 
 ## Decision
 
-Cache warming. Prerendering bakes a single layout into static HTML, but Aisles layouts are persona-dependent — the same URL renders differently for each persona. Prerendering would only serve one persona's layout statically, defeating the thesis.
+**Historical decision, no longer active:** cache warming. The prototype treated whole layouts as persona-dependent, so prerendering would have baked one persona's layout into static HTML.
 
-Cache warming fills the Redis cache with layouts for each persona+category combination. The runtime serves the correct cached layout based on the detected persona.
+The prototype planned to warm Redis with whole layouts for each persona and category. The current runtime does not create, warm, or serve those layouts.
 
 ## Current implementation boundary
 
