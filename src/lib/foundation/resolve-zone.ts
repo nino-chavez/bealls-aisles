@@ -162,13 +162,8 @@ function permitsEngineOutput(opts: ResolveZoneOpts, family: ZoneId, content: unk
 function requiredCapabilities(content: unknown, mode: DecisionMode): AutonomyCapability[] {
 	const required = new Set<AutonomyCapability>();
 	let hasProductRef = false;
-	let hasGeneratedCopy = false;
 	walk(content, (key, value) => {
 		if (key === 'productId' && typeof value === 'string') hasProductRef = true;
-		if (
-			mode === 'model' && typeof value === 'string' &&
-			!['component', 'productId', 'role', 'image', 'href', 'ctaHref', 'icon', 'endsAt'].includes(key)
-		) hasGeneratedCopy = true;
 	});
 	if (hasProductRef) {
 		required.add('rank_products');
@@ -176,10 +171,9 @@ function requiredCapabilities(content: unknown, mode: DecisionMode): AutonomyCap
 	}
 	if (mode === 'model') {
 		required.add('select_component_variant');
-		if (hasGeneratedCopy) {
-			required.add('select_copy_variant');
-			required.add('generate_bounded_copy');
-		}
+		// Model output is materialized from merchant-owned copy variants. A
+		// shopper model never receives a free-form copy-generation capability.
+		required.add('select_copy_variant');
 	}
 	return [...required];
 }

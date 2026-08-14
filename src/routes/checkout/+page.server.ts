@@ -54,6 +54,7 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
 	const bounded = await executeBoundedShopperPageRoute(url, '/checkout', {
 		persona: cookies.get('aisles_persona') ?? 'gatherer',
 		returningShopper: Number(cookies.get('aisles_visits') ?? '0') > 1,
+		sessionKey: cookies.get('aisles_session') ?? undefined,
 	});
 
 	const itemCount = cached.cart.lineItems.physicalItems.reduce((sum, i) => sum + i.quantity, 0);

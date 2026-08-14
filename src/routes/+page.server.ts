@@ -30,6 +30,7 @@ export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	const bounded = await executeBoundedShopperPageRoute(url, '/', {
 		persona: inference.primary,
 		candidates: productCandidates(homeProducts),
+		sessionKey: cookies.get('aisles_session') ?? undefined,
 	});
 	homeProducts = reorderBoundedProducts(homeProducts, bounded.productOrder);
 

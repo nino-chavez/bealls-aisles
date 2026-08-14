@@ -69,6 +69,7 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
 	const bounded = await executeBoundedShopperPageRoute(url, '/cart', {
 		persona: 'gatherer',
 		candidates: productCandidates(candidateProducts),
+		sessionKey: cookies.get('aisles_session') ?? undefined,
 		safeFallbackZones,
 	});
 

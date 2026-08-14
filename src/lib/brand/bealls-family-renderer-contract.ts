@@ -304,7 +304,7 @@ const RESPONSIVE_STRATEGY = {
 const SOURCE_SNAPSHOT = {
 	algorithm: 'sha256',
 	files: [...BEALLS_FAMILY_RENDERER_SOURCE_FILES],
-	fingerprint: '7924f0ddc4c19933d90a4898f34eaddf6ac587e7c504a3d6cd603fbefb945e17',
+	fingerprint: 'baa8a8d94d71c61ef49b00cb2e08229ea1258d4b778cb028d16e65b06dd2b8e3',
 } as const;
 
 interface DesignSnapshotLiteral {

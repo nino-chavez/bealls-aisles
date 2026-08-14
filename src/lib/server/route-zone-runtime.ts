@@ -30,19 +30,24 @@ export interface RouteZoneDecision {
 export interface ZoneExecutionEvidence {
 	zoneId: string;
 	outcome: 'changed' | 'kept' | 'failed' | 'fallback';
+	railLabel: 'Template' | 'Rules' | 'AI available' | 'AI changed' | 'AI kept' | 'failed' | 'fallback';
 	before: unknown | null;
 	after: unknown | null;
-	failureReason?: string;
+	failureCode?: string;
+	failureMessage?: string;
 }
 
 export interface RouteAiEvidence {
-	status: 'applied' | 'disabled' | 'unconfigured' | 'failed' | 'empty';
+	status: 'applied' | 'disabled' | 'gated' | 'cooldown' | 'budget-exhausted' | 'unconfigured' | 'failed' | 'empty';
 	provider: 'anthropic' | 'gateway' | 'none';
 	modelId: string | null;
 	latencyMs: number;
 	callCount: number;
 	maxOutputTokens: number;
-	failureReason?: string;
+	failureCode?: string;
+	failureMessage?: string;
+	gateReason?: string;
+	cooldownMs?: number;
 	reasonCode?: string;
 }
 
@@ -180,9 +185,11 @@ function zoneEvidence(input: {
 }): ZoneExecutionEvidence {
 	const { resolution, baseline } = input;
 	if (resolution.source === 'engine') {
+		const outcome = stableJson(resolution.content) === stableJson(baseline.content) ? 'kept' : 'changed';
 		return {
 			zoneId: input.zoneId,
-			outcome: stableJson(resolution.content) === stableJson(baseline.content) ? 'kept' : 'changed',
+			outcome,
+			railLabel: input.policy.decisionMode === 'rules' ? 'Rules' : outcome === 'changed' ? 'AI changed' : 'AI kept',
 			before: baseline.content,
 			after: resolution.content,
 		};
@@ -191,6 +198,7 @@ function zoneEvidence(input: {
 		return {
 			zoneId: input.zoneId,
 			outcome: 'kept',
+			railLabel: 'Template',
 			before: baseline.content,
 			after: resolution.content,
 		};
@@ -199,14 +207,24 @@ function zoneEvidence(input: {
 		return {
 			zoneId: input.zoneId,
 			outcome: 'failed',
+			railLabel: 'failed',
 			before: baseline.content,
 			after: resolution.content,
-			failureReason: input.ai.failureReason,
+			failureCode: input.ai.failureCode,
+			failureMessage: input.ai.failureMessage,
 		};
 	}
+	const railLabel = input.policy.decisionMode === 'fixed'
+		? 'Template'
+		: input.policy.decisionMode === 'rules'
+			? 'fallback'
+			: input.ai?.status === 'applied'
+				? 'AI available'
+				: 'fallback';
 	return {
 		zoneId: input.zoneId,
 		outcome: resolution.source === 'fallback' ? 'fallback' : 'kept',
+		railLabel,
 		before: baseline.content,
 		after: resolution.content,
 	};
@@ -240,6 +258,7 @@ export function applyTrustedEmptyRouteState(execution: RouteZoneExecution): Rout
 			evidence: {
 				zoneId: decision.zoneId,
 				outcome: 'fallback',
+				railLabel: 'fallback',
 				before: decision.evidence.before,
 				after: null,
 			},

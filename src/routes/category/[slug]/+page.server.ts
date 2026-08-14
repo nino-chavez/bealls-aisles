@@ -69,6 +69,7 @@ export const load: PageServerLoad = async ({ params, url, cookies, request, pare
 	const bounded = await executeBoundedShopperPageRoute(url, '/category/[slug]', {
 		persona: inference.primary,
 		candidates: productCandidates(result.products),
+		sessionKey: cookies.get('aisles_session') ?? undefined,
 		categorySlug: slug,
 		categoryName: result.categoryName,
 		categorySlugs: Object.keys(brand.categories),

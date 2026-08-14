@@ -32,11 +32,12 @@ const RULES_PRODUCT_ZONE = {
 	trustedRule: { id: 'pdp-tag-overlap-v1', version: '1' },
 } as const;
 const MODEL_PRESENTATION_ZONE = {
-	capabilities: ['select_copy_variant', 'generate_bounded_copy', 'select_component_variant'],
+	// The provider selects merchant-owned variants. It does not write shopper copy.
+	capabilities: ['select_copy_variant', 'select_component_variant'],
 	decisionMode: 'model',
 } as const;
 const MODEL_PRODUCT_ZONE = {
-	capabilities: ['rank_products', 'select_products', 'select_copy_variant', 'generate_bounded_copy', 'select_component_variant'],
+	capabilities: ['rank_products', 'select_products', 'select_copy_variant', 'select_component_variant'],
 	decisionMode: 'model',
 } as const;
 const MODEL_NARROW_PRODUCT_ZONE = {

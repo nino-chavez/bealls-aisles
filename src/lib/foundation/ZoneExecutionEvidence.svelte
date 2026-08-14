@@ -15,9 +15,9 @@
 				terminal: string;
 				resolution: { source: string; merchantAuthority?: string; hiddenReason?: string; policyProvenance: { preset: string; referenceState: string } };
 				policy: { decisionMode: string; publicationMode: string };
-				evidence: { outcome: string; before: unknown; after: unknown; failureReason?: string };
+				evidence: { outcome: string; railLabel: string; before: unknown; after: unknown; failureCode?: string; failureMessage?: string };
 			}[];
-			ai?: { status: string; provider: string; modelId: string | null; latencyMs: number; callCount: number; maxOutputTokens: number; failureReason?: string; reasonCode?: string };
+			ai?: { status: string; provider: string; modelId: string | null; latencyMs: number; callCount: number; maxOutputTokens: number; failureCode?: string; failureMessage?: string; gateReason?: string; cooldownMs?: number; reasonCode?: string };
 		}[];
 	} = $props();
 
@@ -41,9 +41,11 @@
 			preset: decision.resolution.policyProvenance.preset,
 			referenceState: decision.resolution.policyProvenance.referenceState,
 			outcome: decision.evidence.outcome,
+			railLabel: decision.evidence.railLabel,
 			before: decision.evidence.before,
 			after: decision.evidence.after,
-			failureReason: decision.evidence.failureReason ?? null,
+			failureCode: decision.evidence.failureCode ?? null,
+			failureMessage: decision.evidence.failureMessage ?? null,
 		})),
 	}))));
 </script>

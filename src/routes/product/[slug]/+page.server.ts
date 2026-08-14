@@ -164,6 +164,7 @@ export const load: PageServerLoad = async ({ params, url, parent, cookies }) => 
 	const bounded = await executeBoundedShopperPageRoute(url, '/product/[slug]', {
 		persona,
 		candidates: productCandidates(relatedProducts),
+		sessionKey: cookies.get('aisles_session') ?? undefined,
 		categorySlug: product.categoryPath.replace(/^\/|\/$/g, '').replace(/^(bealls|beallsflorida|homecentric)-/i, ''),
 		categoryName: product.category,
 		safeFallbackZones,

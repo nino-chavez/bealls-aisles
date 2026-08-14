@@ -5,28 +5,35 @@
 		zoneId: string;
 		terminal: string;
 		resolution: { source: string; content: unknown };
-		evidence: { outcome: 'changed' | 'kept' | 'failed' | 'fallback'; before: unknown; after: unknown; failureReason?: string };
+		policy: { decisionMode: string };
+		evidence: { outcome: 'changed' | 'kept' | 'failed' | 'fallback'; railLabel: string; before: unknown; after: unknown; failureCode?: string; failureMessage?: string };
 	};
 	type RouteExecution = {
 		routeId: string;
 		routePath: string;
 		surface: string;
-		ai?: { status: string; provider: string; modelId: string | null; latencyMs: number; callCount: number; maxOutputTokens: number; failureReason?: string; reasonCode?: string };
+		ai?: { status: string; provider: string; modelId: string | null; latencyMs: number; callCount: number; maxOutputTokens: number; failureCode?: string; failureMessage?: string; reasonCode?: string };
 		decisions: ZoneDecision[];
 	};
 
 	let open = $state(false);
 	let focusedZone = $state<string | null>(null);
+	let triggerElement = $state<HTMLButtonElement | null>(null);
 
 	let executions = $derived.by(() => {
 		const data = $page.data as { zoneExecution?: RouteExecution; emptyZoneExecution?: RouteExecution | null };
 		return [data.zoneExecution, data.emptyZoneExecution].filter((execution): execution is RouteExecution => Boolean(execution));
 	});
 	let decisions = $derived(executions.flatMap((execution) => execution.decisions.map((decision) => ({ ...decision, execution }))));
-	let appliedCount = $derived(decisions.filter((decision) => decision.resolution.source === 'engine' && decision.execution.ai?.status === 'applied').length);
+	let appliedCount = $derived(decisions.filter((decision) => decision.policy.decisionMode === 'model' && decision.resolution.source === 'engine' && decision.execution.ai?.status === 'applied').length);
 
 	function handleKeydown(event: KeyboardEvent) {
-		if (event.key === 'Escape' && open) open = false;
+		if (event.key === 'Escape' && open) closePanel();
+	}
+
+	function closePanel() {
+		open = false;
+		requestAnimationFrame(() => triggerElement?.focus());
 	}
 
 	function focusZone(zoneId: string) {
@@ -52,9 +59,10 @@
 		<button
 			type="button"
 			class="zone-observe-trigger"
+			bind:this={triggerElement}
 			aria-expanded={open}
 			aria-controls="zone-observe-panel"
-			onclick={() => (open = !open)}
+			onclick={() => open ? closePanel() : (open = true)}
 		>
 			<span class="zone-observe-mark" aria-hidden="true">◌</span>
 			<span>Observe</span>
@@ -68,7 +76,7 @@
 						<p class="zone-observe-eyebrow">Observe</p>
 						<h2>What changed on this page</h2>
 					</div>
-					<button type="button" class="zone-observe-close" aria-label="Close Observe" onclick={() => (open = false)}>Close</button>
+					<button type="button" class="zone-observe-close" aria-label="Close Observe" onclick={closePanel}>Close</button>
 				</div>
 
 				{#each executions as execution}
@@ -77,16 +85,17 @@
 							<span>{execution.surface} · {execution.routePath}</span>
 							<span>{execution.ai?.status ?? 'fixed'} · {execution.ai?.latencyMs ?? 0}ms</span>
 						</div>
-						{#if execution.ai?.failureReason}
-							<p class="zone-observe-failure">Provider failed: {execution.ai.failureReason}</p>
+						{#if execution.ai?.failureMessage}
+							<p class="zone-observe-failure">AI failed ({execution.ai.failureCode ?? 'provider-error'}): {execution.ai.failureMessage}</p>
 						{/if}
 						{#each execution.decisions as decision}
 							<section class="zone-observe-decision" class:zone-observe-active={focusedZone === decision.zoneId}>
 								<div class="zone-observe-decision-head">
-									<button type="button" class="zone-observe-zone" onclick={() => focusZone(decision.zoneId)}>{decision.zoneId}</button>
-									<span class="zone-observe-outcome outcome-{decision.evidence.outcome}">{decision.evidence.outcome}</span>
+									<span class="zone-observe-zone">{decision.zoneId}</span>
+									<span class="zone-observe-rail">{decision.evidence.railLabel}</span>
 								</div>
 								<p class="zone-observe-source">{decision.resolution.source} · {decision.terminal}</p>
+								<button type="button" class="zone-observe-view" aria-label={`View changes for ${decision.zoneId}`} onclick={() => focusZone(decision.zoneId)}>View changes</button>
 								<div class="zone-observe-diff">
 									<details>
 										<summary>Before</summary>
@@ -97,8 +106,8 @@
 										<pre>{display(decision.evidence.after)}</pre>
 									</details>
 								</div>
-								{#if decision.evidence.failureReason}
-									<p class="zone-observe-failure">{decision.evidence.failureReason}</p>
+								{#if decision.evidence.failureMessage}
+									<p class="zone-observe-failure">{decision.evidence.failureCode ?? 'provider-error'}: {decision.evidence.failureMessage}</p>
 								{/if}
 							</section>
 						{/each}
@@ -120,7 +129,7 @@
 
 	.zone-observe-trigger,
 	.zone-observe-close,
-	.zone-observe-zone {
+	.zone-observe-view {
 		min-height: 44px;
 	}
 
@@ -141,7 +150,7 @@
 	.zone-observe-trigger:hover,
 	.zone-observe-trigger:focus-visible,
 	.zone-observe-close:focus-visible,
-	.zone-observe-zone:focus-visible {
+	.zone-observe-view:focus-visible {
 		outline: 3px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
 		outline-offset: 2px;
 	}
@@ -234,26 +243,39 @@
 	}
 
 	.zone-observe-zone {
-		padding: 0;
 		font-family: var(--font-mono);
 		font-size: 11px;
 		font-weight: 700;
-		text-align: left;
+	}
+
+	.zone-observe-rail {
+		padding: 4px 6px;
+		border: 1px solid var(--color-surface-border);
+		border-radius: 4px;
+		font-size: 10px;
+		font-weight: 800;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	.zone-observe-view {
+		margin-top: 8px;
+		padding: 0 10px;
+		border: 1px solid var(--color-surface-border);
+		border-radius: 6px;
+		background: transparent;
+		color: var(--color-surface-fg);
+		font-size: 11px;
+		font-weight: 700;
 		text-decoration: underline;
 		text-underline-offset: 3px;
 	}
 
-	.zone-observe-outcome {
-		font-size: 10px;
-		font-weight: 800;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
+	.zone-observe-zone {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		font-weight: 700;
 	}
-
-	.outcome-changed { color: var(--color-success); }
-	.outcome-kept { color: var(--color-info); }
-	.outcome-failed { color: var(--color-error); }
-	.outcome-fallback { color: var(--color-warning); }
 
 	.zone-observe-diff {
 		display: grid;

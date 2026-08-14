@@ -19,6 +19,10 @@ import type { Product } from '../types';
 const MAX_CANDIDATES = 24;
 const MAX_OUTPUT_TOKENS = 640;
 const PROVIDER_TIMEOUT_MS = 4_000;
+const REQUEST_COOLDOWN_MS = 10_000;
+const SESSION_BUDGET_WINDOW_MS = 60_000;
+const SESSION_BUDGET_CALLS = 6;
+const MAX_REQUEST_LEDGER_ENTRIES = 1_000;
 
 const ProductIds = z.array(z.string().trim().min(1).max(128)).max(12);
 const HomeDecisionSchema = z.strictObject({
@@ -94,6 +98,19 @@ const DecisionSchemas = {
 type SupportedSurface = keyof typeof DecisionSchemas;
 type ProviderDecision = z.infer<(typeof DecisionSchemas)[SupportedSurface]>;
 
+export type BoundedAiRequestIntent = 'demo' | 'observe' | 'none';
+export type BoundedAiGateReason = 'feature-disabled' | 'provider-unconfigured' | 'request-not-intentional' | 'cooldown' | 'budget-exhausted';
+export type BoundedAiFailureCode = 'provider-timeout' | 'provider-unavailable' | 'provider-rejected' | 'output-invalid';
+
+export interface BoundedAiRequestGate {
+	/** Only an explicit demo or Observe request may authorize a provider call. */
+	intent: BoundedAiRequestIntent;
+	/** A server-owned session key. It is never sent to the provider. */
+	sessionKey?: string;
+	/** The route pathname makes a same-route reload hit the cooldown. */
+	requestKey?: string;
+}
+
 export interface BoundedAiCandidate {
 	id: string;
 	entityId: number;
@@ -107,6 +124,9 @@ export interface BoundedAiCandidate {
 
 export interface BoundedAiInput {
 	context: TrustedShopperRouteContext;
+	requestGate?: BoundedAiRequestGate;
+	/** Server-only session key used by the request budget. Never sent to the provider. */
+	sessionKey?: string;
 	persona?: string;
 	candidates?: readonly BoundedAiCandidate[];
 	categorySlug?: string;
@@ -118,13 +138,16 @@ export interface BoundedAiInput {
 }
 
 export interface BoundedAiMeta {
-	status: 'applied' | 'disabled' | 'unconfigured' | 'failed' | 'empty';
+	status: 'applied' | 'disabled' | 'gated' | 'cooldown' | 'budget-exhausted' | 'unconfigured' | 'failed' | 'empty';
 	provider: 'anthropic' | 'gateway' | 'none';
 	modelId: string | null;
 	latencyMs: number;
 	callCount: number;
 	maxOutputTokens: number;
-	failureReason?: string;
+	failureCode?: BoundedAiFailureCode;
+	failureMessage?: string;
+	gateReason?: BoundedAiGateReason;
+	cooldownMs?: number;
 	reasonCode?: string;
 }
 
@@ -139,7 +162,7 @@ export interface BoundedAiResult {
 
 type ProviderCallResult =
 	| { ok: true; output: ProviderDecision; latencyMs: number }
-	| { ok: false; latencyMs: number; reason: string; attempted: boolean };
+	| { ok: false; latencyMs: number; reason: string; failureCode: BoundedAiFailureCode; attempted: boolean };
 
 type BoundedAiProviderTestInput = {
 	surface: string;
@@ -150,6 +173,11 @@ type BoundedAiProviderTestInput = {
 
 let boundedAiProviderTestOverride: ((input: BoundedAiProviderTestInput) => Promise<unknown>) | null = null;
 
+type RequestLedgerEntry = { lastCallAt: number };
+type SessionBudgetEntry = { windowStartedAt: number; calls: number };
+const requestLedger = new Map<string, RequestLedgerEntry>();
+const sessionBudgetLedger = new Map<string, SessionBudgetEntry>();
+
 /** Test-only seam: it still passes through the live schema and publication gates. */
 export function setBoundedAiProviderForTest(
 	override: ((input: BoundedAiProviderTestInput) => Promise<unknown>) | null,
@@ -159,9 +187,29 @@ export function setBoundedAiProviderForTest(
 	return () => { boundedAiProviderTestOverride = previous; };
 }
 
+/** Test-only cleanup for the process-local paid-call guard. */
+export function resetBoundedAiRequestBudgetForTest(): void {
+	requestLedger.clear();
+	sessionBudgetLedger.clear();
+}
+
+/** Build the only shopper request intents accepted by the bounded provider gate. */
+export function boundedAiRequestGateFromUrl(url: URL, sessionKey?: string): BoundedAiRequestGate {
+	const observe = ['1', 'true'].includes((url.searchParams.get('observe') ?? '').toLowerCase());
+	const demoValue = (url.searchParams.get('demo') ?? '').toLowerCase();
+	const demo = demoValue === 'ai' || (['1', 'true'].includes(demoValue) && url.searchParams.get('ai') === 'true');
+	return {
+		intent: observe ? 'observe' : demo ? 'demo' : 'none',
+		sessionKey,
+		requestKey: url.pathname,
+	};
+}
+
 export async function composeBoundedZones(input: BoundedAiInput): Promise<BoundedAiResult> {
 	const surface = input.context.surface as SupportedSurface;
 	const candidates = normalizeCandidates(input.candidates ?? []);
+	const featureEnabled = isExplicitFeatureFlagEnabled();
+	const providerConfigured = hasProviderConfiguration() || boundedAiProviderTestOverride !== null;
 	const baseMeta: BoundedAiMeta = {
 		status: 'empty',
 		provider: gatewayEnabled() ? 'gateway' : process.env.ANTHROPIC_API_KEY ? 'anthropic' : 'none',
@@ -170,14 +218,17 @@ export async function composeBoundedZones(input: BoundedAiInput): Promise<Bounde
 		callCount: 0,
 		maxOutputTokens: MAX_OUTPUT_TOKENS,
 	};
-	const providerAvailable = isBoundedAiEnabled() || boundedAiProviderTestOverride !== null;
 
-	if (!(surface in DecisionSchemas) || !providerAvailable || candidates.length === 0 && !['checkout'].includes(surface)) {
+	if (!(surface in DecisionSchemas) || candidates.length === 0 && !['checkout'].includes(surface)) {
 		return { engineOutput: { zones: {} }, fallbackOutput: { zones: input.safeFallbackZones ?? {} }, productOrder: [], ai: {
 			...baseMeta,
-			status: providerAvailable ? 'empty' : process.env.AISLES_BOUNDED_AI_ENABLED === '0' || process.env.AISLES_BOUNDED_AI_ENABLED === 'false' ? 'disabled' : 'unconfigured',
+			status: 'empty',
 		} };
 	}
+	if (!featureEnabled) return gatedResult(input, baseMeta, 'feature-disabled');
+	if (!providerConfigured) return gatedResult(input, baseMeta, 'provider-unconfigured');
+	const reservation = reserveBoundedAiRequest(input.requestGate, input.context.routePath);
+	if (!reservation.allowed) return gatedResult(input, baseMeta, reservation.reason, reservation.cooldownMs);
 
 	const schema = DecisionSchemas[surface];
 	const startedAt = Date.now();
@@ -199,7 +250,10 @@ export async function composeBoundedZones(input: BoundedAiInput): Promise<Bounde
 				status: call.attempted ? 'failed' : 'unconfigured',
 				latencyMs: call.latencyMs,
 				callCount: call.attempted ? 1 : 0,
-				failureReason: call.reason,
+				...(call.attempted ? {
+					failureCode: call.failureCode,
+					failureMessage: publicFailureMessage(call.failureCode),
+				} : {}),
 			},
 		};
 	}
@@ -238,6 +292,8 @@ export async function composeBoundedZones(input: BoundedAiInput): Promise<Bounde
 			},
 		};
 	} catch (error) {
+		const detail = error instanceof Error ? error.message : String(error);
+		console.warn('[bounded-ai] output rejected by publication boundary', { surface, detail });
 		return {
 			engineOutput: { zones: {} },
 			fallbackOutput: { zones: input.safeFallbackZones ?? {} },
@@ -247,16 +303,85 @@ export async function composeBoundedZones(input: BoundedAiInput): Promise<Bounde
 				status: 'failed',
 				latencyMs: Date.now() - startedAt,
 				callCount: 1,
-				failureReason: error instanceof Error ? error.message : String(error),
+				failureCode: 'output-invalid',
+				failureMessage: publicFailureMessage('output-invalid'),
 				reasonCode: decision.reasonCode,
 			},
 		};
 	}
 }
 
-export function isBoundedAiEnabled(): boolean {
-	if (process.env.AISLES_BOUNDED_AI_ENABLED === '0' || process.env.AISLES_BOUNDED_AI_ENABLED === 'false') return false;
+export function isBoundedAiEnabled(requestGate?: BoundedAiRequestGate): boolean {
+	return isExplicitFeatureFlagEnabled()
+		&& (hasProviderConfiguration() || boundedAiProviderTestOverride !== null)
+		&& requestGate?.intent !== undefined
+		&& requestGate.intent !== 'none';
+}
+
+function isExplicitFeatureFlagEnabled(): boolean {
+	return ['1', 'true'].includes((process.env.AISLES_BOUNDED_AI_ENABLED ?? '').toLowerCase());
+}
+
+function hasProviderConfiguration(): boolean {
 	return Boolean(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || process.env.ANTHROPIC_API_KEY);
+}
+
+function gatedResult(input: BoundedAiInput, baseMeta: BoundedAiMeta, reason: BoundedAiGateReason, cooldownMs = 0): BoundedAiResult {
+	const status = reason === 'feature-disabled'
+		? 'disabled'
+		: reason === 'provider-unconfigured'
+			? 'unconfigured'
+			: reason === 'cooldown'
+				? 'cooldown'
+				: reason === 'budget-exhausted'
+					? 'budget-exhausted'
+					: 'gated';
+	return {
+		engineOutput: { zones: {} },
+		fallbackOutput: { zones: input.safeFallbackZones ?? {} },
+		productOrder: [],
+		ai: {
+			...baseMeta,
+			status,
+			gateReason: reason,
+			...(cooldownMs > 0 ? { cooldownMs } : {}),
+		},
+	};
+}
+
+function reserveBoundedAiRequest(requestGate: BoundedAiRequestGate | undefined, fallbackRequestKey: string):
+	| { allowed: true }
+	| { allowed: false; reason: 'request-not-intentional' | 'cooldown' | 'budget-exhausted'; cooldownMs?: number } {
+	if (!requestGate || requestGate.intent === 'none') return { allowed: false, reason: 'request-not-intentional' };
+	const now = Date.now();
+	const sessionKey = (requestGate.sessionKey || 'anonymous').slice(0, 160);
+	const requestKey = `${sessionKey}:${(requestGate.requestKey || fallbackRequestKey).slice(0, 256)}`;
+	const priorRequest = requestLedger.get(requestKey);
+	if (priorRequest && now - priorRequest.lastCallAt < REQUEST_COOLDOWN_MS) {
+		return { allowed: false, reason: 'cooldown', cooldownMs: REQUEST_COOLDOWN_MS - (now - priorRequest.lastCallAt) };
+	}
+	const priorSession = sessionBudgetLedger.get(sessionKey);
+	const session = priorSession && now - priorSession.windowStartedAt < SESSION_BUDGET_WINDOW_MS
+		? priorSession
+		: { windowStartedAt: now, calls: 0 };
+	if (session.calls >= SESSION_BUDGET_CALLS) return { allowed: false, reason: 'budget-exhausted' };
+	requestLedger.set(requestKey, { lastCallAt: now });
+	sessionBudgetLedger.set(sessionKey, { ...session, calls: session.calls + 1 });
+	pruneRequestLedgers();
+	return { allowed: true };
+}
+
+function pruneRequestLedgers(): void {
+	while (requestLedger.size > MAX_REQUEST_LEDGER_ENTRIES) {
+		const first = requestLedger.keys().next().value;
+		if (first === undefined) break;
+		requestLedger.delete(first);
+	}
+	while (sessionBudgetLedger.size > MAX_REQUEST_LEDGER_ENTRIES) {
+		const first = sessionBudgetLedger.keys().next().value;
+		if (first === undefined) break;
+		sessionBudgetLedger.delete(first);
+	}
 }
 
 /** Stable server-side reorder: unknown, duplicate, and omitted IDs never enter the shopper grid. */
@@ -284,7 +409,9 @@ async function callProvider<T extends z.ZodTypeAny>(input: {
 	category: string;
 	surface: string;
 }): Promise<ProviderCallResult> {
-	if (!isBoundedAiEnabled() && !boundedAiProviderTestOverride) return { ok: false, latencyMs: 0, reason: 'provider is not configured', attempted: false };
+	if (!isExplicitFeatureFlagEnabled() || (!hasProviderConfiguration() && !boundedAiProviderTestOverride)) {
+		return { ok: false, latencyMs: 0, reason: 'provider is not configured', failureCode: 'provider-unavailable', attempted: false };
+	}
 	const startedAt = Date.now();
 	const controller = new AbortController();
 	let rejectTimeout!: (reason?: unknown) => void;
@@ -309,15 +436,35 @@ async function callProvider<T extends z.ZodTypeAny>(input: {
 			}), timeoutPromise])).output;
 		return { ok: true, output: input.schema.parse(rawOutput) as ProviderDecision, latencyMs: Date.now() - startedAt };
 	} catch (error) {
+		const failure = classifyProviderFailure(error);
+		console.warn('[bounded-ai] provider failure', { surface: input.surface, code: failure.code, detail: failure.reason });
 		return {
 			ok: false,
 			latencyMs: Date.now() - startedAt,
-			reason: error instanceof Error ? error.message : String(error),
+			reason: failure.reason,
+			failureCode: failure.code,
 			attempted: true,
 		};
 	} finally {
 		clearTimeout(timeout);
 	}
+}
+
+function classifyProviderFailure(error: unknown): { code: BoundedAiFailureCode; reason: string } {
+	const reason = error instanceof Error ? error.message : String(error);
+	if (/timeout|aborted|abort/i.test(reason)) return { code: 'provider-timeout', reason };
+	if (error instanceof z.ZodError) return { code: 'output-invalid', reason };
+	if (/not configured|unavailable|credentials|api key/i.test(reason)) return { code: 'provider-unavailable', reason };
+	return { code: 'provider-rejected', reason };
+}
+
+function publicFailureMessage(code: BoundedAiFailureCode): string {
+	return {
+		'provider-timeout': 'AI request timed out; showing the approved fallback.',
+		'provider-unavailable': 'AI is unavailable; showing the approved fallback.',
+		'provider-rejected': 'AI could not use this decision; showing the approved fallback.',
+		'output-invalid': 'AI returned an unusable decision; showing the approved fallback.',
+	}[code];
 }
 
 function buildPrompt(input: BoundedAiInput, candidates: readonly BoundedAiCandidate[]): string {

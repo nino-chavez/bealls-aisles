@@ -17,12 +17,15 @@ function throws(name: string, action: () => void, expected: RegExp): void {
 }
 
 const registry = BEALLS_COMPOSITION_POLICY;
+const merchantVariantCapabilities = new Set(['rank_products', 'select_products', 'select_copy_variant', 'select_component_variant']);
+const usesOnlyMerchantVariantCapabilities = (capabilities: readonly string[]) => capabilities.every((capability) => merchantVariantCapabilities.has(capability));
 const beallsHome = () => compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'home', registry });
 
 const home = beallsHome();
 assert('Bealls home records bounded live model zones', home.decisionMode === 'model'
 	&& home.publicationMode === 'live' && home.provenance.preset === 'assist'
-	&& home.capabilities.includes('select_component_variant'));
+	&& home.capabilities.includes('select_component_variant')
+	&& usesOnlyMerchantVariantCapabilities(home.capabilities));
 const pdp = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'pdp', registry });
 const pdpRelated = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'pdp', zoneId: 'pdp.related', registry });
 const pdpBelowDescription = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'pdp', zoneId: 'pdp.below-description', registry });
@@ -37,9 +40,14 @@ assert('Bealls PDP permits bounded model zones while recently-viewed remains a t
 	&& pdpRelated.trustedRule === null
 	&& pdpBelowDescription.decisionMode === 'model'
 	&& pdpBelowDescription.trustedRule === null);
-assert('cart, checkout, and search keep narrower approved capabilities', !cartAboveCheckout.capabilities.includes('generate_bounded_copy')
-	&& !checkoutAssurance.capabilities.includes('generate_bounded_copy')
-	&& !searchRescue.capabilities.includes('generate_bounded_copy'));
+assert('Home, PLP, and PDP model zones select merchant-owned variants without copy generation',
+	usesOnlyMerchantVariantCapabilities(home.capabilities)
+	&& usesOnlyMerchantVariantCapabilities(pdpRelated.capabilities)
+	&& usesOnlyMerchantVariantCapabilities(pdpBelowDescription.capabilities)
+	&& usesOnlyMerchantVariantCapabilities(compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'plp', zoneId: 'plp.banner', registry }).capabilities));
+assert('cart, checkout, and search keep narrower approved capabilities', usesOnlyMerchantVariantCapabilities(cartAboveCheckout.capabilities)
+	&& usesOnlyMerchantVariantCapabilities(checkoutAssurance.capabilities)
+	&& usesOnlyMerchantVariantCapabilities(searchRescue.capabilities));
 const florida = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'beallsflorida', surface: 'plp', registry });
 assert('Bealls Florida remains a separate brand policy', florida.provenance.brandId === 'beallsflorida' && florida.policyVersion !== home.policyVersion);
 const category = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'homecentric', surface: 'category', registry });
@@ -64,7 +72,7 @@ throws('rejects a brand expansion beyond the organization ceiling', () => compil
 const narrowedBrand: BrandCompositionPolicy = {
 	...registry.brands.bealls,
 	maximum: {
-		capabilities: ['rank_products', 'select_products', 'select_copy_variant', 'generate_bounded_copy', 'select_component_variant'],
+		capabilities: ['rank_products', 'select_products', 'select_copy_variant', 'select_component_variant'],
 		decisionMode: 'rules',
 		publicationMode: 'live',
 	},
