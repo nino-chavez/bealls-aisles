@@ -302,13 +302,19 @@
 		<div class="pt-4">
 			<RuntimeZone execution={data.zoneExecution} zoneId="plp.banner" products={data.products ?? []} />
 		</div>
+		<div class="pt-8">
+			<RuntimeZone execution={data.zoneExecution} zoneId="plp.editorial-header" products={data.products ?? []} />
+		</div>
+		<div class="pt-8">
+			<RuntimeZone execution={data.zoneExecution} zoneId="plp.cluster-row" products={data.products ?? []} />
+		</div>
 		<div class="flex items-end justify-between gap-4 pt-4">
 			<FilterStrip resultCount={data.products?.length ?? 0} />
 			<SortSelector options={SORT_OPTIONS} bind:value={sortValue} />
 		</div>
 	{/if}
 
-	<!-- Current PLP policy is rules/fixed only; the existing persona recipe remains in control. -->
+	<!-- The persona recipe remains fixed. Bounded AI can change only the named framing zones and the approved product order. -->
 	{#if currentPersona === 'gatherer'}
 		<GathererLayout category={data.category} products={data.products ?? []} />
 	{:else if currentPersona === 'hunter'}
@@ -320,6 +326,10 @@
 	{:else}
 		<GathererLayout category={data.category} products={data.products ?? []} />
 	{/if}
+
+	<div class="pt-12">
+		<RuntimeZone execution={data.zoneExecution} zoneId="plp.between-thirds" products={data.products ?? []} />
+	</div>
 
 </div>
 

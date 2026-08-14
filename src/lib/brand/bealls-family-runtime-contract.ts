@@ -110,10 +110,12 @@ export type ZoneMount = 'mounted' | 'not-applicable';
 export type ZoneExposure = 'exposed' | 'hidden' | 'not-applicable';
 
 const MOUNTED_STOREFRONT_ZONES = new Set<ZoneId>([
-	'home.hero',
+	'home.hero', 'home.editorial-strip', 'home.brand-spotlight', 'home.below-fold',
+	'plp.banner', 'plp.editorial-header', 'plp.cluster-row', 'plp.between-thirds',
 	'pdp.below-description', 'pdp.related', 'pdp.cross-sell', 'pdp.recently-viewed', 'pdp.below-recs',
 	'cart.above-checkout-cta',
 	'checkout.assurance-strip', 'checkout.last-chance-upsell',
+	'search.zero-results-rescue',
 	'locator.editorial-intro',
 ]);
 const MOUNTED_CONTENT_ZONES = new Set<ZoneId>(['home.hero', 'locator.editorial-intro']);
@@ -152,11 +154,15 @@ export interface TrustedShopperRouteContext {
 }
 
 /**
- * Shopper routes never grant model execution. A future model operation must
- * use a separately authenticated merchant contract with explicit cost limits.
+ * The named-zone service receives this server-trusted context. It does not
+ * grant a client API caller authority: the route, brand, policy, candidate
+ * closure, and renderer still bind the provider result before publication.
  */
 export function trustedModelZoneApiContext(context: TrustedShopperRouteContext): TrustedShopperRouteContext {
-	throw new ShopperRouteContractError(`route "${context.routeId}" has no model-zone API authority`);
+	if (context.surface === 'account' || context.brandId === 'homecentric') {
+		throw new ShopperRouteContractError(`route "${context.routeId}" has no bounded AI zone authority`);
+	}
+	return context;
 }
 
 export class ShopperRouteContractError extends Error {

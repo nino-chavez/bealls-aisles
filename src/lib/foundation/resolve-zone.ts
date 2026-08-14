@@ -56,6 +56,8 @@ export interface ResolveZoneOpts {
 	adminRecord?: TrustedMerchantZoneRecord | null;
 	/** Server-derived catalog and asset closure for every publication source. */
 	publicationContext?: ZonePublicationContext;
+	/** Request-local deterministic fallback for a valid route-owned candidate pool. */
+	fallbackOutput?: Record<ZoneInstanceId, unknown>;
 }
 
 export interface ZonePublicationContext {
@@ -99,7 +101,7 @@ export function resolveZone(opts: ResolveZoneOpts): ZoneResolution {
 	const authoredAdmin = trustedMerchantContent(opts, family, meta, ['authored']);
 	if (authoredAdmin) return resolution(opts, family, index, 'admin', authoredAdmin.content, { merchantAuthority: authoredAdmin.authority, merchantContentVersion: authoredAdmin.contentVersion });
 
-	const fallbackRaw = getFallback(family, opts.brandId);
+	const fallbackRaw = opts.fallbackOutput?.[opts.zoneId] ?? getFallback(family, opts.brandId);
 	if (fallbackRaw === null || fallbackRaw === undefined) return resolution(opts, family, index, 'fallback', null);
 	const fallback = validatePublicationForZone(opts, fallbackRaw);
 	return resolution(opts, family, index, 'fallback', fallback.ok ? fallback.content : null);

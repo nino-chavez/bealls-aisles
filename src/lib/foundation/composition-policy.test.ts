@@ -20,19 +20,26 @@ const registry = BEALLS_COMPOSITION_POLICY;
 const beallsHome = () => compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'home', registry });
 
 const home = beallsHome();
-assert('Bealls home records the fixed live route now implemented', home.decisionMode === 'fixed'
-	&& home.publicationMode === 'live' && home.provenance.preset === 'preserve' && home.capabilities.length === 0);
+assert('Bealls home records bounded live model zones', home.decisionMode === 'model'
+	&& home.publicationMode === 'live' && home.provenance.preset === 'assist'
+	&& home.capabilities.includes('select_component_variant'));
 const pdp = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'pdp', registry });
 const pdpRelated = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'pdp', zoneId: 'pdp.related', registry });
 const pdpBelowDescription = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'pdp', zoneId: 'pdp.below-description', registry });
-assert('Bealls PDP permits only trusted rules while named zones narrow to rules or fixed', pdp.decisionMode === 'rules'
+const cartAboveCheckout = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'cart', zoneId: 'cart.above-checkout-cta', registry });
+const checkoutAssurance = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'checkout', zoneId: 'checkout.assurance-strip', registry });
+const searchRescue = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'bealls', surface: 'search', zoneId: 'search.zero-results-rescue', registry });
+
+assert('Bealls PDP permits bounded model zones while recently-viewed remains a trusted rule', pdp.decisionMode === 'model'
 	&& pdp.publicationMode === 'live'
-	&& pdp.provenance.preset === 'preserve'
-	&& pdpRelated.decisionMode === 'rules'
-	&& pdpRelated.trustedRule?.id === 'pdp-tag-overlap-v1'
-	&& pdpRelated.trustedRule.version === '1'
-	&& pdpBelowDescription.decisionMode === 'fixed'
+	&& pdp.provenance.preset === 'assist'
+	&& pdpRelated.decisionMode === 'model'
+	&& pdpRelated.trustedRule === null
+	&& pdpBelowDescription.decisionMode === 'model'
 	&& pdpBelowDescription.trustedRule === null);
+assert('cart, checkout, and search keep narrower approved capabilities', !cartAboveCheckout.capabilities.includes('generate_bounded_copy')
+	&& !checkoutAssurance.capabilities.includes('generate_bounded_copy')
+	&& !searchRescue.capabilities.includes('generate_bounded_copy'));
 const florida = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'beallsflorida', surface: 'plp', registry });
 assert('Bealls Florida remains a separate brand policy', florida.provenance.brandId === 'beallsflorida' && florida.policyVersion !== home.policyVersion);
 const category = compileCompositionPolicy({ organizationId: 'example-merchant', brandId: 'homecentric', surface: 'category', registry });

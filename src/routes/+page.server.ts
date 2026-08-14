@@ -3,9 +3,10 @@ import { getBrand, getBrandMode } from '$lib/brand/config';
 import { infer } from '$lib/signals/inference';
 import { createStoreFromRequest } from '$lib/signals/request';
 import { loadHomeProducts } from '$lib/server/catalog';
-import { executeShopperPageRoute } from '$lib/server/shopper-route-runtime';
+import { executeBoundedShopperPageRoute } from '$lib/server/shopper-route-runtime';
 import { routeZoneDecision } from '$lib/server/route-zone-runtime';
 import { projectShopperProducts } from '$lib/foundation/shopper-product';
+import { productCandidates, reorderBoundedProducts } from '$lib/server/bounded-ai';
 
 export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	const brand = getBrand();
@@ -25,6 +26,12 @@ export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	} catch (err) {
 		console.warn('Home: loadHomeProducts failed, rendering with empty catalog', err);
 	}
+
+	const bounded = await executeBoundedShopperPageRoute(url, '/', {
+		persona: inference.primary,
+		candidates: productCandidates(homeProducts),
+	});
+	homeProducts = reorderBoundedProducts(homeProducts, bounded.productOrder);
 
 	// Pick featured products (first 4 from different price ranges) — used as static fallback only
 	const shopperHomeProducts = projectShopperProducts(homeProducts);
@@ -46,10 +53,7 @@ export const load: PageServerLoad = async ({ url, cookies, request }) => {
 	cookies.set('aisles_persona', inference.primary, { path: '/', maxAge: 60 * 60 * 24 * 30 });
 	cookies.set('aisles_visits', String(visitCount), { path: '/', maxAge: 60 * 60 * 24 * 30 });
 
-	// Phase 2 vertical slice — resolve home.hero through the zone system.
-	// Engine wiring (Phase 3) will pass engineOutput here; for now the
-	// resolver falls through to the brand-aware static fallback.
-	const zoneExecution = await executeShopperPageRoute(url, '/');
+	const zoneExecution = bounded.zoneExecution;
 	const heroZone = routeZoneDecision(zoneExecution, 'home.hero').resolution;
 
 	return {

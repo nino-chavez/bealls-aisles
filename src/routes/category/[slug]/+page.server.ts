@@ -4,12 +4,12 @@ import { createStoreFromRequest } from '$lib/signals/request';
 import { loadCategoryProducts, CATEGORY_MAP } from '$lib/server/catalog';
 import { getBrand, getBrandMode } from '$lib/brand/config';
 import { requireBrandSurface } from '$lib/server/brand-surface-guard';
-import { executeShopperPageRoute, throwShopperNotFound } from '$lib/server/shopper-route-runtime';
+import { executeBoundedShopperPageRoute, executeShopperPageRoute, throwShopperNotFound } from '$lib/server/shopper-route-runtime';
 import { projectShopperProducts } from '$lib/foundation/shopper-product';
+import { productCandidates, reorderBoundedProducts } from '$lib/server/bounded-ai';
 
 export const load: PageServerLoad = async ({ params, url, cookies, request, parent }) => {
 	const slug = params.slug;
-	const zoneExecution = await executeShopperPageRoute(url, '/category/[slug]');
 	const { devMode } = await parent();
 
 	if (!CATEGORY_MAP[slug]) {
@@ -24,6 +24,7 @@ export const load: PageServerLoad = async ({ params, url, cookies, request, pare
 	const mode = getBrandMode(brand);
 	requireBrandSurface(mode === 'content' ? 'category' : 'plp');
 	if (mode === 'content') {
+		const zoneExecution = await executeShopperPageRoute(url, '/category/[slug]');
 		const categoryDisplayName = brand.categories[slug]?.displayName ?? slug;
 		const otherCategories = Object.entries(brand.categories)
 			.filter(([s]) => s !== slug)
@@ -65,6 +66,14 @@ export const load: PageServerLoad = async ({ params, url, cookies, request, pare
 	if (result.products.length === 0) {
 		return throwShopperNotFound(url, `Category "${slug}" has no products available`);
 	}
+	const bounded = await executeBoundedShopperPageRoute(url, '/category/[slug]', {
+		persona: inference.primary,
+		candidates: productCandidates(result.products),
+		categorySlug: slug,
+		categoryName: result.categoryName,
+		categorySlugs: Object.keys(brand.categories),
+	});
+	const rankedProducts = reorderBoundedProducts(result.products, bounded.productOrder);
 
 	// Store current session state in cookies
 	cookies.set('aisles_persona', inference.primary, { path: '/', maxAge: 60 * 60 * 24 * 30 });
@@ -78,7 +87,7 @@ export const load: PageServerLoad = async ({ params, url, cookies, request, pare
 			name: result.categoryName,
 			description: '',
 		},
-		products: projectShopperProducts(result.products),
+		products: projectShopperProducts(rankedProducts),
 		inference,
 		persona: inference.primary,
 		confidence: inference.confidence,
@@ -93,6 +102,6 @@ export const load: PageServerLoad = async ({ params, url, cookies, request, pare
 			signalCount: store.eventCount,
 		},
 		sessionId: cookies.get('aisles_session') || null,
-		zoneExecution,
+		zoneExecution: bounded.zoneExecution,
 	};
 };

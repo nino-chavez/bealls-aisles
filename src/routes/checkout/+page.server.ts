@@ -2,7 +2,7 @@ import type { PageServerLoad } from './$types';
 import { requireBrandSurface } from '$lib/server/brand-surface-guard';
 import { getCheckoutRedirectUrl } from '$lib/server/bigcommerce';
 import { getCachedCart, getSessionCookie } from '$lib/server/cart-store';
-import { executeShopperPageRoute, executeTrustedErrorZones } from '$lib/server/shopper-route-runtime';
+import { executeBoundedShopperPageRoute, executeShopperPageRoute, executeTrustedErrorZones } from '$lib/server/shopper-route-runtime';
 import { applyTrustedEmptyRouteState } from '$lib/server/route-zone-runtime';
 
 /**
@@ -10,8 +10,9 @@ import { applyTrustedEmptyRouteState } from '$lib/server/route-zone-runtime';
  *
  * Per ADR-006/-007 and FND-010: BC Optimized One-Page Checkout handles
  * the actual purchase flow. This page is the *handoff UX* — it renders
- * the fixed brand assurance fallback, then continues to BC's hosted
- * checkout via the minted redirect URL. Shopper model upsells are retired.
+ * the bounded, merchant-owned assurance variant, then continues to BC's hosted
+ * checkout via the minted redirect URL. No model can alter cart, payment,
+ * order, or checkout state.
  *
  * Previous behavior auto-redirected when a checkoutUrl was available.
  * We now render the handoff page first and put the BC redirect behind
@@ -19,12 +20,12 @@ import { applyTrustedEmptyRouteState } from '$lib/server/route-zone-runtime';
  * still fall back to the demo-splash CTA.
  */
 export const load: PageServerLoad = async ({ cookies, url }) => {
-	const zoneExecution = await executeShopperPageRoute(url, '/checkout');
 	requireBrandSurface('checkout');
 
 	const cartId = cookies.get('bc_cart_id');
 
 	if (!cartId) {
+		const zoneExecution = await executeShopperPageRoute(url, '/checkout');
 		return {
 			reason: 'empty' as const,
 			zoneExecution: applyTrustedEmptyRouteState(zoneExecution),
@@ -40,6 +41,7 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
 	// gracefully to the empty path when no cached cart exists.
 	const cached = await getCachedCart(cartId);
 	if (!cached || cached.cart.lineItems.physicalItems.length === 0) {
+		const zoneExecution = await executeShopperPageRoute(url, '/checkout');
 		return {
 			reason: 'empty' as const,
 			zoneExecution: applyTrustedEmptyRouteState(zoneExecution),
@@ -49,6 +51,10 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
 
 	const sessionCookie = (await getSessionCookie(cartId)) ?? undefined;
 	const checkoutUrl = await getCheckoutRedirectUrl(cartId, sessionCookie);
+	const bounded = await executeBoundedShopperPageRoute(url, '/checkout', {
+		persona: cookies.get('aisles_persona') ?? 'gatherer',
+		returningShopper: Number(cookies.get('aisles_visits') ?? '0') > 1,
+	});
 
 	const itemCount = cached.cart.lineItems.physicalItems.reduce((sum, i) => sum + i.quantity, 0);
 	const subtotal = cached.cart.lineItems.physicalItems.reduce(
@@ -61,7 +67,7 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
 		itemCount,
 		subtotal,
 		checkoutUrl,
-		zoneExecution,
+		zoneExecution: bounded.zoneExecution,
 		emptyZoneExecution: null,
 	};
 };

@@ -6,12 +6,12 @@ import { logZoneRetrieval } from '$lib/server/zone-retrieval-log';
 import { getStoresForBrand } from '$lib/server/locator/stores';
 import { getBOPISContext } from '$lib/server/locator/proximity';
 import { requireBrandSurface } from '$lib/server/brand-surface-guard';
-import { executeRouteZones, routeZoneDecision } from '$lib/server/route-zone-runtime';
-import { requireTrustedShopperPageContext, throwShopperNotFound } from '$lib/server/shopper-route-runtime';
+import { routeZoneDecision } from '$lib/server/route-zone-runtime';
+import { executeBoundedShopperPageRoute, throwShopperNotFound } from '$lib/server/shopper-route-runtime';
 import { projectShopperProduct, projectShopperProducts } from '$lib/foundation/shopper-product';
+import { productCandidates } from '$lib/server/bounded-ai';
 
 export const load: PageServerLoad = async ({ params, url, parent, cookies }) => {
-	const routeContext = await requireTrustedShopperPageContext(url, '/product/[slug]');
 	requireBrandSurface('pdp');
 	const slug = params.slug;
 	const { devMode } = await parent();
@@ -70,12 +70,10 @@ export const load: PageServerLoad = async ({ params, url, parent, cookies }) => 
 	const reviewsSummary = synthesizeReviewsSummary(product.entityId);
 	const reviewsList = synthesizeReviewsList(product.entityId);
 
-	// PDP cross-sell zones are populated from tag-overlap neighborhoods
-	// (PRD-ENG-019). The engine output is synthesized here from the
-	// retrieval substrate — no AI composition for these zones; the AI
-	// involvement happens upstream in enrichment (tag generation) and
-	// downstream in the cart upsell. Cascade then resolves naturally
-	// — engine output wins, falls through to fallback when sparse.
+	// The retrieval substrate is the approved candidate pool. The bounded
+	// provider may choose only from this pool; deterministic tag-overlap
+	// ordering remains the request-local fallback when the provider is absent,
+	// times out, or returns an invalid decision.
 	const relatedRefs = relatedMatches.slice(0, 4).map((p) => ({ productId: p.id, role: 'standard' as const }));
 	const crossSellRefs = crossSellMatches.slice(0, 8).map((p) => ({ productId: p.id, role: 'standard' as const }));
 
@@ -86,8 +84,7 @@ export const load: PageServerLoad = async ({ params, url, parent, cookies }) => 
 	// fallback path is removed and the real session list takes over.
 	const recentlyViewedRefs = crossSellMatches.slice(0, 6).map((p) => ({ productId: p.id, role: 'standard' as const }));
 
-	const engineOutput = {
-		zones: {
+	const safeFallbackZones = {
 			...(relatedRefs.length >= 3
 				? {
 						'pdp.related': {
@@ -112,7 +109,6 @@ export const load: PageServerLoad = async ({ params, url, parent, cookies }) => 
 						},
 					}
 				: {}),
-		},
 	};
 
 	// Decisions Inspector substrate: structured log per zone with the
@@ -165,16 +161,14 @@ export const load: PageServerLoad = async ({ params, url, parent, cookies }) => 
 			}
 		: null;
 
-	const zoneExecution = await executeRouteZones({
-		context: routeContext,
-		engineOutput,
-		engineDecisionMode: 'rules',
-		engineProvenance: { kind: 'trusted-rule', id: 'pdp-tag-overlap-v1', version: '1' },
-		publicationContext: {
-			candidateProductIds: [product, ...relatedProducts].flatMap((candidate) => [candidate.id, String(candidate.entityId)]),
-			candidateAssetUrls: [product, ...relatedProducts].map((candidate) => candidate.image).filter(Boolean),
-		},
+	const bounded = await executeBoundedShopperPageRoute(url, '/product/[slug]', {
+		persona,
+		candidates: productCandidates(relatedProducts),
+		categorySlug: product.categoryPath.replace(/^\/|\/$/g, '').replace(/^(bealls|beallsflorida|homecentric)-/i, ''),
+		categoryName: product.category,
+		safeFallbackZones,
 	});
+	const zoneExecution = bounded.zoneExecution;
 	const belowDescriptionZone = routeZoneDecision(zoneExecution, 'pdp.below-description').resolution;
 	const relatedZone = routeZoneDecision(zoneExecution, 'pdp.related').resolution;
 	const crossSellZone = routeZoneDecision(zoneExecution, 'pdp.cross-sell').resolution;

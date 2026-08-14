@@ -5,6 +5,7 @@
 	import EmptyRescue from '$lib/components/EmptyRescue.svelte';
 	import { getBrand } from '$lib/brand/config';
 	import ZoneExecutionEvidence from '$lib/foundation/ZoneExecutionEvidence.svelte';
+	import RuntimeZone from '$lib/foundation/RuntimeZone.svelte';
 
 	let { data }: { data: PageData } = $props();
 	const brandCategories = Object.entries(getBrand().categories).map(([slug, c]) => ({
@@ -51,6 +52,9 @@
 				persona={data.persona ?? 'gatherer'}
 				categories={brandCategories}
 			/>
+		</div>
+		<div class="mt-12">
+			<RuntimeZone execution={data.zoneExecution} zoneId="search.zero-results-rescue" products={data.rescueProducts ?? []} />
 		</div>
 		</div>
 	{:else if data.suggestedCategory}

@@ -59,6 +59,7 @@ export const BEALLS_FAMILY_RENDERER_SOURCE_FILES = [
 	'src/lib/components/PicksTray.svelte',
 	'src/lib/components/dev/DevToolbar.svelte',
 	'src/lib/components/dev/DevZoneBadge.svelte',
+	'src/lib/components/dev/ZoneObservationOverlay.svelte',
 	'src/lib/components/layouts/ContentCategorySurface.svelte',
 	'src/lib/components/layouts/GathererLayout.svelte',
 	'src/lib/components/layouts/GifterLayout.svelte',
@@ -141,6 +142,7 @@ export const BEALLS_FAMILY_RENDERER_SOURCE_FILES = [
 	'src/lib/server/bigcommerce.ts',
 	'src/lib/server/cache.ts',
 	'src/lib/server/parity-fixture.ts',
+	'src/lib/server/bounded-ai.ts',
 	'src/lib/server/route-zone-runtime.ts',
 	'src/lib/server/shopper-route-runtime.ts',
 	'src/lib/server/zone-output-runtime.ts',
@@ -302,7 +304,7 @@ const RESPONSIVE_STRATEGY = {
 const SOURCE_SNAPSHOT = {
 	algorithm: 'sha256',
 	files: [...BEALLS_FAMILY_RENDERER_SOURCE_FILES],
-	fingerprint: '6697c299eb641849e9781dee452f89416dd3e1ef63ef3936e6fa6847abf1c997',
+	fingerprint: '7924f0ddc4c19933d90a4898f34eaddf6ac587e7c504a3d6cd603fbefb945e17',
 } as const;
 
 interface DesignSnapshotLiteral {
@@ -329,11 +331,11 @@ function storefrontContract(
 
 /** One explicit record per brand, even where the renderer implementation is shared. */
 export const BEALLS_FAMILY_RENDERER_CONTRACTS: Readonly<Record<(typeof BRAND_IDS)[number], BeallsFamilyRendererContract>> = {
-	bealls: storefrontContract('bealls', 'bealls', 'bealls-executable-runtime-v6', {
+	bealls: storefrontContract('bealls', 'bealls', 'bealls-bounded-ai-runtime-v7', {
 		googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap',
 		fingerprint: '789eb043880e8daed628c65a483591a8aa4367d560a846cfc7b4e4c1cdd2052b',
 	}),
-	beallsflorida: storefrontContract('beallsflorida', 'Bealls Florida', 'beallsflorida-executable-runtime-v6', {
+	beallsflorida: storefrontContract('beallsflorida', 'Bealls Florida', 'beallsflorida-bounded-ai-runtime-v7', {
 		googleFontsUrl: 'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Public+Sans:wght@400;500;600;700&display=swap',
 		fingerprint: '746ae8604bccee7b0169b1a961bc0104186f95b2c314dac8c5e191e94fe34222',
 	}),
@@ -352,7 +354,7 @@ export const BEALLS_FAMILY_RENDERER_CONTRACTS: Readonly<Record<(typeof BRAND_IDS
 		},
 		sourceSnapshot: { ...SOURCE_SNAPSHOT, files: [...SOURCE_SNAPSHOT.files] },
 		tokenSource: { ...TOKEN_SOURCE }, responsiveStrategy: { ...RESPONSIVE_STRATEGY },
-		autonomy: { policyRegistry: 'BEALLS_COMPOSITION_POLICY', organizationPolicyVersion: 'bealls-family-org-observed-v2', brandPolicyVersion: 'homecentric-executable-runtime-v6', referenceState: 'uncontracted' },
+		autonomy: { policyRegistry: 'BEALLS_COMPOSITION_POLICY', organizationPolicyVersion: 'bealls-family-org-observed-v2', brandPolicyVersion: 'homecentric-executable-runtime-v7', referenceState: 'uncontracted' },
 	},
 };
 
