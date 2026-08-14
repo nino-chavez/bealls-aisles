@@ -125,11 +125,17 @@ assert('every applicable zone has an exact child override', contracts.every((rec
 		BEALLS_COMPOSITION_POLICY.brands[record.brandId].surfaces[record.surface]?.zoneOverrides ?? {},
 		record.zoneId,
 	)));
-assert('runtime authority is exact: no shopper model families and only three PDP rule families remain', (() => {
+assert('runtime authority is exact: bounded model zones and the PDP recently-viewed rule are explicit', (() => {
 	const bealls = getRuntimeZoneContracts('bealls').filter((record) => record.applicable);
-	return bealls.filter((record) => record.policy?.decisionMode === 'model').length === 0
-		&& bealls.filter((record) => record.policy?.decisionMode === 'rules').map((record) => record.zoneId).sort().join(',')
-		=== ['pdp.cross-sell', 'pdp.recently-viewed', 'pdp.related'].sort().join(',')
+	const modelZones = bealls.filter((record) => record.policy?.decisionMode === 'model').map((record) => record.zoneId).sort();
+	const ruleZones = bealls.filter((record) => record.policy?.decisionMode === 'rules').map((record) => record.zoneId).sort();
+	return modelZones.join(',') === [
+		'cart.above-checkout-cta', 'checkout.assurance-strip',
+		'home.brand-spotlight', 'home.below-fold', 'home.editorial-strip', 'home.hero',
+		'plp.banner', 'plp.between-thirds', 'plp.cluster-row', 'plp.editorial-header',
+		'pdp.below-description', 'pdp.cross-sell', 'pdp.related', 'search.zero-results-rescue',
+	].sort().join(',')
+		&& ruleZones.join(',') === 'pdp.recently-viewed'
 		&& getRuntimeZoneContracts('homecentric').filter((record) => record.applicable)
 			.every((record) => record.policy?.decisionMode === 'fixed');
 })());
@@ -150,17 +156,17 @@ for (const path of ['/observe', '/style-guide', '/test/components', '/api/layout
 }
 rejects('Home Centric cannot select a storefront cart contract', () => normalizeTrustedShopperRoute('homecentric', '/cart'), /not available/);
 rejects('unknown category slugs do not compile a policy', () => normalizeTrustedShopperRoute('bealls', '/category/not-registered'), /unknown or non-shopper/);
-for (const path of ['/cart', '/checkout'] as const) {
-	rejects(`shopper route ${path} grants no paid model authority`, () => trustedModelZoneApiContext(
+for (const path of ['/', '/cart', '/checkout', '/category/women', '/product/parity-coastal-shirt', '/search'] as const) {
+	assert(`shopper route ${path} receives bounded model-zone context`, trustedModelZoneApiContext(
 		normalizeTrustedShopperRoute('bealls', path),
-	), /no model-zone API authority/);
+	).routePath === path);
 }
-rejects('home/PLP/PDP grants cannot be repurposed for the global cart drawer', () => trustedModelZoneApiContext(
-	normalizeTrustedShopperRoute('bealls', '/product/parity-coastal-shirt'),
-), /no model-zone API authority/);
-rejects('Home Centric receives no model-zone API authority', () => trustedModelZoneApiContext(
+rejects('account receives no bounded model-zone API authority', () => trustedModelZoneApiContext(
+	normalizeTrustedShopperRoute('bealls', '/account'),
+), /no bounded AI zone authority/);
+rejects('Home Centric receives no bounded model-zone API authority', () => trustedModelZoneApiContext(
 	normalizeTrustedShopperRoute('homecentric', '/'),
-), /no model-zone API authority/);
+), /no bounded AI zone authority/);
 
 const modelApiSource = read('src/routes/api/layout/+server.ts');
 const refineApiSource = read('src/routes/api/refine/+server.ts');
@@ -293,8 +299,8 @@ const relatedContent = {
 };
 const relatedResolution = resolveZone({
 	zoneId: 'pdp.related', brandId: 'bealls', routePath: '/product/parity-shirt', policy: relatedPolicy,
-	engineOutput: { zones: { 'pdp.related': relatedContent } }, engineDecisionMode: 'rules',
-	engineProvenance: { kind: 'trusted-rule', id: 'pdp-tag-overlap-v1', version: '1' },
+	engineOutput: { zones: { 'pdp.related': relatedContent } }, engineDecisionMode: 'model',
+	engineProvenance: { kind: 'model', approvedInputHash: 'c'.repeat(64), modelId: 'test-model' },
 	publicationContext: { candidateProductIds: ['p1'] },
 });
 const relatedContext = createZoneDecisionContext({
@@ -478,8 +484,8 @@ const cacheDimensions: Array<[string, ZoneDecisionContext]> = [
 	['organization policy version', { ...baseContext, organizationPolicyVersion: 'org-v2' }],
 	['brand policy version', { ...baseContext, brandPolicyVersion: 'brand-v2' }],
 	['effective policy version', { ...baseContext, effectivePolicyVersion: 'effective-v2' }],
-	['autonomy preset', { ...baseContext, autonomyPreset: 'assist' }],
-	['decision mode', { ...baseContext, decisionMode: 'model' }],
+	['autonomy preset', { ...baseContext, autonomyPreset: 'preserve' }],
+	['decision mode', { ...baseContext, decisionMode: 'fixed' }],
 	['publication mode', { ...baseContext, publicationMode: 'holdout' }],
 	['capabilities', { ...baseContext, capabilities: ['rank_products'] }],
 	['viewport', { ...baseContext, viewportClass: 'desktop' }],
@@ -534,7 +540,7 @@ const pageRuntimeFiles = [
 	'src/routes/search/+page.server.ts', 'src/routes/store-locator/+page.server.ts',
 ];
 assert('every shopper page server executes its named route-zone contract', pageRuntimeFiles.every((file) =>
-	/executeShopperPageRoute|executeRouteZones/.test(read(file))));
+	/executeShopperPageRoute|executeBoundedShopperPageRoute|executeRouteZones/.test(read(file))));
 assert('root layout executes 404 zones only for an unmatched route and never executes empty zones globally',
 	read('src/routes/+layout.server.ts').includes("route.id === null")
 	&& read('src/routes/+layout.server.ts').includes("executeTrustedErrorZones(url, 'not-found')")

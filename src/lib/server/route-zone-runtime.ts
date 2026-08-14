@@ -24,6 +24,31 @@ export interface RouteZoneDecision {
 	terminal: RouteZoneTerminal;
 	resolution: ZoneResolution;
 	policy: EffectiveCompositionPolicy;
+	evidence: ZoneExecutionEvidence;
+}
+
+export interface ZoneExecutionEvidence {
+	zoneId: string;
+	outcome: 'changed' | 'kept' | 'failed' | 'fallback';
+	railLabel: 'Template' | 'Rules' | 'AI available' | 'AI changed' | 'AI kept' | 'failed' | 'fallback';
+	before: unknown | null;
+	after: unknown | null;
+	failureCode?: string;
+	failureMessage?: string;
+}
+
+export interface RouteAiEvidence {
+	status: 'applied' | 'disabled' | 'gated' | 'cooldown' | 'budget-exhausted' | 'unconfigured' | 'failed' | 'empty';
+	provider: 'anthropic' | 'gateway' | 'none';
+	modelId: string | null;
+	latencyMs: number;
+	callCount: number;
+	maxOutputTokens: number;
+	failureCode?: string;
+	failureMessage?: string;
+	gateReason?: string;
+	cooldownMs?: number;
+	reasonCode?: string;
 }
 
 export interface RouteZoneExecution {
@@ -35,6 +60,7 @@ export interface RouteZoneExecution {
 	policyVersion: string;
 	expectedZoneIds: readonly string[];
 	decisions: readonly RouteZoneDecision[];
+	ai?: RouteAiEvidence;
 }
 
 export async function executeRouteZones(input: {
@@ -50,6 +76,8 @@ export async function executeRouteZones(input: {
 		context: TrustedShopperRouteContext,
 		policyVersion: string,
 	) => Promise<ReadonlyMap<string, TrustedMerchantZoneRecord | null>>;
+	ai?: RouteAiEvidence;
+	safeFallbackOutput?: Record<string, unknown>;
 }): Promise<RouteZoneExecution> {
 	const routePolicy = compileBrandCompositionPolicy(input.context.brandId, input.context.surface);
 	let merchantRecords = input.merchantRecords;
@@ -71,7 +99,24 @@ export async function executeRouteZones(input: {
 			engineDecisionMode: input.engineDecisionMode,
 			engineProvenance: input.engineProvenance,
 			publicationContext: input.publicationContext,
+			fallbackOutput: input.safeFallbackOutput,
 			adminRecord: merchantRecords.get(zoneId) ?? null,
+		});
+		const baseline = resolveZone({
+			zoneId,
+			brandId: input.context.brandId,
+			routePath: input.context.routePath,
+			policy,
+			publicationContext: input.publicationContext,
+			fallbackOutput: input.safeFallbackOutput,
+			adminRecord: merchantRecords.get(zoneId) ?? null,
+		});
+		const evidence = zoneEvidence({
+			zoneId,
+			resolution,
+			baseline,
+			policy,
+			ai: input.ai,
 		});
 		return {
 			zoneId,
@@ -81,9 +126,10 @@ export async function executeRouteZones(input: {
 					? 'materialized-engine'
 					: resolution.source === 'admin'
 						? 'materialized-admin'
-						: 'materialized-fallback',
+					: 'materialized-fallback',
 			resolution,
 			policy,
+			evidence,
 		};
 	});
 
@@ -96,6 +142,7 @@ export async function executeRouteZones(input: {
 		policyVersion: routePolicy.policyVersion,
 		expectedZoneIds: [...input.context.zoneInstanceIds],
 		decisions,
+		...(input.ai ? { ai: input.ai } : {}),
 	};
 	assertCompleteRouteZoneExecution(execution);
 	return execution;
@@ -114,6 +161,9 @@ export function assertCompleteRouteZoneExecution(execution: RouteZoneExecution):
 		if (decision.terminal === 'hidden' && decision.resolution.content !== null) {
 			throw new Error(`route zone runtime: Hidden terminal has content for ${decision.zoneId}`);
 		}
+		if (decision.evidence.zoneId !== decision.zoneId || decision.evidence.after !== decision.resolution.content) {
+			throw new Error(`route zone runtime: mismatched evidence for ${decision.zoneId}`);
+		}
 		if (decision.terminal !== 'hidden' && decision.resolution.content === null) {
 			throw new Error(`route zone runtime: materialized terminal lacks content for ${decision.zoneId}`);
 		}
@@ -124,6 +174,68 @@ export function routeZoneDecision(execution: RouteZoneExecution, zoneId: string)
 	const decision = execution.decisions.find((candidate) => candidate.zoneId === zoneId);
 	if (!decision) throw new Error(`route zone runtime: ${zoneId} is not in ${execution.routeId}`);
 	return decision;
+}
+
+function zoneEvidence(input: {
+	zoneId: string;
+	resolution: ZoneResolution;
+	baseline: ZoneResolution;
+	policy: EffectiveCompositionPolicy;
+	ai?: RouteAiEvidence;
+}): ZoneExecutionEvidence {
+	const { resolution, baseline } = input;
+	if (resolution.source === 'engine') {
+		const outcome = stableJson(resolution.content) === stableJson(baseline.content) ? 'kept' : 'changed';
+		return {
+			zoneId: input.zoneId,
+			outcome,
+			railLabel: input.policy.decisionMode === 'rules' ? 'Rules' : outcome === 'changed' ? 'AI changed' : 'AI kept',
+			before: baseline.content,
+			after: resolution.content,
+		};
+	}
+	if (resolution.source === 'admin') {
+		return {
+			zoneId: input.zoneId,
+			outcome: 'kept',
+			railLabel: 'Template',
+			before: baseline.content,
+			after: resolution.content,
+		};
+	}
+	if (input.ai?.status === 'failed' && input.policy.decisionMode === 'model') {
+		return {
+			zoneId: input.zoneId,
+			outcome: 'failed',
+			railLabel: 'failed',
+			before: baseline.content,
+			after: resolution.content,
+			failureCode: input.ai.failureCode,
+			failureMessage: input.ai.failureMessage,
+		};
+	}
+	const railLabel = input.policy.decisionMode === 'fixed'
+		? 'Template'
+		: input.policy.decisionMode === 'rules'
+			? 'fallback'
+			: input.ai?.status === 'applied'
+				? 'AI available'
+				: 'fallback';
+	return {
+		zoneId: input.zoneId,
+		outcome: resolution.source === 'fallback' ? 'fallback' : 'kept',
+		railLabel,
+		before: baseline.content,
+		after: resolution.content,
+	};
+}
+
+function stableJson(value: unknown): string {
+	if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+	if (value && typeof value === 'object') {
+		return `{${Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, child]) => `${JSON.stringify(key)}:${stableJson(child)}`).join(',')}}`;
+	}
+	return JSON.stringify(value);
 }
 
 /** A trusted empty route narrows every insertion point to an explicit Hidden terminal. */
@@ -142,6 +254,13 @@ export function applyTrustedEmptyRouteState(execution: RouteZoneExecution): Rout
 				content: null,
 				policyProvenance: decision.resolution.policyProvenance,
 				hiddenReason: 'route-empty',
+			},
+			evidence: {
+				zoneId: decision.zoneId,
+				outcome: 'fallback',
+				railLabel: 'fallback',
+				before: decision.evidence.before,
+				after: null,
 			},
 		})),
 	};

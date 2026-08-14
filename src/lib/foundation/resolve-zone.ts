@@ -56,6 +56,8 @@ export interface ResolveZoneOpts {
 	adminRecord?: TrustedMerchantZoneRecord | null;
 	/** Server-derived catalog and asset closure for every publication source. */
 	publicationContext?: ZonePublicationContext;
+	/** Request-local deterministic fallback for a valid route-owned candidate pool. */
+	fallbackOutput?: Record<ZoneInstanceId, unknown>;
 }
 
 export interface ZonePublicationContext {
@@ -99,7 +101,7 @@ export function resolveZone(opts: ResolveZoneOpts): ZoneResolution {
 	const authoredAdmin = trustedMerchantContent(opts, family, meta, ['authored']);
 	if (authoredAdmin) return resolution(opts, family, index, 'admin', authoredAdmin.content, { merchantAuthority: authoredAdmin.authority, merchantContentVersion: authoredAdmin.contentVersion });
 
-	const fallbackRaw = getFallback(family, opts.brandId);
+	const fallbackRaw = opts.fallbackOutput?.[opts.zoneId] ?? getFallback(family, opts.brandId);
 	if (fallbackRaw === null || fallbackRaw === undefined) return resolution(opts, family, index, 'fallback', null);
 	const fallback = validatePublicationForZone(opts, fallbackRaw);
 	return resolution(opts, family, index, 'fallback', fallback.ok ? fallback.content : null);
@@ -160,13 +162,8 @@ function permitsEngineOutput(opts: ResolveZoneOpts, family: ZoneId, content: unk
 function requiredCapabilities(content: unknown, mode: DecisionMode): AutonomyCapability[] {
 	const required = new Set<AutonomyCapability>();
 	let hasProductRef = false;
-	let hasGeneratedCopy = false;
 	walk(content, (key, value) => {
 		if (key === 'productId' && typeof value === 'string') hasProductRef = true;
-		if (
-			mode === 'model' && typeof value === 'string' &&
-			!['component', 'productId', 'role', 'image', 'href', 'ctaHref', 'icon', 'endsAt'].includes(key)
-		) hasGeneratedCopy = true;
 	});
 	if (hasProductRef) {
 		required.add('rank_products');
@@ -174,10 +171,9 @@ function requiredCapabilities(content: unknown, mode: DecisionMode): AutonomyCap
 	}
 	if (mode === 'model') {
 		required.add('select_component_variant');
-		if (hasGeneratedCopy) {
-			required.add('select_copy_variant');
-			required.add('generate_bounded_copy');
-		}
+		// Model output is materialized from merchant-owned copy variants. A
+		// shopper model never receives a free-form copy-generation capability.
+		required.add('select_copy_variant');
 	}
 	return [...required];
 }

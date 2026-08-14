@@ -15,7 +15,9 @@
 				terminal: string;
 				resolution: { source: string; merchantAuthority?: string; hiddenReason?: string; policyProvenance: { preset: string; referenceState: string } };
 				policy: { decisionMode: string; publicationMode: string };
+				evidence: { outcome: string; railLabel: string; before: unknown; after: unknown; failureCode?: string; failureMessage?: string };
 			}[];
+			ai?: { status: string; provider: string; modelId: string | null; latencyMs: number; callCount: number; maxOutputTokens: number; failureCode?: string; failureMessage?: string; gateReason?: string; cooldownMs?: number; reasonCode?: string };
 		}[];
 	} = $props();
 
@@ -26,6 +28,7 @@
 		routePath: execution.routePath,
 		surface: execution.surface,
 		policyVersion: execution.policyVersion,
+		ai: execution.ai ?? null,
 		expectedZoneIds: execution.expectedZoneIds,
 		decisions: execution.decisions.map((decision) => ({
 			zoneId: decision.zoneId,
@@ -37,6 +40,12 @@
 			publicationMode: decision.policy.publicationMode,
 			preset: decision.resolution.policyProvenance.preset,
 			referenceState: decision.resolution.policyProvenance.referenceState,
+			outcome: decision.evidence.outcome,
+			railLabel: decision.evidence.railLabel,
+			before: decision.evidence.before,
+			after: decision.evidence.after,
+			failureCode: decision.evidence.failureCode ?? null,
+			failureMessage: decision.evidence.failureMessage ?? null,
 		})),
 	}))));
 </script>

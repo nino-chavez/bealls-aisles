@@ -101,8 +101,10 @@ try {
 }
 assert('a policy compiled for another surface/zone cannot publish', policyMismatchThrew);
 
-const fixedModel = resolveHomeHero({
-	engineOutput: { zones: { 'home.hero': homeHero('MODEL') } },
+const fixedModel = resolveZone({
+	zoneId: 'home.featured-row.1', brandId: 'bealls', routePath: '/',
+	policy: compileBrandCompositionPolicy('bealls', 'home', 'home.featured-row'),
+	engineOutput: { zones: { 'home.featured-row.1': homeHero('MODEL') } },
 	engineDecisionMode: 'model',
 	engineProvenance: { kind: 'model', approvedInputHash: 'a'.repeat(64), modelId: 'fixture-model' },
 });
@@ -124,11 +126,11 @@ assert('strict props reject styling invention before fallback', invalidExtraProp
 
 const relatedPolicy = compileBrandCompositionPolicy('bealls', 'pdp', 'pdp.related');
 const trustedRules = resolveZone({
-	zoneId: 'pdp.related',
+	zoneId: 'pdp.recently-viewed',
 	brandId: 'bealls',
 	routePath: '/product/parity-shirt',
-	policy: relatedPolicy,
-	engineOutput: { zones: { 'pdp.related': related } },
+	policy: compileBrandCompositionPolicy('bealls', 'pdp', 'pdp.recently-viewed'),
+	engineOutput: { zones: { 'pdp.recently-viewed': related } },
 	engineDecisionMode: 'rules',
 	engineProvenance: { kind: 'trusted-rule', id: 'pdp-tag-overlap-v1', version: '1' },
 	publicationContext: { candidateProductIds: ['p1', 'p2', 'p3'] },
@@ -137,11 +139,11 @@ assert('registered trusted-rule output publishes inside rules authority', truste
 	&& trustedRules.engineProvenance?.kind === 'trusted-rule');
 
 const forgedRules = resolveZone({
-	zoneId: 'pdp.related',
+	zoneId: 'pdp.recently-viewed',
 	brandId: 'bealls',
 	routePath: '/product/parity-shirt',
-	policy: relatedPolicy,
-	engineOutput: { zones: { 'pdp.related': related } },
+	policy: compileBrandCompositionPolicy('bealls', 'pdp', 'pdp.recently-viewed'),
+	engineOutput: { zones: { 'pdp.recently-viewed': related } },
 	engineDecisionMode: 'rules',
 	engineProvenance: { kind: 'trusted-rule', id: 'arbitrary-unregistered-rule', version: '999' } as never,
 	publicationContext: { candidateProductIds: ['p1', 'p2', 'p3'] },
@@ -158,7 +160,20 @@ const modelOverreach = resolveZone({
 	engineProvenance: { kind: 'model', approvedInputHash: 'b'.repeat(64), modelId: 'fixture-model' },
 	publicationContext: { candidateProductIds: ['p1', 'p2', 'p3'] },
 });
-assert('model authority cannot replace a rules-only zone', modelOverreach.source === 'fallback');
+assert('model authority publishes inside a bounded product zone', modelOverreach.source === 'engine'
+	&& modelOverreach.engineProvenance?.kind === 'model');
+
+const modelOverreachRulesOnly = resolveZone({
+	zoneId: 'pdp.recently-viewed',
+	brandId: 'bealls',
+	routePath: '/product/parity-shirt',
+	policy: compileBrandCompositionPolicy('bealls', 'pdp', 'pdp.recently-viewed'),
+	engineOutput: { zones: { 'pdp.recently-viewed': related } },
+	engineDecisionMode: 'model',
+	engineProvenance: { kind: 'model', approvedInputHash: 'b'.repeat(64), modelId: 'fixture-model' },
+	publicationContext: { candidateProductIds: ['p1', 'p2', 'p3'] },
+});
+assert('model authority cannot replace the PDP rules-only zone', modelOverreachRulesOnly.source === 'fallback');
 
 const cartPolicy = compileBrandCompositionPolicy('bealls', 'cart', 'cart.above-checkout-cta');
 const pin: TrustedMerchantZoneRecord = {
@@ -217,9 +232,6 @@ const unboundIgnored = resolveZone({
 	routePath: '/cart',
 	policy: cartPolicy,
 	adminRecord: wrongRoutePin,
-	engineOutput: { zones: { 'cart.above-checkout-cta': lastChance } },
-	engineDecisionMode: 'model',
-	engineProvenance: { kind: 'model', approvedInputHash: 'd'.repeat(64), modelId: 'fixture-model' },
 	publicationContext: { candidateProductIds: ['p1', 'p2', 'p3'] },
 });
 assert('merchant data bound to another route is not authority', unboundIgnored.source === 'fallback');

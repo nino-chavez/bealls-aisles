@@ -8,10 +8,43 @@ import {
 	type ShopperRouteId,
 } from '$lib/brand/bealls-family-runtime-contract';
 import { executeRouteZones, type RouteZoneExecution } from './route-zone-runtime';
+import { boundedAiRequestGateFromUrl, composeBoundedZones, type BoundedAiInput } from './bounded-ai';
 
 export async function executeShopperPageRoute(url: URL, expectedRouteId: ShopperRouteId): Promise<RouteZoneExecution> {
 	const context = await requireTrustedShopperPageContext(url, expectedRouteId);
 	return executeRouteZones({ context });
+}
+
+/**
+ * Run one bounded provider decision for a trusted shopper route, then publish
+ * only the named zones that survive the normal merchant/schema/catalog gate.
+ */
+export async function executeBoundedShopperPageRoute(
+	url: URL,
+	expectedRouteId: ShopperRouteId,
+	input: Omit<BoundedAiInput, 'context'>,
+): Promise<{ context: Awaited<ReturnType<typeof requireTrustedShopperPageContext>>; zoneExecution: RouteZoneExecution; productOrder: string[] }> {
+	const context = await requireTrustedShopperPageContext(url, expectedRouteId);
+	const bounded = await composeBoundedZones({
+		...input,
+		context,
+		// Without this explicit URL intent the provider is never called, even
+		// when a credential and the feature flag are present.
+		requestGate: input.requestGate ?? boundedAiRequestGateFromUrl(url, input.sessionKey),
+	});
+	const zoneExecution = await executeRouteZones({
+		context,
+		engineOutput: bounded.engineOutput,
+		engineDecisionMode: bounded.engineDecisionMode,
+		engineProvenance: bounded.engineProvenance,
+		ai: bounded.ai,
+		safeFallbackOutput: bounded.fallbackOutput.zones,
+		publicationContext: {
+			candidateProductIds: (input.candidates ?? []).flatMap((candidate) => [candidate.id, String(candidate.entityId)]),
+			candidateAssetUrls: (input.candidates ?? []).map((candidate) => candidate.image).filter((value): value is string => Boolean(value)),
+		},
+	});
+	return { context, zoneExecution, productOrder: bounded.productOrder };
 }
 
 export async function requireTrustedShopperPageContext(

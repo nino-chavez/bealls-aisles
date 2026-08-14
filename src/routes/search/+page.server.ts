@@ -5,11 +5,12 @@ import { infer } from '$lib/signals/inference';
 import { createStoreFromRequest } from '$lib/signals/request';
 import { searchProducts } from '$lib/server/search';
 import { requireBrandSurface } from '$lib/server/brand-surface-guard';
-import { executeShopperPageRoute, executeTrustedErrorZones } from '$lib/server/shopper-route-runtime';
 import { projectShopperProducts } from '$lib/foundation/shopper-product';
+import { executeBoundedShopperPageRoute, executeShopperPageRoute, executeTrustedErrorZones } from '$lib/server/shopper-route-runtime';
+import { productCandidates } from '$lib/server/bounded-ai';
+import { getBrand } from '$lib/brand/config';
 
 export const load: PageServerLoad = async ({ url, cookies, request, parent }) => {
-	const zoneExecution = await executeShopperPageRoute(url, '/search');
 	requireBrandSurface('search');
 	const query = url.searchParams.get('q') || '';
 	const { devMode } = await parent();
@@ -66,12 +67,37 @@ export const load: PageServerLoad = async ({ url, cookies, request, parent }) =>
 	});
 	const inferenceContext = store.toInferenceContext();
 	const inference = infer(inferenceContext);
+	const brand = getBrand();
+	let zoneExecution;
+	if (matched.length === 0) {
+		const bounded = await executeBoundedShopperPageRoute(url, '/search', {
+			persona: inference.primary,
+			sessionKey: cookies.get('aisles_session') ?? undefined,
+			query,
+			categorySlugs: Object.keys(brand.categories),
+			candidates: productCandidates(allProducts.map(transformProduct)),
+			safeFallbackZones: {
+				'search.zero-results-rescue': [{
+					component: 'category-tile-grid',
+					props: {
+						sectionLabel: 'browse a category',
+						columns: 4,
+						tiles: Object.entries(brand.categories).slice(0, 4).map(([slug, category]) => ({ label: category.displayName, image: category.tileImage, href: `/category/${slug}` })),
+					},
+				}],
+			},
+		});
+		zoneExecution = bounded.zoneExecution;
+	} else {
+		zoneExecution = await executeShopperPageRoute(url, '/search');
+	}
 
 	cookies.set('aisles_persona', inference.primary, { path: '/', maxAge: 60 * 60 * 24 * 30 });
 
 	return {
 		query,
 		results: projectShopperProducts(matched),
+		rescueProducts: matched.length === 0 ? projectShopperProducts(allProducts.map(transformProduct)) : [],
 		resultCount: matched.length,
 		searchMethod,
 		inference,

@@ -14,12 +14,12 @@ const organization: OrganizationCompositionPolicy = {
 };
 
 const STORE_FRONT_SURFACES = {
-	home: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
-	plp: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
-	pdp: { preset: 'preserve', decisionMode: 'rules', publicationMode: 'live' },
-	cart: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
-	checkout: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
-	search: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
+	home: { preset: 'assist', decisionMode: 'model', publicationMode: 'live' },
+	plp: { preset: 'assist', decisionMode: 'model', publicationMode: 'live' },
+	pdp: { preset: 'assist', decisionMode: 'model', publicationMode: 'live' },
+	cart: { preset: 'assist', decisionMode: 'model', publicationMode: 'live' },
+	checkout: { preset: 'assist', decisionMode: 'model', publicationMode: 'live' },
+	search: { preset: 'assist', decisionMode: 'model', publicationMode: 'live' },
 	account: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
 	compare: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
 	picks: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
@@ -31,6 +31,23 @@ const RULES_PRODUCT_ZONE = {
 	decisionMode: 'rules',
 	trustedRule: { id: 'pdp-tag-overlap-v1', version: '1' },
 } as const;
+const MODEL_PRESENTATION_ZONE = {
+	// The provider selects merchant-owned variants. It does not write shopper copy.
+	capabilities: ['select_copy_variant', 'select_component_variant'],
+	decisionMode: 'model',
+} as const;
+const MODEL_PRODUCT_ZONE = {
+	capabilities: ['rank_products', 'select_products', 'select_copy_variant', 'select_component_variant'],
+	decisionMode: 'model',
+} as const;
+const MODEL_NARROW_PRODUCT_ZONE = {
+	capabilities: ['rank_products', 'select_products', 'select_component_variant'],
+	decisionMode: 'model',
+} as const;
+const MODEL_NARROW_PRESENTATION_ZONE = {
+	capabilities: ['select_copy_variant', 'select_component_variant'],
+	decisionMode: 'model',
+} as const;
 
 /**
  * Every catalog zone is explicit. A fixed override does not mean the route is
@@ -40,39 +57,39 @@ const RULES_PRODUCT_ZONE = {
  */
 const ZONE_OVERRIDES = {
 	home: {
-		'home.hero': FIXED_ZONE,
+		'home.hero': MODEL_PRESENTATION_ZONE,
 		'home.featured-row': FIXED_ZONE,
-		'home.editorial-strip': FIXED_ZONE,
-		'home.brand-spotlight': FIXED_ZONE,
-		'home.below-fold': FIXED_ZONE,
+		'home.editorial-strip': MODEL_PRESENTATION_ZONE,
+		'home.brand-spotlight': MODEL_PRESENTATION_ZONE,
+		'home.below-fold': MODEL_PRESENTATION_ZONE,
 	},
 	plp: {
-		'plp.banner': FIXED_ZONE,
-		'plp.editorial-header': FIXED_ZONE,
-		'plp.cluster-row': FIXED_ZONE,
-		'plp.between-thirds': FIXED_ZONE,
+		'plp.banner': MODEL_PRESENTATION_ZONE,
+		'plp.editorial-header': MODEL_PRESENTATION_ZONE,
+		'plp.cluster-row': MODEL_PRESENTATION_ZONE,
+		'plp.between-thirds': MODEL_PRESENTATION_ZONE,
 		'plp.below-grid': FIXED_ZONE,
 		'plp.empty-state': FIXED_ZONE,
 	},
 	pdp: {
-		'pdp.below-description': FIXED_ZONE,
-		'pdp.related': RULES_PRODUCT_ZONE,
-		'pdp.cross-sell': RULES_PRODUCT_ZONE,
+		'pdp.below-description': MODEL_PRESENTATION_ZONE,
+		'pdp.related': MODEL_PRODUCT_ZONE,
+		'pdp.cross-sell': MODEL_PRODUCT_ZONE,
 		'pdp.recently-viewed': RULES_PRODUCT_ZONE,
 		'pdp.below-recs': FIXED_ZONE,
 	},
 	cart: {
-		'cart.above-checkout-cta': FIXED_ZONE,
+		'cart.above-checkout-cta': MODEL_NARROW_PRODUCT_ZONE,
 		'cart.below-fold': FIXED_ZONE,
 		'cart.empty-state': FIXED_ZONE,
 	},
 	checkout: {
-		'checkout.assurance-strip': FIXED_ZONE,
+		'checkout.assurance-strip': MODEL_NARROW_PRESENTATION_ZONE,
 		'checkout.last-chance-upsell': FIXED_ZONE,
 	},
 	search: {
 		'search.empty-state': FIXED_ZONE,
-		'search.zero-results-rescue': FIXED_ZONE,
+		'search.zero-results-rescue': MODEL_NARROW_PRODUCT_ZONE,
 	},
 	account: {
 		'account.welcome': FIXED_ZONE,
@@ -101,7 +118,7 @@ function observedStorefrontPolicy(brandId: 'bealls' | 'beallsflorida'): BrandCom
 	return {
 		organizationId: 'example-merchant',
 		brandId,
-		policyVersion: `${brandId}-executable-runtime-v6`,
+		policyVersion: `${brandId}-bounded-ai-runtime-v7`,
 		maximum: { capabilities: AUTONOMY_CAPABILITIES, decisionMode: 'model', publicationMode: 'live' },
 		reference: { state: 'uncontracted' },
 		surfaces: {
@@ -121,11 +138,17 @@ function observedStorefrontPolicy(brandId: 'bealls' | 'beallsflorida'): BrandCom
 const homecentric: BrandCompositionPolicy = {
 	organizationId: 'example-merchant',
 	brandId: 'homecentric',
-	policyVersion: 'homecentric-executable-runtime-v6',
+	policyVersion: 'homecentric-executable-runtime-v7',
 	maximum: { capabilities: AUTONOMY_CAPABILITIES, decisionMode: 'model', publicationMode: 'live' },
 	reference: { state: 'uncontracted' },
 	surfaces: {
-		home: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live', zoneOverrides: ZONE_OVERRIDES.home },
+		home: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live', zoneOverrides: {
+			'home.hero': FIXED_ZONE,
+			'home.featured-row': FIXED_ZONE,
+			'home.editorial-strip': FIXED_ZONE,
+			'home.brand-spotlight': FIXED_ZONE,
+			'home.below-fold': FIXED_ZONE,
+		} },
 		category: { preset: 'preserve', capabilities: [], decisionMode: 'fixed', publicationMode: 'live' },
 		locator: SHARED_SURFACES.locator,
 		'style-guide': SHARED_SURFACES['style-guide'],
