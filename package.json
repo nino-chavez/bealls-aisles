@@ -16,8 +16,10 @@
     "test:renderer-contract": "tsx src/lib/brand/bealls-family-renderer-contract.test.ts",
     "test:runtime-contract": "tsx src/lib/brand/bealls-family-runtime-contract.test.ts",
     "test:contracts": "npm run test:runtime-contract && npm run test:renderer-contract",
-    "test:all": "for test_file in $(find src -name '*.test.ts' -type f | sort); do tsx \"$test_file\" || exit 1; done",
-    "test": "npm run test:all",
+		"test:all": "for test_file in $(find src -name '*.test.ts' -type f | sort); do tsx \"$test_file\" || exit 1; done",
+		"test:commerce": "vitest run src/lib/commerce src/lib/server/commerce",
+		"test:commerce:browser": "playwright test tests/commerce-rendered.spec.ts",
+		"test": "npm run test:all && npm run test:commerce",
     "capture:runtime-parity": "node scripts/capture-runtime-parity.mjs",
     "warm-images": "npx tsx scripts/cache/warm-bc-images.ts"
   },
@@ -34,6 +36,7 @@
     "tsx": "^4.23.12",
     "typescript": "^5.8.0",
     "vite": "^6.3.0",
+    "vitest": "^3.2.7",
     "wrangler": "^4.123.0"
   },
   "dependencies": {

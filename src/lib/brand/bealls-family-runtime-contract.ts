@@ -65,6 +65,7 @@ const RUNTIME_ROUTE_DEFINITIONS = [
 	{ routeId: '/test/pdp-scaffold', path: '/test/pdp-scaffold', sourceFiles: ['src/routes/test/+layout.server.ts', 'src/routes/test/pdp-scaffold/+page.svelte'], audience: 'development', chrome: 'family', commerce: 'none', componentTree: ['development-access-gate', 'pdp-fixtures'], policySurface: null, availability: ALL_AVAILABLE },
 	{ routeId: '/+error', path: '<sveltekit-error>', sourceFiles: ['src/routes/+layout.server.ts', 'src/routes/+error.svelte'], audience: 'shopper', chrome: 'family', commerce: 'none', componentTree: ['fixed-empty-rescue', 'named-zone-terminals'], policySurface: 'reason-normalized', availability: ALL_AVAILABLE },
 	{ routeId: '/api/cart', path: '/api/cart', sourceFiles: ['src/routes/api/cart/+server.ts'], audience: 'runtime-api', chrome: 'none', commerce: 'cart', componentTree: ['cart-api'], policySurface: 'cart', availability: STOREFRONT_ONLY },
+	{ routeId: '/api/checkout/redirect', path: '/api/checkout/redirect', sourceFiles: ['src/routes/api/checkout/redirect/+server.ts'], audience: 'runtime-api', chrome: 'none', commerce: 'checkout-handoff', componentTree: ['hosted-checkout-handoff-api'], policySurface: 'checkout', availability: STOREFRONT_ONLY },
 	{ routeId: '/api/email-signup', path: '/api/email-signup', sourceFiles: ['src/routes/api/email-signup/+server.ts'], audience: 'runtime-api', chrome: 'none', commerce: 'none', componentTree: ['email-signup-api'], policySurface: null, availability: ALL_AVAILABLE },
 	{ routeId: '/api/layout', path: '/api/layout', sourceFiles: ['src/routes/api/layout/+server.ts'], audience: 'runtime-api', chrome: 'none', commerce: 'none', componentTree: ['shopper-model-execution-retired'], policySurface: null, availability: NO_BRAND_AUTHORITY },
 	{ routeId: '/api/layout/stream', path: '/api/layout/stream', sourceFiles: ['src/routes/api/layout/stream/+server.ts'], audience: 'runtime-api', chrome: 'none', commerce: 'none', componentTree: ['whole-layout-publication-rejected'], policySurface: null, availability: NO_BRAND_AUTHORITY },
@@ -97,7 +98,8 @@ export const BEALLS_FAMILY_RUNTIME_ROUTES: readonly RuntimeRouteContract[] = RUN
 }));
 
 function methodsForRoute(routeId: string): readonly string[] {
-	if (routeId === '/api/cart') return ['GET', 'POST', 'PATCH'];
+	if (routeId === '/api/cart') return ['GET', 'POST', 'PATCH', 'DELETE'];
+	if (routeId === '/api/checkout/redirect') return ['POST'];
 	if (routeId === '/api/session/reset' || routeId === '/api/signals/finalize') return ['GET', 'POST'];
 	return [routeId.startsWith('/api/') ? (routeId === '/api/email-signup' || routeId === '/api/layout' || routeId === '/api/layout/stream' || routeId === '/api/refine' || routeId === '/api/signals' || routeId === '/api/suggest' ? 'POST' : 'GET') : 'GET'];
 }

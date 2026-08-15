@@ -1,9 +1,12 @@
 import type { LayoutServerLoad } from './$types';
 import { getBrand, getBrandMode } from '$lib/brand/config';
 import { executeTrustedErrorZones } from '$lib/server/shopper-route-runtime';
+import { getCommerceServiceBoundary, isCommerceEnabled } from '$lib/server/commerce/boundary';
+import { commerceSessionId } from '$lib/server/commerce/session';
 
 export const load: LayoutServerLoad = async ({ url, cookies, route }) => {
 	const brand = getBrand();
+	if (isCommerceEnabled()) commerceSessionId(cookies);
 
 	// Dev mode: ?dev=true turns it on, ?dev=false turns it off, cookie persists
 	const devParam = url.searchParams.get('dev');
@@ -43,5 +46,6 @@ export const load: LayoutServerLoad = async ({ url, cookies, route }) => {
 		devMode,
 		personaHint,
 		notFoundZoneExecution,
+		commerceServices: getCommerceServiceBoundary(),
 	};
 };

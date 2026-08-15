@@ -1,59 +1,46 @@
 import type { PageServerLoad } from './$types';
-import { getCachedCart, getSessionCookie } from '$lib/server/cart-store';
-import { getCart } from '$lib/server/bigcommerce';
 import { loadProductsByTagOverlapAggregate } from '$lib/server/catalog';
 import { getBrand } from '$lib/brand/config';
 import { requireBrandSurface } from '$lib/server/brand-surface-guard';
 import { executeBoundedShopperPageRoute, executeShopperPageRoute, executeTrustedErrorZones } from '$lib/server/shopper-route-runtime';
 import { productCandidates } from '$lib/server/bounded-ai';
 import { projectShopperProducts } from '$lib/foundation/shopper-product';
+import { getCommerceServiceBoundary, isCommerceEnabled } from '$lib/server/commerce/boundary';
+import { commerceService } from '$lib/server/commerce/service';
+import { commerceSessionId } from '$lib/server/commerce/session';
 
-/**
- * /cart — full cart page (companion to the cart drawer).
- *
- * The drawer is the primary cart UX; the page is the surface BC's
- * "review cart" link can route to if a merchant wants pre-checkout
- * customization. Both render the same blocks; the page is just sized
- * for a full-width review rather than a 384px drawer.
- *
- * Cart state is read from the cart-store cache (BC headless carts
- * aren't visible to `site.cart()` without the visitor session cookie
- * replay; the cache is the source of truth — see cart-store.ts).
- */
 export const load: PageServerLoad = async ({ cookies, url }) => {
 	requireBrandSurface('cart');
-	const cartId = cookies.get('bc_cart_id');
 	const brand = getBrand();
+	const services = getCommerceServiceBoundary();
 	const freeShippingThresholdMinor = brand.incentives?.freeShippingThresholdMinor ?? null;
 
-	if (!cartId) {
+	if (!isCommerceEnabled()) {
 		const zoneExecution = await executeShopperPageRoute(url, '/cart');
 		return {
 			cart: null,
 			itemCount: 0,
 			subtotal: 0,
+			cartError: null,
+			services,
 			freeShippingThreshold: freeShippingThresholdMinor != null ? freeShippingThresholdMinor / 100 : null,
 			zoneExecution,
 			emptyZoneExecution: await executeTrustedErrorZones(url, 'empty'),
 		};
 	}
 
-	let cart = (await getCachedCart(cartId))?.cart ?? null;
-	if (!cart) {
-		const sessionCookie = (await getSessionCookie(cartId)) ?? undefined;
-		try {
-			cart = await getCart(cartId, sessionCookie);
-		} catch {
-			cart = null;
-		}
-	}
+	const result = await commerceService.read(commerceSessionId(cookies));
+	const cart = result.ok ? result.data.cart : null;
+	const cartError = result.ok ? null : result.error;
+	const lines = cart?.lines ?? [];
+	const itemCount = cart?.itemCount ?? 0;
+	const subtotal = cart?.subtotal.value ?? 0;
 
-	const items = cart?.lineItems.physicalItems ?? [];
-	const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
-	const subtotal = items.reduce((sum, i) => sum + i.salePrice.value * i.quantity, 0);
-
-	const candidateProducts = items.length > 0
-		? await loadProductsByTagOverlapAggregate(items.map((item) => item.productEntityId), { minOverlap: 2, limit: 8 }).catch(() => [])
+	const candidateProducts = lines.length > 0
+		? await loadProductsByTagOverlapAggregate(
+				lines.map((line) => line.productEntityId),
+				{ minOverlap: 2, limit: 8 },
+			).catch(() => [])
 		: [];
 	const safeFallbackZones = candidateProducts.length > 0
 		? {
@@ -77,9 +64,11 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
 		cart,
 		itemCount,
 		subtotal,
+		cartError,
+		services,
 		freeShippingThreshold: freeShippingThresholdMinor != null ? freeShippingThresholdMinor / 100 : null,
 		zoneExecution: bounded.zoneExecution,
 		upsellProducts: projectShopperProducts(candidateProducts),
-		emptyZoneExecution: items.length === 0 ? await executeTrustedErrorZones(url, 'empty') : null,
+		emptyZoneExecution: lines.length === 0 ? await executeTrustedErrorZones(url, 'empty') : null,
 	};
 };

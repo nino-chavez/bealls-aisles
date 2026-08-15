@@ -18,28 +18,32 @@
 
 	const items: CartLineItem[] = [
 		{
-			entityId: 'li1',
+			lineId: 'li1',
 			productEntityId: 1001,
-			productSlug: 'walnut-coffee-table',
+			variantEntityId: null,
+			productPath: '/product/walnut-coffee-table',
 			name: 'Walnut coffee table',
 			quantity: 1,
-			salePrice: { value: 249.0 },
-			listPrice: { value: 349.0 },
+			unitPrice: { value: 249.0, currencyCode: 'USD' },
+			extendedPrice: { value: 249.0, currencyCode: 'USD' },
 			imageUrl: 'https://picsum.photos/seed/walnut/200/200',
+			isMutable: true,
 		},
 		{
-			entityId: 'li2',
+			lineId: 'li2',
 			productEntityId: 1002,
-			productSlug: 'linen-throw-blanket',
+			variantEntityId: null,
+			productPath: '/product/linen-throw-blanket',
 			name: 'Linen throw blanket',
 			quantity: 2,
-			salePrice: { value: 39.0 },
-			listPrice: { value: 39.0 },
+			unitPrice: { value: 39.0, currencyCode: 'USD' },
+			extendedPrice: { value: 78.0, currencyCode: 'USD' },
 			imageUrl: 'https://picsum.photos/seed/linen/200/200',
+			isMutable: true,
 		},
 	];
 
-	const subtotal = items.reduce((sum, i) => sum + i.salePrice.value * i.quantity, 0);
+	const subtotal = items.reduce((sum, i) => sum + i.extendedPrice.value, 0);
 
 	const upsellProducts: Product[] = [
 		{

@@ -17,13 +17,17 @@ export function _setBigCommerceQueryAccessObserverForTest(observer: (() => void)
 
 function getGraphQLConfig() {
 	const brand = getBrand();
-	// Brand-specific storefront tokens: BEALLS_STOREFRONT_TOKEN, BEALLSFLORIDA_STOREFRONT_TOKEN, etc.
-	const tokenKey = `${brand.id.toUpperCase()}_STOREFRONT_TOKEN`;
+	const privateTokenKey = `${brand.id.toUpperCase()}_STOREFRONT_PRIVATE_TOKEN`;
+	const legacyTokenKey = `${brand.id.toUpperCase()}_STOREFRONT_TOKEN`;
 	const storeHash = process.env.BIGCOMMERCE_STORE_HASH;
-	const storefrontToken = process.env[tokenKey] || process.env.BIGCOMMERCE_STOREFRONT_TOKEN;
+	const storefrontToken =
+		process.env[privateTokenKey] ||
+		process.env.BIGCOMMERCE_STOREFRONT_PRIVATE_TOKEN ||
+		process.env[legacyTokenKey] ||
+		process.env.BIGCOMMERCE_STOREFRONT_TOKEN;
 
 	if (!storeHash) throw new Error('BIGCOMMERCE_STORE_HASH not configured');
-	if (!storefrontToken) throw new Error(`Storefront token not configured (tried ${tokenKey} and BIGCOMMERCE_STOREFRONT_TOKEN)`);
+	if (!storefrontToken) throw new Error(`Storefront token not configured for ${brand.id}`);
 
 	// Non-default channels need channel ID in the URL hostname
 	const channelId = brand.bc.channelId;
@@ -38,72 +42,91 @@ function getGraphQLConfig() {
 }
 
 interface GraphQLResponse<T> {
-	data: T;
-	errors?: Array<{ message: string }>;
+	data?: T;
+	errors?: Array<{ message: string; extensions?: { code?: string } }>;
 }
 
 async function query<T>(gql: string, variables?: Record<string, unknown>): Promise<T> {
-	const { data } = await rawQuery<T>(gql, variables);
-	return data;
-}
-
-async function rawQuery<T>(
-	gql: string,
-	variables?: Record<string, unknown>,
-	opts: { sessionCookie?: string } = {},
-): Promise<{ data: T; sessionCookie: string | null }> {
 	if (isParityFixtureEnabled()) {
 		throw new Error('BigCommerce access is disabled by the parity fixture');
 	}
 	queryAccessObserverForTest?.();
 	const { url, token } = getGraphQLConfig();
-	// BC's Storefront GraphQL enforces an Origin check matching the token's
-	// allowed_cors_origins. Server-to-server fetches sometimes have an Origin
-	// implicitly added by the runtime; explicitly setting it to localhost
-	// (which is in every token's allowed list) is the most reliable bridge.
-	const headers: Record<string, string> = {
-		'Content-Type': 'application/json',
-		Authorization: `Bearer ${token}`,
-		Origin: 'http://localhost:5173',
-	};
-	// BC scopes cart mutations/queries to a visitor session. The session
-	// cookie comes back from cart.createCart and must be replayed on
-	// subsequent cart calls — otherwise BC returns "Cart does not exist".
-	if (opts.sessionCookie) {
-		headers.Cookie = opts.sessionCookie;
+	const isMutation = /\bmutation\b/.test(gql);
+	// Stateless server-to-server requests use a private Storefront token and
+	// the opaque cart entity ID. They deliberately send no Origin or shopper
+	// session cookie. See BigCommerce's current token guidance:
+	// https://docs.bigcommerce.com/developer/api-reference/rest/admin/authentication-apis/storefront-api-tokens/overview
+	let res: Response;
+	try {
+		res = await fetch(url, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`,
+			},
+			body: JSON.stringify({ query: gql, variables }),
+			signal: AbortSignal.timeout(20_000),
+		});
+	} catch {
+		throw new BigCommerceGraphQLError('BigCommerce could not be reached.', {
+			outcomeUnknown: isMutation,
+		});
 	}
-	const res = await fetch(url, {
-		method: 'POST',
-		headers,
-		body: JSON.stringify({ query: gql, variables }),
-	});
 
 	if (!res.ok) {
-		throw new Error(`BigCommerce GraphQL error: ${res.status} ${res.statusText}`);
+		throw new BigCommerceGraphQLError('BigCommerce rejected the request.', {
+			status: res.status,
+			outcomeUnknown: isMutation && res.status >= 500,
+		});
 	}
 
-	const json: GraphQLResponse<T> = await res.json();
+	let json: GraphQLResponse<T>;
+	try {
+		json = (await res.json()) as GraphQLResponse<T>;
+	} catch {
+		throw new BigCommerceGraphQLError('BigCommerce returned an unreadable response.', {
+			outcomeUnknown: isMutation,
+		});
+	}
 
 	if (json.errors?.length) {
-		console.error('GraphQL errors:', json.errors);
-		throw new Error(json.errors[0].message);
+		const providerCode = json.errors[0].extensions?.code;
+		const hint = `${providerCode ?? ''} ${json.errors[0].message}`.toLowerCase();
+		const conflict = hint.includes('conflict') || hint.includes('version');
+		console.error('BigCommerce GraphQL request returned an application error.', {
+			count: json.errors.length,
+			code: providerCode ?? 'unspecified',
+		});
+		throw new BigCommerceGraphQLError(json.errors[0].message, {
+			providerCode,
+			outcomeUnknown: isMutation && !conflict,
+		});
 	}
 
-	return { data: json.data, sessionCookie: extractSessionCookie(res.headers) };
+	if (!json.data) {
+		throw new BigCommerceGraphQLError('BigCommerce returned no data.', {
+			outcomeUnknown: isMutation,
+		});
+	}
+	return json.data;
 }
 
-/**
- * BC may return multiple Set-Cookie headers. Concatenate the relevant
- * cart-session entries into a single Cookie header value for replay.
- */
-function extractSessionCookie(headers: Headers): string | null {
-	const raw =
-		typeof (headers as unknown as { getSetCookie?: () => string[] }).getSetCookie === 'function'
-			? (headers as unknown as { getSetCookie: () => string[] }).getSetCookie()
-			: headers.get('set-cookie')?.split(/,(?=\s*[A-Za-z0-9_\-]+=)/) ?? [];
-	if (!raw.length) return null;
-	const parts = raw.map((c) => c.split(';')[0].trim()).filter(Boolean);
-	return parts.length ? parts.join('; ') : null;
+export class BigCommerceGraphQLError extends Error {
+	readonly status: number | null;
+	readonly providerCode: string | null;
+	readonly outcomeUnknown: boolean;
+
+	constructor(
+		message: string,
+		options: { status?: number; providerCode?: string; outcomeUnknown?: boolean } = {},
+	) {
+		super(message);
+		this.name = 'BigCommerceGraphQLError';
+		this.status = options.status ?? null;
+		this.providerCode = options.providerCode ?? null;
+		this.outcomeUnknown = options.outcomeUnknown ?? false;
+	}
 }
 
 // ─── Queries ────────────────────────────────────────────────────────
@@ -338,6 +361,49 @@ export async function getProductByEntityId(entityId: number): Promise<BCProduct 
 	return data.site.product;
 }
 
+export interface CartProductEligibility {
+	entityId: number;
+	isInStock: boolean;
+	hasOptions: boolean;
+}
+
+/** Revalidate the minimum optionless, one-time cart boundary from provider-owned catalog data. */
+export async function getCartProductEligibility(entityId: number): Promise<CartProductEligibility | null> {
+	if (isParityFixtureEnabled()) {
+		const product = parityBCProducts().find((candidate) => candidate.entityId === entityId);
+		return product ? { entityId, isInStock: true, hasOptions: false } : null;
+	}
+	const data = await query<{
+		site: {
+			product: {
+				entityId: number;
+				inventory: { isInStock: boolean } | null;
+				productOptions: { edges: Array<{ node: { entityId: number } }> };
+			} | null;
+		};
+	}>(
+		`
+		query GetCartProductEligibility($entityId: Int!) {
+			site {
+				product(entityId: $entityId) {
+					entityId
+					inventory { isInStock }
+					productOptions(first: 1) { edges { node { entityId } } }
+				}
+			}
+		}
+	`,
+		{ entityId },
+	);
+	const product = data.site.product;
+	if (!product) return null;
+	return {
+		entityId: product.entityId,
+		isInStock: product.inventory?.isInStock === true,
+		hasOptions: product.productOptions.edges.length > 0,
+	};
+}
+
 /**
  * Per-process category tree cache. The brand's category tree is fetched by
  * every page that resolves a category slug or builds nav, plus inside
@@ -386,22 +452,52 @@ export async function getCategories() {
 
 export interface CartResponse {
 	entityId: string;
+	version: number;
+	currencyCode: string;
+	amount: { value: number; currencyCode: string };
+	baseAmount: { value: number; currencyCode: string };
 	lineItems: {
 		physicalItems: Array<{
 			entityId: string;
 			productEntityId: number;
+			variantEntityId: number | null;
 			name: string;
 			quantity: number;
-			salePrice: { value: number; currencyCode: string };
+			salePrice: { value: number; currencyCode: string } | null;
 			listPrice: { value: number; currencyCode: string };
-			imageUrl: string;
-			/** BC product path, e.g. "/women-s-floral-print-top/" — used by cart UI to link back to the PDP. */
-			url?: string;
-			/** Slug derived from url for `/product/[slug]` routing. */
-			productSlug?: string;
+			extendedSalePrice: { value: number; currencyCode: string } | null;
+			extendedListPrice: { value: number; currencyCode: string };
+			imageUrl: string | null;
+			path: string;
+			isMutable: boolean;
 		}>;
 	};
 }
+
+const CART_FRAGMENT = /* GraphQL */ `
+	entityId
+	version
+	currencyCode
+	amount { value currencyCode }
+	baseAmount { value currencyCode }
+	lineItems {
+		physicalItems {
+			entityId
+			productEntityId
+			variantEntityId
+			name
+			quantity
+			salePrice { value currencyCode }
+			listPrice { value currencyCode }
+			extendedSalePrice { value currencyCode }
+			extendedListPrice { value currencyCode }
+			imageUrl
+			path
+			isMutable
+		}
+	}
+`;
+
 
 const parityCarts = new Map<string, CartResponse>();
 
@@ -413,322 +509,315 @@ function parityProductOrThrow(productEntityId: number): BCProduct {
 
 function parityLineItem(productEntityId: number, quantity: number): CartResponse['lineItems']['physicalItems'][number] {
 	const product = parityProductOrThrow(productEntityId);
+	const salePrice = product.prices.salePrice ?? product.prices.price;
 	return {
 		entityId: `parity-line-${productEntityId}`,
 		productEntityId,
+		variantEntityId: null,
 		name: product.name,
 		quantity,
-		salePrice: product.prices.salePrice ?? product.prices.price,
+		salePrice,
 		listPrice: product.prices.price,
-		imageUrl: product.defaultImage?.url ?? '',
-		url: product.path,
-		productSlug: product.path.replace(/^\/+|\/+$/g, ''),
+		extendedSalePrice: { ...salePrice, value: salePrice.value * quantity },
+		extendedListPrice: { ...product.prices.price, value: product.prices.price.value * quantity },
+		imageUrl: product.defaultImage?.url ?? null,
+		path: product.path,
+		isMutable: true,
 	};
 }
 
-function parityCartId(): string {
-	return `parity-cart-${getBrand().id}`;
+function recalculateParityCart(cart: CartResponse): void {
+	for (const line of cart.lineItems.physicalItems) {
+		const salePrice = line.salePrice ?? line.listPrice;
+		line.extendedSalePrice = { ...salePrice, value: salePrice.value * line.quantity };
+		line.extendedListPrice = { ...line.listPrice, value: line.listPrice.value * line.quantity };
+	}
+	const value = cart.lineItems.physicalItems.reduce(
+		(sum, line) => sum + (line.salePrice ?? line.listPrice).value * line.quantity,
+		0,
+	);
+	cart.amount = { value, currencyCode: cart.currencyCode };
+	cart.baseAmount = { value, currencyCode: cart.currencyCode };
 }
 
 function parityCartSnapshot(cart: CartResponse): CartResponse {
 	return structuredClone(cart);
 }
 
-function requireParityCart(cartEntityId: string): CartResponse {
+function requireParityCart(cartEntityId: string, version?: number): CartResponse {
 	const cart = parityCarts.get(cartEntityId);
 	if (!cart) throw new Error(`Parity cart ${cartEntityId} does not exist`);
+	if (version !== undefined && cart.version !== version) {
+		throw new BigCommerceGraphQLError('Parity cart version conflict.', { status: 409 });
+	}
 	return cart;
 }
 
 /**
- * Result of a cart mutation: the cart payload plus the BC visitor session
- * cookie that scoped it. The cookie must be replayed on subsequent cart
- * operations against the same cartEntityId — without it BC returns
- * "Cart does not exist" because the new request has no session linkage.
+ * Headless cart operations use the current Storefront GraphQL cart API.
+ * BigCommerce owns the cart, prices, and version used for optimistic concurrency.
+ * Verified 2026-08-14 against:
+ * https://docs.bigcommerce.com/developer/docs/admin/checkout-and-cart/custom-checkouts/graphql-storefront
+ * and the current official Catalyst-generated GraphQL schema for Cart.version.
  */
-export interface CartMutationResult {
-	cart: CartResponse;
-	sessionCookie: string | null;
-}
 
-export async function createCart(productEntityId: number, quantity = 1): Promise<CartMutationResult> {
+export async function createCart(productEntityId: number, quantity = 1): Promise<CartResponse> {
 	if (isParityFixtureEnabled()) {
 		const cart: CartResponse = {
-			entityId: parityCartId(),
+			entityId: `parity-cart-${getBrand().id}`,
+			version: 1,
+			currencyCode: 'USD',
+			amount: { value: 0, currencyCode: 'USD' },
+			baseAmount: { value: 0, currencyCode: 'USD' },
 			lineItems: { physicalItems: [parityLineItem(productEntityId, quantity)] },
 		};
+		recalculateParityCart(cart);
 		parityCarts.set(cart.entityId, cart);
-		return { cart: parityCartSnapshot(cart), sessionCookie: null };
+		return parityCartSnapshot(cart);
 	}
-	interface CreateCartResponse { cart: { createCart: { cart: CartResponse } } }
 
-	const { data, sessionCookie } = await rawQuery<CreateCartResponse>(`
+	interface CreateCartResponse {
+		cart?: { createCart?: { cart?: CartResponse | null } | null } | null;
+	}
+
+	const data = await query<CreateCartResponse>(
+		`
 		mutation CreateCart($productId: Int!, $quantity: Int!) {
 			cart {
 				createCart(input: {
 					lineItems: [{ productEntityId: $productId, quantity: $quantity }]
 				}) {
 					cart {
-						entityId
-						lineItems {
-							physicalItems {
-								entityId
-								productEntityId
-								name
-								quantity
-								salePrice { value currencyCode }
-								listPrice { value currencyCode }
-								imageUrl
-								url
-							}
-						}
+						${CART_FRAGMENT}
 					}
 				}
 			}
 		}
-	`, { productId: productEntityId, quantity });
+	`,
+		{ productId: productEntityId, quantity },
+	);
 
-	const cart = data.cart.createCart.cart;
-	if (cart) decorateCartSlugs(cart);
-	return { cart, sessionCookie };
+	return requireMutationCart(data.cart?.createCart?.cart, 'BigCommerce did not confirm cart creation.');
 }
 
-export async function addToCart(
-	cartEntityId: string,
-	productEntityId: number,
-	quantity = 1,
-	sessionCookie?: string,
-): Promise<CartMutationResult> {
+export async function addToCart(cartEntityId: string, productEntityId: number, quantity = 1, version?: number): Promise<CartResponse> {
 	if (isParityFixtureEnabled()) {
-		const cart = requireParityCart(cartEntityId);
-		const item = cart.lineItems.physicalItems.find((candidate) => candidate.productEntityId === productEntityId);
-		if (item) item.quantity += quantity;
+		const cart = requireParityCart(cartEntityId, version);
+		const line = cart.lineItems.physicalItems.find((candidate) => candidate.productEntityId === productEntityId);
+		if (line) line.quantity += quantity;
 		else cart.lineItems.physicalItems.push(parityLineItem(productEntityId, quantity));
-		return { cart: parityCartSnapshot(cart), sessionCookie: null };
+		cart.version += 1;
+		recalculateParityCart(cart);
+		return parityCartSnapshot(cart);
 	}
-	interface AddToCartResponse { cart: { addCartLineItems: { cart: CartResponse } } }
 
-	const { data, sessionCookie: nextCookie } = await rawQuery<AddToCartResponse>(`
-		mutation AddToCart($cartId: String!, $productId: Int!, $quantity: Int!) {
+	interface AddToCartResponse {
+		cart?: { addCartLineItems?: { cart?: CartResponse | null } | null } | null;
+	}
+
+	const data = await query<AddToCartResponse>(
+		`
+		mutation AddToCart($cartId: String!, $productId: Int!, $quantity: Int!, $version: Int) {
 			cart {
 				addCartLineItems(input: {
 					cartEntityId: $cartId,
+					version: $version,
 					data: { lineItems: [{ productEntityId: $productId, quantity: $quantity }] }
 				}) {
 					cart {
-						entityId
-						lineItems {
-							physicalItems {
-								entityId
-								productEntityId
-								name
-								quantity
-								salePrice { value currencyCode }
-								listPrice { value currencyCode }
-								imageUrl
-								url
-							}
-						}
+						${CART_FRAGMENT}
 					}
 				}
 			}
 		}
-	`, { cartId: cartEntityId, productId: productEntityId, quantity }, { sessionCookie });
+	`,
+		{ cartId: cartEntityId, productId: productEntityId, quantity, version },
+	);
 
-	const cart = data.cart.addCartLineItems.cart;
-	if (cart) decorateCartSlugs(cart);
-	return { cart, sessionCookie: nextCookie ?? sessionCookie ?? null };
+	return requireMutationCart(data.cart?.addCartLineItems?.cart, 'BigCommerce did not confirm the added item.');
 }
 
-export async function updateCartLineItem(
-	cartEntityId: string,
-	lineItemEntityId: string,
-	productEntityId: number,
-	quantity: number,
-	sessionCookie?: string,
-): Promise<CartMutationResult> {
+export async function getCart(cartEntityId: string): Promise<CartResponse | null> {
+	if (isParityFixtureEnabled()) {
+		const cart = parityCarts.get(cartEntityId);
+		return cart ? parityCartSnapshot(cart) : null;
+	}
+
+	interface GetCartResponse {
+		site: { cart: CartResponse | null };
+	}
+
+	const data = await query<GetCartResponse>(
+		`
+		query GetCart($cartId: String!) {
+			site {
+				cart(entityId: $cartId) {
+					${CART_FRAGMENT}
+				}
+			}
+		}
+	`,
+		{ cartId: cartEntityId },
+	);
+
+	return data.site.cart;
+}
+
+export async function updateCartLineItem(cartEntityId: string, lineItemEntityId: string, productEntityId: number, quantity: number, version: number): Promise<CartResponse> {
 	if (isParityFixtureEnabled()) {
 		parityProductOrThrow(productEntityId);
-		const cart = requireParityCart(cartEntityId);
-		const item = cart.lineItems.physicalItems.find((candidate) => candidate.entityId === lineItemEntityId);
-		if (!item) throw new Error(`Parity line item ${lineItemEntityId} does not exist`);
-		item.quantity = quantity;
-		return { cart: parityCartSnapshot(cart), sessionCookie: null };
+		const cart = requireParityCart(cartEntityId, version);
+		const line = cart.lineItems.physicalItems.find((candidate) => candidate.entityId === lineItemEntityId);
+		if (!line) throw new Error(`Parity line item ${lineItemEntityId} does not exist`);
+		line.quantity = quantity;
+		cart.version += 1;
+		recalculateParityCart(cart);
+		return parityCartSnapshot(cart);
 	}
-	interface UpdateLineItemResponse { cart: { updateCartLineItem: { cart: CartResponse } } }
 
-	const { data, sessionCookie: nextCookie } = await rawQuery<UpdateLineItemResponse>(`
-		mutation UpdateLineItem($cartId: String!, $lineItemId: String!, $productId: Int!, $quantity: Int!) {
+	const data = await query<{
+		cart?: { updateCartLineItem?: { cart?: CartResponse | null } | null } | null;
+	}>(
+		`
+		mutation UpdateCartLineItem($cartId: String!, $lineId: String!, $productId: Int!, $quantity: Int!, $version: Int!) {
 			cart {
 				updateCartLineItem(input: {
 					cartEntityId: $cartId,
-					lineItemEntityId: $lineItemId,
+					lineItemEntityId: $lineId,
+					version: $version,
 					data: { lineItem: { productEntityId: $productId, quantity: $quantity } }
 				}) {
-					cart {
-						entityId
-						lineItems {
-							physicalItems {
-								entityId
-								productEntityId
-								name
-								quantity
-								salePrice { value currencyCode }
-								listPrice { value currencyCode }
-								imageUrl
-								url
-							}
-						}
-					}
+					cart { ${CART_FRAGMENT} }
 				}
 			}
 		}
-	`, { cartId: cartEntityId, lineItemId: lineItemEntityId, productId: productEntityId, quantity }, { sessionCookie });
-
-	const cart = data.cart.updateCartLineItem.cart;
-	if (cart) decorateCartSlugs(cart);
-	return { cart, sessionCookie: nextCookie ?? sessionCookie ?? null };
+	`,
+		{
+			cartId: cartEntityId,
+			lineId: lineItemEntityId,
+			productId: productEntityId,
+			quantity,
+			version,
+		},
+	);
+	return requireMutationCart(data.cart?.updateCartLineItem?.cart, 'BigCommerce did not confirm the quantity update.');
 }
 
-export async function deleteCartLineItem(
-	cartEntityId: string,
-	lineItemEntityId: string,
-	sessionCookie?: string,
-): Promise<{ cart: CartResponse | null; sessionCookie: string | null }> {
+export async function deleteCartLineItem(cartEntityId: string, lineItemEntityId: string, version: number): Promise<CartResponse | null> {
 	if (isParityFixtureEnabled()) {
-		const cart = requireParityCart(cartEntityId);
+		const cart = requireParityCart(cartEntityId, version);
 		const index = cart.lineItems.physicalItems.findIndex((candidate) => candidate.entityId === lineItemEntityId);
 		if (index < 0) throw new Error(`Parity line item ${lineItemEntityId} does not exist`);
 		cart.lineItems.physicalItems.splice(index, 1);
 		if (cart.lineItems.physicalItems.length === 0) {
 			parityCarts.delete(cartEntityId);
-			return { cart: null, sessionCookie: null };
+			return null;
 		}
-		return { cart: parityCartSnapshot(cart), sessionCookie: null };
+		cart.version += 1;
+		recalculateParityCart(cart);
+		return parityCartSnapshot(cart);
 	}
-	interface DeleteLineItemResponse { cart: { deleteCartLineItem: { cart: CartResponse | null } } }
 
-	const { data, sessionCookie: nextCookie } = await rawQuery<DeleteLineItemResponse>(`
-		mutation DeleteLineItem($cartId: String!, $lineItemId: String!) {
+	const data = await query<{
+		cart?: {
+			deleteCartLineItem?: {
+				cart?: CartResponse | null;
+				deletedCartEntityId?: string | null;
+			} | null;
+		} | null;
+	}>(
+		`
+		mutation DeleteCartLineItem($cartId: String!, $lineId: String!, $version: Int!) {
 			cart {
 				deleteCartLineItem(input: {
 					cartEntityId: $cartId,
-					lineItemEntityId: $lineItemId
+					lineItemEntityId: $lineId,
+					version: $version
 				}) {
-					cart {
-						entityId
-						lineItems {
-							physicalItems {
-								entityId
-								productEntityId
-								name
-								quantity
-								salePrice { value currencyCode }
-								listPrice { value currencyCode }
-								imageUrl
-								url
-							}
-						}
-					}
+					deletedCartEntityId
+					cart { ${CART_FRAGMENT} }
 				}
 			}
 		}
-	`, { cartId: cartEntityId, lineItemId: lineItemEntityId }, { sessionCookie });
+	`,
+		{ cartId: cartEntityId, lineId: lineItemEntityId, version },
+	);
+	const result = data.cart?.deleteCartLineItem;
+	if (result?.cart) return result.cart;
+	if (result?.deletedCartEntityId === cartEntityId) return null;
+	throw new BigCommerceGraphQLError('BigCommerce did not confirm line removal.', { outcomeUnknown: true });
+}
 
-	const cart = data.cart.deleteCartLineItem.cart;
-	if (cart) decorateCartSlugs(cart);
-	return { cart, sessionCookie: nextCookie ?? sessionCookie ?? null };
+export async function deleteCart(cartEntityId: string): Promise<void> {
+	if (isParityFixtureEnabled()) {
+		if (!parityCarts.delete(cartEntityId)) throw new Error(`Parity cart ${cartEntityId} does not exist`);
+		return;
+	}
+
+	const data = await query<{
+		cart: { deleteCart: { deletedCartEntityId: string | null } | null };
+	}>(
+		`
+		mutation DeleteCart($cartId: String!) {
+			cart {
+				deleteCart(input: { cartEntityId: $cartId }) { deletedCartEntityId }
+			}
+		}
+	`,
+		{ cartId: cartEntityId },
+	);
+	if (data.cart.deleteCart?.deletedCartEntityId !== cartEntityId) {
+		throw new BigCommerceGraphQLError('BigCommerce did not confirm the empty-cart operation.', { outcomeUnknown: true });
+	}
 }
 
 /**
- * Generate a BC Optimized Checkout redirect URL for a cart. BC's mutation
- * returns a short-lived signed URL that hands the shopper into BC's
- * hosted checkout with the cart contents + customer context attached.
- *
- * Trace: PRD-FND-010 (real checkout via BC Optimized One-Page handoff).
+ * Mint a one-use hosted checkout URL only when the shopper asks to continue.
+ * This does not create an order or collect payment in Aisles.
+ * Verified 2026-08-14 against:
+ * https://docs.bigcommerce.com/developer/learn/courses/composable-core/checkout/redirected-checkout
  */
-export async function getCheckoutRedirectUrl(
-	cartEntityId: string,
-	sessionCookie?: string,
-): Promise<string | null> {
+export async function createCartRedirectUrl(cartEntityId: string): Promise<string> {
 	if (isParityFixtureEnabled()) {
-		// Fixture evidence never mints an external checkout capability.
-		return null;
+		requireParityCart(cartEntityId);
+		return 'https://checkout.example.invalid/parity';
 	}
-	interface RedirectUrlsResponse {
-		cart: {
-			createCartRedirectUrls: {
-				redirectUrls: {
-					redirectedCheckoutUrl?: string | null;
-					embeddedCheckoutUrl?: string | null;
-				} | null;
+
+	const data = await query<{
+		cart?: {
+			createCartRedirectUrls?: {
+				redirectUrls: { redirectedCheckoutUrl: string | null } | null;
 			} | null;
-		};
-	}
-
+		} | null;
+	}>(
+		`
+		mutation CreateCartRedirectUrl($cartId: String!) {
+			cart {
+				createCartRedirectUrls(input: { cartEntityId: $cartId }) {
+					redirectUrls { redirectedCheckoutUrl }
+				}
+			}
+		}
+	`,
+		{ cartId: cartEntityId },
+	);
+	const value = data.cart?.createCartRedirectUrls?.redirectUrls?.redirectedCheckoutUrl;
+	if (!value) throw new BigCommerceGraphQLError('BigCommerce did not confirm a checkout handoff URL.', { outcomeUnknown: true });
+	let url: URL;
 	try {
-		const { data } = await rawQuery<RedirectUrlsResponse>(`
-			mutation CartRedirectUrls($cartId: String!) {
-				cart {
-					createCartRedirectUrls(input: { cartEntityId: $cartId }) {
-						redirectUrls {
-							redirectedCheckoutUrl
-							embeddedCheckoutUrl
-						}
-					}
-				}
-			}
-		`, { cartId: cartEntityId }, { sessionCookie });
-
-		const urls = data.cart?.createCartRedirectUrls?.redirectUrls;
-		return urls?.redirectedCheckoutUrl ?? urls?.embeddedCheckoutUrl ?? null;
-	} catch (err) {
-		console.warn('getCheckoutRedirectUrl failed:', err instanceof Error ? err.message : err);
-		return null;
+		url = new URL(value);
+	} catch {
+		throw new BigCommerceGraphQLError('BigCommerce returned an invalid checkout handoff URL.');
 	}
+	if (url.protocol !== 'https:') {
+		throw new BigCommerceGraphQLError('BigCommerce returned an insecure checkout handoff URL.');
+	}
+	return url.toString();
 }
 
-export async function getCart(cartEntityId: string, sessionCookie?: string): Promise<CartResponse | null> {
-	if (isParityFixtureEnabled()) {
-		const cart = parityCarts.get(cartEntityId);
-		return cart ? parityCartSnapshot(cart) : null;
-	}
-	interface GetCartResponse { site: { cart: CartResponse | null } }
-
-	const { data } = await rawQuery<GetCartResponse>(`
-		query GetCart($cartId: String!) {
-			site {
-				cart(entityId: $cartId) {
-					entityId
-					lineItems {
-						physicalItems {
-							entityId
-							productEntityId
-							name
-							quantity
-							salePrice { value currencyCode }
-							listPrice { value currencyCode }
-							imageUrl
-							url
-						}
-					}
-				}
-			}
-		}
-	`, { cartId: cartEntityId }, { sessionCookie });
-
-	const cart = data.site.cart;
-	if (cart) decorateCartSlugs(cart);
+function requireMutationCart(cart: CartResponse | null | undefined, message: string): CartResponse {
+	if (!cart) throw new BigCommerceGraphQLError(message, { outcomeUnknown: true });
 	return cart;
-}
-
-/** BC's `url` field comes back as `/{slug}/`; expose `productSlug` so cart UI can link back to /product/{slug}. */
-function decorateCartSlugs(cart: CartResponse): void {
-	for (const item of cart.lineItems.physicalItems) {
-		if (item.url) {
-			item.productSlug = item.url.replace(/^\/+|\/+$/g, '');
-		}
-	}
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────

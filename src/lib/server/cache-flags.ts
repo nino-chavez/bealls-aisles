@@ -4,8 +4,8 @@
  * Only the server-owned `AISLES_NO_CACHE=1` environment setting can bypass
  * caches. Shopper URLs and cookies are never cache authority.
  *
- * The cart cache is NOT bypassable — it's the cart-state truth, not a
- * perf optimization. Bypassing it would corrupt the cart.
+ * Commerce state is not handled here. BigCommerce remains cart truth and
+ * Aisles stores only the opaque server-owned session reference.
  */
 
 let warned = false;

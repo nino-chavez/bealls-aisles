@@ -32,6 +32,7 @@
 	);
 
 	const isCompact = $derived(columns >= 3);
+	const quickAddKeys = new Map<number, string>();
 
 	function badgeClass(label: string): string {
 		const l = label.toLowerCase();
@@ -149,17 +150,22 @@
 							btn.textContent = 'Adding...';
 							btn.disabled = true;
 							try {
+								const idempotencyKey = quickAddKeys.get(product.entityId) ?? crypto.randomUUID();
+								quickAddKeys.set(product.entityId, idempotencyKey);
 								const res = await fetch('/api/cart', {
 									method: 'POST',
-									headers: { 'Content-Type': 'application/json' },
+									headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
 									body: JSON.stringify({ productEntityId: product.entityId }),
 								});
-								if (res.ok) {
-									const data = await res.json();
+								const data = await res.json();
+								if (data.evidence) window.dispatchEvent(new CustomEvent('commerce-service-outcome', { detail: data.evidence }));
+								if (res.ok && data.evidence?.confirmed === true) {
+									quickAddKeys.delete(product.entityId);
 									btn.textContent = 'Added!';
-									window.dispatchEvent(new CustomEvent('cart-updated', { detail: { itemCount: data.itemCount } }));
+									window.dispatchEvent(new CustomEvent('cart-updated', { detail: { itemCount: data.itemCount, cart: data.cart } }));
 									setTimeout(() => { btn.textContent = 'Add to Cart'; btn.disabled = false; }, 1500);
 								} else {
+									if (!['provider_outcome_unknown', 'session_unavailable', 'operation_in_progress'].includes(data.error?.code)) quickAddKeys.delete(product.entityId);
 									btn.textContent = 'Failed';
 									setTimeout(() => { btn.textContent = 'Add to Cart'; btn.disabled = false; }, 1500);
 								}

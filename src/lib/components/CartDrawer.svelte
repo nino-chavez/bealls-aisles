@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import EmptyRescue from '$lib/components/EmptyRescue.svelte';
 	import CartLineItems from '$lib/components/layouts/sections/CartLineItems.svelte';
 	import CartSummary from '$lib/components/layouts/sections/CartSummary.svelte';
@@ -21,7 +22,7 @@
 
 	let items = $state<CartLineItem[]>([]);
 	let isLoading = $state(false);
-	let subtotal = $derived(items.reduce((sum, item) => sum + item.salePrice.value * item.quantity, 0));
+	let subtotal = $derived(items.reduce((sum, item) => sum + item.extendedPrice.value, 0));
 	let itemCount = $derived(items.reduce((sum, item) => sum + item.quantity, 0));
 
 	const brand = getBrand();
@@ -35,12 +36,22 @@
 		}
 	});
 
+	onMount(() => {
+		const handleUpdate = (event: Event) => {
+			const cart = (event as CustomEvent).detail?.cart;
+			if (cart) items = cart.lines ?? [];
+			else if ((event as CustomEvent).detail?.itemCount === 0) items = [];
+		};
+		window.addEventListener('cart-updated', handleUpdate);
+		return () => window.removeEventListener('cart-updated', handleUpdate);
+	});
+
 	async function loadCart() {
 		isLoading = true;
 		try {
 			const res = await fetch('/api/cart');
 			const data = await res.json();
-			items = data.cart?.lineItems?.physicalItems || [];
+			items = data.cart?.lines || [];
 		} catch {
 			items = [];
 		} finally {

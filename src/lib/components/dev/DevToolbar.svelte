@@ -16,6 +16,7 @@
 		getTraces,
 	} from '$lib/stores/dev-mode.svelte';
 	import { getBrand } from '$lib/brand/config';
+	import type { CommerceEvidence } from '$lib/commerce/cart-contract';
 
 	let mounted = $state(false);
 	let collapsed = $state(false);
@@ -24,12 +25,30 @@
 	// they can flip it back on without page refresh. Cleared only by
 	// `?dev=0` URL or by clearing localStorage manually.
 	let everActive = $state(false);
+	let commerceEvidence = $state<CommerceEvidence | null>(null);
 
 	onMount(() => {
 		initDevMode();
 		mounted = true;
 		if (isDevMode()) everActive = true;
+		const onCommerceOutcome = (event: Event) => {
+			const value = (event as CustomEvent).detail;
+			if (isCommerceEvidence(value)) commerceEvidence = value;
+		};
+		window.addEventListener('commerce-service-outcome', onCommerceOutcome);
+		return () => window.removeEventListener('commerce-service-outcome', onCommerceOutcome);
 	});
+
+	function isCommerceEvidence(value: unknown): value is CommerceEvidence {
+		if (!value || typeof value !== 'object') return false;
+		const evidence = value as Partial<CommerceEvidence>;
+		return typeof evidence.operation === 'string'
+			&& typeof evidence.attempted === 'boolean'
+			&& typeof evidence.confirmed === 'boolean'
+			&& (evidence.provider === 'bigcommerce' || evidence.provider === 'none')
+			&& evidence.modelCalls === 0
+			&& typeof evidence.correlationId === 'string';
+	}
 
 	const brand = getBrand();
 	const active = $derived(mounted && isDevMode());
@@ -87,6 +106,15 @@
 					<div class="row">
 						<span class="label">Cache hits</span>
 						<span class="value">{cacheHits}/{traces.length}</span>
+					</div>
+				{/if}
+				{#if commerceEvidence}
+					<div class="commerce-evidence" data-commerce-evidence>
+						<div class="row"><span class="label">Commerce</span><span class="value">{commerceEvidence.operation}</span></div>
+						<div class="row"><span class="label">Attempted</span><span class="value">{commerceEvidence.attempted ? 'yes' : 'no'}</span></div>
+						<div class="row"><span class="label">Confirmed</span><span class="value">{commerceEvidence.confirmed ? 'yes' : 'no'}</span></div>
+						<div class="row"><span class="label">State changed</span><span class="value">{commerceEvidence.commerceStateChanged}</span></div>
+						<div class="row"><span class="label">Model calls</span><span class="value">0</span></div>
 					</div>
 				{/if}
 				<div class="legend">
@@ -206,6 +234,12 @@
 		display: flex;
 		flex-direction: column;
 		gap: 3px;
+	}
+
+	.commerce-evidence {
+		margin-top: 6px;
+		padding-top: 6px;
+		border-top: 1px solid #27272a;
 	}
 
 	.legend-row {

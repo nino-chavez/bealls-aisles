@@ -28,6 +28,7 @@
 	let quantity = $state(1);
 	let isAdding = $state(false);
 	let message = $state('');
+	let addIdempotencyKey: string | null = null;
 
 	const fmt = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
 
@@ -36,16 +37,27 @@
 	}
 
 	async function addToCart() {
+		addIdempotencyKey ??= crypto.randomUUID();
 		isAdding = true;
 		message = '';
 		try {
 			const res = await fetch('/api/cart', {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+				headers: {
+					'Content-Type': 'application/json',
+					'Idempotency-Key': addIdempotencyKey,
+				},
 				body: JSON.stringify({ productEntityId, quantity }),
 			});
-			if (!res.ok) throw new Error('Failed to add to cart');
 			const result = await res.json();
+			if (result.evidence) window.dispatchEvent(new CustomEvent('commerce-service-outcome', { detail: result.evidence }));
+			if (!res.ok || result.evidence?.confirmed !== true) {
+				if (!['provider_outcome_unknown', 'session_unavailable', 'operation_in_progress'].includes(result.error?.code)) {
+					addIdempotencyKey = null;
+				}
+				throw new Error(result.error?.message || 'BigCommerce did not confirm the cart add.');
+			}
+			addIdempotencyKey = null;
 			message = `Added to cart (${result.itemCount} items)`;
 			showToast({
 				message: `Added to bag — ${productName ?? 'item'}`,
@@ -63,10 +75,10 @@
 				quantity,
 			});
 
-			window.dispatchEvent(new CustomEvent('cart-updated', { detail: { itemCount: result.itemCount } }));
+			window.dispatchEvent(new CustomEvent('cart-updated', { detail: { itemCount: result.itemCount, cart: result.cart } }));
 			setTimeout(() => (message = ''), 3000);
-		} catch {
-			message = 'Failed to add to cart';
+		} catch (cause) {
+			message = cause instanceof Error ? cause.message : 'Failed to add to cart';
 		} finally {
 			isAdding = false;
 		}
@@ -124,6 +136,6 @@
 	</div>
 
 	{#if message}
-		<p class="text-sm {message.includes('Failed') ? 'text-error' : 'text-success'}" aria-live="polite">{message}</p>
+		<p class="text-sm {message.startsWith('Added') ? 'text-success' : 'text-error'}" aria-live="polite">{message}</p>
 	{/if}
 </div>
