@@ -1,27 +1,24 @@
 <script lang="ts">
 	/**
 	 * Brand-strip cross-banner nav for the Bealls family.
-	 * Renders only when the active brand is one of: bealls, beallsflorida, homecentric.
 	 *
-	 * Each banner runs as its own Vercel project. When clicked, an inactive tab
-	 * links to that banner's deployment. The active banner's tab is non-navigating.
+	 * Bealls Florida and HOME centric were retired, so there is no sibling
+	 * banner left to link to. The strip renders nothing below two banners —
+	 * a one-tab strip is chrome that says nothing. The component is kept
+	 * rather than deleted because it is listed in
+	 * BEALLS_FAMILY_RENDERER_SOURCE_FILES, which is fingerprinted; restore
+	 * the sibling entries here if another banner ships.
 	 */
 
 	let { activeBrandId }: { activeBrandId: string } = $props();
 
 	const SISTER_URLS: Record<string, string> = {
 		bealls: 'https://aisles-demo-1-signal-x-studio-labs.vercel.app',
-		beallsflorida: 'https://aisles-demo-2-signal-x-studio-labs.vercel.app',
-		homecentric: 'https://aisles-demo-3-signal-x-studio-labs.vercel.app',
 	};
 
-	const banners = [
-		{ id: 'bealls', label: 'bealls' },
-		{ id: 'beallsflorida', label: 'Bealls Florida' },
-		{ id: 'homecentric', label: 'HOME centric' },
-	];
+	const banners = [{ id: 'bealls', label: 'bealls' }];
 
-	const isFamily = $derived(banners.some((b) => b.id === activeBrandId));
+	const isFamily = $derived(banners.length > 1 && banners.some((b) => b.id === activeBrandId));
 </script>
 
 {#if isFamily}
