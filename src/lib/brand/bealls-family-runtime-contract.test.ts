@@ -70,11 +70,11 @@ const discoveredRoutes = discoverExecutableRoutes(routeRoot);
 const declaredRoutes = [...BEALLS_FAMILY_RUNTIME_ROUTES].map((route) => route.routeId).sort();
 const discoveredHandlers = discoverAddressableHandlers(routeRoot);
 
-assert('all 30 executable page/error/API endpoints are inventoried', discoveredRoutes.length === 30
-	&& declaredRoutes.length === 30, `${discoveredRoutes.length}/${declaredRoutes.length}`);
+assert('all 31 executable page/error/API endpoints are inventoried', discoveredRoutes.length === 31
+	&& declaredRoutes.length === 31, `${discoveredRoutes.length}/${declaredRoutes.length}`);
 assert('route inventory exactly matches source', discoveredRoutes.join('\n') === declaredRoutes.join('\n'));
-assert('34 page-plus-method handlers are addressable', discoveredHandlers.length === 34
-	&& BEALLS_FAMILY_RUNTIME_HANDLERS.length === 34, `${discoveredHandlers.length}/${BEALLS_FAMILY_RUNTIME_HANDLERS.length}`);
+assert('36 page-plus-method handlers are addressable', discoveredHandlers.length === 36
+	&& BEALLS_FAMILY_RUNTIME_HANDLERS.length === 36, `${discoveredHandlers.length}/${BEALLS_FAMILY_RUNTIME_HANDLERS.length}`);
 assert('handler inventory exactly matches exported methods', discoveredHandlers.join('\n') === BEALLS_FAMILY_RUNTIME_HANDLERS
 	.map(({ routeId, method }) => `${method} ${routeId}`).sort().join('\n'));
 assert('browser parity viewports are exactly mobile, tablet, and desktop', JSON.stringify(PARITY_VIEWPORTS) === JSON.stringify({
@@ -221,7 +221,7 @@ assert('shopper projection preserves the exact public catalog contract and strip
 	&& !['personaFit', 'semanticTags', 'relevanceScore', 'overlapScore', 'sharedTags'].some((key) => key in shopperProduct));
 assert('every shopper SSR product boundary uses the same safe projection', [
 	'src/routes/+page.server.ts', 'src/routes/category/[slug]/+page.server.ts',
-	'src/routes/search/+page.server.ts', 'src/routes/account/+page.server.ts',
+	'src/routes/search/+page.server.ts',
 	'src/routes/product/[slug]/+page.server.ts',
 ].every((file) => read(file).includes('projectShopperProduct'))
 	&& !/^\s*homeProducts,\s*$/m.test(read('src/routes/+page.server.ts'))

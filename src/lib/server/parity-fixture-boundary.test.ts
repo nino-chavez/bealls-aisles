@@ -41,14 +41,10 @@ const [
 	},
 	{ createStoreFromRequest },
 	{
-		_setCartRedisAccessObserverForTest, _resetCartStoreForTest,
-		cacheCart, getCachedCart, getSessionCookie, evictCart,
-	},
-	{
 		_setBigCommerceQueryAccessObserverForTest,
 		getProducts, getProductsByCategory, getProductByPath, getProductsByEntityIds,
 		getProductByEntityId, getCategories, createCart, addToCart, updateCartLineItem,
-		deleteCartLineItem, getCart, getCheckoutRedirectUrl,
+		deleteCartLineItem, deleteCart, getCart, createCartRedirectUrl,
 	},
 	{ _setDecisionCacheRedisAccessObserverForTest, invalidateDecisionCache },
 ] = await Promise.all([
@@ -62,7 +58,6 @@ const [
 	import('./zone-retrieval-log'),
 	import('../signals/session'),
 	import('../signals/request'),
-	import('./cart-store'),
 	import('./bigcommerce'),
 	import('./cache'),
 ]);
@@ -70,13 +65,11 @@ const [
 let databaseAccesses = 0;
 let searchStrategyAccesses = 0;
 let sessionRedisAccesses = 0;
-let cartRedisAccesses = 0;
 let decisionCacheRedisAccesses = 0;
 let bigCommerceQueryAccesses = 0;
 _setDbAccessObserverForTest(() => { databaseAccesses++; });
 _setExternalSearchObserverForTest(() => { searchStrategyAccesses++; });
 _setSessionRedisAccessObserverForTest(() => { sessionRedisAccesses++; });
-_setCartRedisAccessObserverForTest(() => { cartRedisAccesses++; });
 _setDecisionCacheRedisAccessObserverForTest(() => { decisionCacheRedisAccesses++; });
 _setBigCommerceQueryAccessObserverForTest(() => { bigCommerceQueryAccesses++; });
 
@@ -134,17 +127,14 @@ try {
 	const productById = await getProductByEntityId(8001);
 	const categories = await getCategories();
 	const created = await createCart(8001, 1);
-	const added = await addToCart(created.cart.entityId, 8002, 2);
+	const added = await addToCart(created.entityId, 8002, 2, created.version);
 	const updated = await updateCartLineItem(
-		created.cart.entityId, 'parity-line-8002', 8002, 3,
+		created.entityId, 'parity-line-8002', 8002, 3, added.version,
 	);
-	const fetched = await getCart(created.cart.entityId);
-	const checkoutUrl = await getCheckoutRedirectUrl(created.cart.entityId);
-	const deleted = await deleteCartLineItem(created.cart.entityId, 'parity-line-8001');
-	await cacheCart(updated.cart, null);
-	const cached = await getCachedCart(updated.cart.entityId);
-	const cachedCookie = await getSessionCookie(updated.cart.entityId);
-	await evictCart(updated.cart.entityId);
+	const fetched = await getCart(created.entityId);
+	const checkoutUrl = await createCartRedirectUrl(created.entityId);
+	const deleted = await deleteCartLineItem(created.entityId, 'parity-line-8001', updated.version);
+	await deleteCart(created.entityId);
 	await invalidateDecisionCache();
 
 	assert('fixture search returns before OpenRouter even when a key is present',
@@ -161,17 +151,15 @@ try {
 	assert('fixture catalog and commerce paths use deterministic fakes with zero BigCommerce calls',
 		catalog.length === 12 && category.products.length === 12 && productByPath?.entityId === 8001
 		&& productsById.length === 2 && productById?.entityId === 8001 && categories.length > 0
-		&& created.cart.lineItems.physicalItems.length === 1
-		&& added.cart.lineItems.physicalItems.length === 2
-		&& updated.cart.lineItems.physicalItems.find((item) => item.entityId === 'parity-line-8002')?.quantity === 3
-		&& fetched?.lineItems.physicalItems.length === 2 && checkoutUrl === null
-		&& deleted.cart?.lineItems.physicalItems.length === 1
+		&& created.lineItems.physicalItems.length === 1
+		&& added.lineItems.physicalItems.length === 2
+		&& updated.lineItems.physicalItems.find((item) => item.entityId === 'parity-line-8002')?.quantity === 3
+		&& fetched?.lineItems.physicalItems.length === 2 && checkoutUrl === 'https://checkout.example.invalid/parity'
+		&& deleted?.lineItems.physicalItems.length === 1
 		&& bigCommerceQueryAccesses === 0,
 		`observed ${bigCommerceQueryAccesses} BigCommerce query acquisitions`);
-	assert('fixture cart and decision caches never acquire Upstash clients',
-		cached?.cart.entityId === updated.cart.entityId && cachedCookie === null
-		&& cartRedisAccesses === 0 && decisionCacheRedisAccesses === 0,
-		`observed cart=${cartRedisAccesses}, decision=${decisionCacheRedisAccesses}`);
+	assert('fixture decision cache never acquires an Upstash client', decisionCacheRedisAccesses === 0,
+		`observed decision=${decisionCacheRedisAccesses}`);
 	assert('hostile fixture credentials produce zero external fetches', networkFetches === 0,
 		`observed ${networkFetches}`);
 	const enrichSource = readFileSync(fileURLToPath(new URL('./enrichment/enrich.ts', import.meta.url)), 'utf8');
@@ -183,7 +171,6 @@ try {
 	_setBigCommerceQueryAccessObserverForTest(null);
 	_setDecisionCacheRedisAccessObserverForTest(null);
 	_resetSessionStateForTest();
-	_resetCartStoreForTest();
 	globalThis.fetch = originalFetch;
 	for (const key of envKeys) {
 		const value = originalEnv[key];

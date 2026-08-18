@@ -14,9 +14,12 @@
 	let { data }: { data: PageData } = $props();
 
 	// Local mirror so qty mutations re-render without a full server round-trip.
-	let items = $state<CartLineItem[]>(data.cart?.lineItems.physicalItems ?? []);
+	let items = $state<CartLineItem[]>(data.cart?.lines ?? []);
+	let emptying = $state(false);
+	let operationError = $state('');
+	let emptyIdempotencyKey: string | null = null;
 
-	let subtotal = $derived(items.reduce((sum, i) => sum + i.salePrice.value * i.quantity, 0));
+	let subtotal = $derived(items.reduce((sum, i) => sum + i.extendedPrice.value, 0));
 	let itemCount = $derived(items.reduce((sum, i) => sum + i.quantity, 0));
 
 	const persona = data.personaHint ?? 'gatherer';
@@ -27,7 +30,12 @@
 	}));
 
 	onMount(() => {
-		const onUpdate = () => refreshCart();
+		const onUpdate = (event: Event) => {
+			const cart = (event as CustomEvent).detail?.cart;
+			if (cart) items = cart.lines ?? [];
+			else if ((event as CustomEvent).detail?.itemCount === 0) items = [];
+			else refreshCart();
+		};
 		window.addEventListener('cart-updated', onUpdate);
 		return () => window.removeEventListener('cart-updated', onUpdate);
 	});
@@ -36,9 +44,36 @@
 		try {
 			const res = await fetch('/api/cart');
 			const d = await res.json();
-			items = d.cart?.lineItems?.physicalItems || [];
+			items = d.cart?.lines || [];
 		} catch {
 			// keep current items on transient failure
+		}
+	}
+
+	async function emptyCart() {
+		emptyIdempotencyKey ??= crypto.randomUUID();
+		emptying = true;
+		operationError = '';
+		try {
+			const res = await fetch('/api/cart', {
+				method: 'DELETE',
+				headers: { 'Idempotency-Key': emptyIdempotencyKey },
+			});
+			const result = await res.json();
+			if (result.evidence) window.dispatchEvent(new CustomEvent('commerce-service-outcome', { detail: result.evidence }));
+			if (!res.ok || result.evidence?.confirmed !== true) {
+				if (!['provider_outcome_unknown', 'session_unavailable', 'operation_in_progress'].includes(result.error?.code)) {
+					emptyIdempotencyKey = null;
+				}
+				throw new Error(result.error?.message || 'BigCommerce did not confirm the empty-cart operation.');
+			}
+			emptyIdempotencyKey = null;
+			items = [];
+			window.dispatchEvent(new CustomEvent('cart-updated', { detail: { itemCount: 0, cart: null } }));
+		} catch (cause) {
+			operationError = cause instanceof Error ? cause.message : 'The cart could not be emptied.';
+		} finally {
+			emptying = false;
 		}
 	}
 
@@ -53,7 +88,12 @@
 
 	{#if items.length === 0}
 		<div class="mt-8 rounded-sm border border-surface-border bg-surface-card p-8 text-center" data-empty-state="empty-cart">
-			<p class="text-surface-muted-fg">Your cart is empty</p>
+			<p class="text-surface-muted-fg">
+				{data.services.mode === 'off' ? 'Sandbox cart service is not connected.' : 'Your cart is empty'}
+			</p>
+			{#if data.services.mode === 'off'}
+				<p class="mx-auto mt-2 max-w-xl text-xs text-surface-muted-fg">No cart was read, created, priced, or changed. Account, order creation, and recurring subscriptions are also not configured.</p>
+			{/if}
 			<a href="/" class="mt-4 inline-block text-sm font-medium text-primary hover:text-secondary">
 				Continue shopping
 			</a>
@@ -92,6 +132,14 @@
 					>
 						Checkout — {itemCount} item{itemCount === 1 ? '' : 's'}
 					</a>
+					<button
+						type="button"
+						onclick={emptyCart}
+						disabled={emptying}
+						class="mt-3 block w-full py-2 text-center text-xs text-surface-muted-fg hover:text-error disabled:opacity-50"
+					>
+						{emptying ? 'Emptying cart…' : 'Empty cart'}
+					</button>
 				</div>
 				<div class="rounded-sm border border-surface-border bg-surface-card p-6">
 					<!-- Foundation: promo-code-entry -->
@@ -99,6 +147,9 @@
 				</div>
 			</aside>
 		</div>
+	{/if}
+	{#if operationError}
+		<p class="mt-4 text-sm text-error" role="alert">{operationError}</p>
 	{/if}
 </div>
 

@@ -49,6 +49,7 @@ export const BEALLS_FAMILY_RENDERER_SOURCE_FILES = [
 	'src/lib/brand/bealls-family-runtime-contract.ts',
 	'src/lib/brand/config.ts',
 	'src/lib/brand/pricing.ts',
+	'src/lib/commerce/cart-contract.ts',
 	'src/lib/components/AILoadingInline.svelte',
 	'src/lib/components/BrandStripNav.svelte',
 	'src/lib/components/CartDrawer.svelte',
@@ -141,6 +142,9 @@ export const BEALLS_FAMILY_RENDERER_SOURCE_FILES = [
 	'src/lib/server/admin-overrides.ts',
 	'src/lib/server/bigcommerce.ts',
 	'src/lib/server/cache.ts',
+	'src/lib/server/commerce/boundary.ts',
+	'src/lib/server/commerce/service.ts',
+	'src/lib/server/commerce/session.ts',
 	'src/lib/server/parity-fixture.ts',
 	'src/lib/server/bounded-ai.ts',
 	'src/lib/server/route-zone-runtime.ts',
@@ -156,6 +160,8 @@ export const BEALLS_FAMILY_RENDERER_SOURCE_FILES = [
 	'src/routes/+layout.svelte',
 	'src/routes/+page.server.ts',
 	'src/routes/+page.svelte',
+	'src/routes/api/cart/+server.ts',
+	'src/routes/api/checkout/redirect/+server.ts',
 	'src/routes/api/layout/+server.ts',
 	'src/routes/api/layout/stream/+server.ts',
 	'src/routes/api/observe/enrichment/+server.ts',
@@ -304,7 +310,7 @@ const RESPONSIVE_STRATEGY = {
 const SOURCE_SNAPSHOT = {
 	algorithm: 'sha256',
 	files: [...BEALLS_FAMILY_RENDERER_SOURCE_FILES],
-	fingerprint: 'baa8a8d94d71c61ef49b00cb2e08229ea1258d4b778cb028d16e65b06dd2b8e3',
+	fingerprint: 'd2153a808559776c6f456af21517c3dea47989b8371079f09fac51d5e4dd7427',
 } as const;
 
 interface DesignSnapshotLiteral {
@@ -319,7 +325,7 @@ function storefrontContract(
 	designSnapshot: DesignSnapshotLiteral,
 ): BeallsFamilyRendererContract {
 	return {
-		contractVersion: '2.4.0', organizationId: 'example-merchant', brandId, brandName, mode: 'storefront',
+		contractVersion: '2.5.0', organizationId: 'example-merchant', brandId, brandName, mode: 'storefront',
 		supportedSurfaces: [...STOREFRONT_SURFACES, LOCATOR_SURFACE, STYLE_GUIDE_SURFACE, ERROR_404_SURFACE, STOREFRONT_EMPTY_SURFACE].map(cloneSurface),
 		mountedChromeIds: [...MOUNTED_CHROME], exposedChromeIds: [...STOREFRONT_EXPOSED_CHROME],
 		designConfigSnapshot: { algorithm: 'sha256', inputs: [...DESIGN_CONFIG_INPUTS], ...designSnapshot },
@@ -340,7 +346,7 @@ export const BEALLS_FAMILY_RENDERER_CONTRACTS: Readonly<Record<(typeof BRAND_IDS
 		fingerprint: '746ae8604bccee7b0169b1a961bc0104186f95b2c314dac8c5e191e94fe34222',
 	}),
 	homecentric: {
-		contractVersion: '2.4.0', organizationId: 'example-merchant', brandId: 'homecentric', brandName: 'Home Centric', mode: 'content',
+		contractVersion: '2.5.0', organizationId: 'example-merchant', brandId: 'homecentric', brandName: 'Home Centric', mode: 'content',
 		supportedSurfaces: ([
 			{ surface: 'home', recipeId: 'home.content', componentIds: ['zone-renderer'], rescueReasons: [] },
 			{ surface: 'category', recipeId: 'category.content', componentIds: ['content-category-surface'], rescueReasons: [] },
